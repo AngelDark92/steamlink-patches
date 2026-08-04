@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.0.0-dev.1",
+  "version": "1.0.0-dev.2",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -11,7 +11,7 @@
       ],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -64,7 +64,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -97,7 +97,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -143,7 +143,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -176,7 +176,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -209,7 +209,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -244,7 +244,7 @@
       ],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -277,7 +277,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -323,7 +323,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
@@ -356,7 +356,7 @@
       "dependencies": [],
       "compatiblePackages": [
         {
-          "packageName": "com.valvesoftware.steamlink",
+          "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
           "description": null,
           "apkFileType": "APK",
