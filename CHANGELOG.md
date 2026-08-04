@@ -1,3 +1,9 @@
+## [1.0.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2026-08-04)
+
+### ✨ New Features
+
+* trigger new release ([fe3340b](https://github.com/AngelDark92/steamlink-patches/commit/fe3340ba1446fd322335de7454479019be919456))
+
 ## [1.0.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2026-08-04)
 
 ### 🐛 Bug Fixes

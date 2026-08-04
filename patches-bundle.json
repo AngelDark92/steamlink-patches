@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-04T17:54:11",
-  "description": "## [1.0.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2026-08-04)\n\n### 🐛 Bug Fixes\n\n* clarify package name change to point to steamlinkvr ([c948785](https://github.com/AngelDark92/steamlink-patches/commit/c948785381b098d24f1d21c9447cc3ff683a4a40))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.0.0-dev.3/patches-1.0.0-dev.3.mpp",
+  "created_at": "2026-08-04T17:59:36",
+  "description": "## [1.0.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2026-08-04)\n\n### ✨ New Features\n\n* trigger new release ([fe3340b](https://github.com/AngelDark92/steamlink-patches/commit/fe3340ba1446fd322335de7454479019be919456))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.0.0-dev.4/patches-1.0.0-dev.4.mpp",
   "signature_download_url": "",
-  "version": "1.0.0-dev.3"
+  "version": "1.0.0-dev.4"
 }
