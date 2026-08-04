@@ -29,7 +29,6 @@ private fun NodeList.asSequence(): Sequence<org.w3c.dom.Node> = sequence {
 private val androidXrLibPatch = rawResourcePatch {
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
-        File(libDir, "libgxr_face_bridge.so").writeBytes(loadResource("libgxr_face_bridge.so"))
         File(libDir, "libgxr_xr_bridge.so").writeBytes(loadResource("libgxr_xr_bridge.so"))
     }
 }
