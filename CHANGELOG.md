@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.0...v1.2.1) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* Merge pull request [#7](https://github.com/AngelDark92/steamlink-patches/issues/7) from AngelDark92/dev ([ea1678f](https://github.com/AngelDark92/steamlink-patches/commit/ea1678f67eb2542561584d4658fa31c638b3b9c7))
+* Update README and add ids.xml creation for resource patches ([ef01292](https://github.com/AngelDark92/steamlink-patches/commit/ef0129256f1367d2d8ec5b2330186668a96e22b0))
+
 ## [1.2.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.0...v1.2.1-dev.1) (2026-08-04)
 
 ### 🐛 Bug Fixes
