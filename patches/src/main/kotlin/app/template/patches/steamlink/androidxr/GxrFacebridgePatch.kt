@@ -16,8 +16,8 @@ private val gxrFacebridgeLibPatch = rawResourcePatch {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         File(libDir, "libgxr_face_bridge.so").writeBytes(facebridgeResource("libgxr_face_bridge.so"))
 
-        // arslib ResourceIdProcessor requires ids.xml to exist even when the APK omits it
-        val idsFile = File(libDir.parentFile!!.parentFile!!, "res/values/ids.xml")
+        // arslib ResourceIdProcessor requires ids.xml; APKs without <item type="id"> resources omit it
+        val idsFile = File(get("AndroidManifest.xml").parentFile!!, "res/values/ids.xml")
         if (!idsFile.exists()) {
             idsFile.parentFile!!.mkdirs()
             idsFile.writeText("""<?xml version="1.0" encoding="utf-8"?><resources/>""")

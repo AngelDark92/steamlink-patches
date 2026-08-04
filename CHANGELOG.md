@@ -1,3 +1,9 @@
+## [1.2.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.1...v1.2.2-dev.1) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* Update ids.xml file path for ResourceIdProcessor in AndroidXr and GxrFacebridge patches ([a505517](https://github.com/AngelDark92/steamlink-patches/commit/a5055174d5e0d0758bc67f683042365f4245fda3))
+
 ## [1.2.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.0...v1.2.1) (2026-08-04)
 
 ### 🐛 Bug Fixes
