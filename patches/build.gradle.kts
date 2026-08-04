@@ -70,7 +70,7 @@ val assembleExtension by tasks.registering(JavaExec::class) {
         out.parentFile.mkdirs()
         args(
             "a",
-            "-a", "35",
+            "-a", "33",
             "-o", out.absolutePath,
             smaliSrcDir.absolutePath,
         )

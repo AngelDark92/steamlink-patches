@@ -1,3 +1,9 @@
+## [1.1.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.0...v1.1.1-dev.1) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* update smali assembler argument for extension assembly ([44d2bf4](https://github.com/AngelDark92/steamlink-patches/commit/44d2bf450ce309317f7ca4a3a206d2c2a3af177d))
+
 ## [1.1.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.0.0...v1.1.0) (2026-08-04)
 
 ### 🐛 Bug Fixes
