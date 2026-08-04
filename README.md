@@ -17,7 +17,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.1.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.1.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;12 patches total
+> **[v1.2.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.2.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;12 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;11 patches</summary>
 <br>
@@ -32,7 +32,7 @@ To download it:
 | [Android XR compatibility](#android-xr-compatibility) | Makes Steam Link fully functional on Samsung Galaxy XR. Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, the Galaxy XR bridge native library (`libgxr_xr_bridge.so`), the permission-bootstrap launcher activity, and the XR spatial-pointer SDL input bridge. This patch is required for Galaxy XR operation. |  |
 | [Disable permission prompt](#disable-permission-prompt) | Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR. |  |
 | [Frame queue latency offset](#frame-queue-latency-offset) | Adds a fixed offset to VRLink's frame-queue latency budget to compensate for wireless pipeline delay. 'full' adds +32.768 ms; 'half' adds +16.384 ms. | • Offset size |
-| [GXR face bridge](#gxr-face-bridge) | Installs `libgxr_face_bridge.so` (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds `android.permission.FACE_TRACKING` to the manifest. Required for face-tracking expression data to reach SteamVR. |  |
+| [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. |  |
 | [HMD-only pose fix](#hmd-only-pose-fix) | Adds 78 ms to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. |  |
 | [Legacy two-layer renderer](#legacy-two-layer-renderer) | Restores the 5001712-era two-layer XR stream topology by skipping underside swapchain creation and submission added in 5002244. |  |
 | [Low-latency decoder](#low-latency-decoder) | Forces findBestDecoder() to always select the low-latency hardware decoder (KEY_LOW_LATENCY), reducing decode jitter from ~11 ms median to ≤8 ms on Galaxy XR. |  |

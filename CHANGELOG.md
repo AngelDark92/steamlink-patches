@@ -1,3 +1,10 @@
+## [1.2.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.3...v1.2.0) (2026-08-04)
+
+### ✨ New Features
+
+* Add GXR face bridge patch and enhance HMD only patch with new functionality ([44ee2d2](https://github.com/AngelDark92/steamlink-patches/commit/44ee2d233cf65be85f4426ccf3dd758aea62ee82))
+* Merge pull request [#6](https://github.com/AngelDark92/steamlink-patches/issues/6) from AngelDark92/dev ([a38c1f9](https://github.com/AngelDark92/steamlink-patches/commit/a38c1f999133334f2912ff6177fe51b36aea70ec))
+
 ## [1.2.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.3...v1.2.0-dev.1) (2026-08-04)
 
 ### ✨ New Features
