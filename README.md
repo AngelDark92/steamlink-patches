@@ -1,12 +1,12 @@
-# 👋🧩 Morphe Patches template
+# 🥽 Steam Link GalaxyXR Patches
 
-Template repository for Morphe Patches.
+[Morphe](https://morphe.software) patches that make Steam Link work on the Samsung Galaxy XR (SM-I610).
 
 ## ❓ About
 
-Patches for apps I like.
+Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR bridge native libraries, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
-TODO: Update this about section with a brief introduction/summary about this repo and what it offers.
+Target APK: `com.valvesoftware.steamlinkvr` v2.0.22 (versionCode 5002244).
 
 ## 🩹 Patches list
 
@@ -19,68 +19,44 @@ TODO: Update this about section with a brief introduction/summary about this rep
      If you wish to manually keep this list updated then remove the PATCHES_START and PATCHES_END 
      comment blocks entirely. -->
 
-#### A list of your patches will automatically be shown here after your first patches release is created.
+| Patch | Default | Description |
+|---|---|---|
+| **Android XR compatibility** | ✅ | Makes Steam Link fully functional on Samsung Galaxy XR. Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, Galaxy XR bridge native libraries, the permission-bootstrap launcher activity, and the XR spatial-pointer SDL input bridge. |
+| **No overlay permission** | | Removes `SYSTEM_ALERT_WINDOW` usage so Steam Link installs and runs without the overlay permission prompt that tears down the XR stream. |
+| **Disable permission prompt** | | Replaces VRLink's `RequestAndroidPermissions` with a no-op to prevent stream teardown on Galaxy XR. |
+| **Low-latency decoder** | | Forces `findBestDecoder()` to always select the low-latency hardware decoder (`KEY_LOW_LATENCY`), reducing decode jitter from ~11 ms median to ≤8 ms. |
+| **Pose prediction offset** | | Adds +16.77 ms to the `XrTime` argument passed to `xrLocateSpace`, compensating for the Android XR runtime's local-display prediction being too early for a wireless stream. |
+| **Frame queue latency offset** | | Adds a fixed offset to VRLink's frame-queue latency budget to compensate for wireless pipeline delay. `full` adds +32.768 ms; `half` adds +16.384 ms. |
+| **HMD-only pose fix** | | Adds 78 ms to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. |
+| **Legacy two-layer renderer** | | Restores the 5001712-era two-layer XR stream topology by skipping underside swapchain creation and submission added in 5002244. |
+| **OLED color calibration** | | Replaces VRLink's embedded GLSL fragment shader with a Galaxy XR OLED-tuned version. Profile `initial`: gamma 1.06 / sat 1.12. Profile `final-balanced`: gamma 1.20 / sat 1.45. |
+| **Video dither** | | Enables (or disables) the dormant GLSL dither term in VRLink's video fragment shader. Reduces 8-bit contouring on OLED displays. |
+| **Change package name** | | Renames the app package so it can be installed alongside the original Steam Link. Default appends `.gxr`. |
 
 &nbsp;
 
-## 🚀 Get started
+## 🚀 How to use
 
-To start using this template, follow these steps:
+Add this repository as a patch source in [Morphe Manager](https://morphe.software):
 
-1. [Setup](https://github.com/MorpheApp/morphe-documentation/blob/main/docs/morphe-development/README.md) your development environment including adding a GitHub PAT as described [here](https://github.com/MorpheApp/morphe-patcher/blob/main/docs/2_1_setup.md#-prepare-the-environment).
-2. [Create a new repository using this template](https://github.com/new?template_name=morphe-patches-template&template_owner=MorpheApp). Select create a new repository, and **enable 'Include all branches'** 
-3. Enable "Allow GitHub Actions to create and approve pull requests" in your repo Settings > Actions > General > Workflow permissions
-4. Update the [build.gradle.kts](patches/build.gradle.kts) file (Specifically, the 
-   [group of the project](patches/build.gradle.kts#L1), and the [About](patches/build.gradle.kts#L6-L11))
-5. Update the [README.md](README.md) file to be specific of your repo, and update the links in the [issue templates](.github/ISSUE_TEMPLATE).
-6. Choose a name for your patches project. Keep in mind you must use a name that does not 
-   imply authorship by the Morphe open source project. If unsure, then simply name these
-   patches after yourself ("UserXYZ Morphe patches"). See the [NOTICE](NOTICE) for details. 
-7. (Optional): Add `patches-bundle.png` to the project if you want a custom icon to show in
-   Morphe Manager instead of your GitHub profile avatar.
+```
+https://github.com/AngelDark92/steamlink-patches
+```
 
-🎉 You are now ready to start creating patches!
+Or click: https://morphe.software/add-source?github=AngelDark92/steamlink-patches
 
-## 🧑‍💻 Usage
-
-To develop and release your Patches using this template:
-
-- Do all development work in the `dev` branch.
-- For local development work build your patches using the gradle task `./gradlew buildAndroid` to generate the mpp file found in `patches/build/libs/patches-*.mpp`. Apply your patches locally using Morphe CLI tool like any other patch bundle.
-- Always use [Semantic commit](https://kapeli.com/cheat_sheets/Semantic_Commits.docset/Contents/Resources/Documents/index) messages for commits. To keep it simple use only 3 commit message types: `feat: Added a new feature`, `fix: Some problem now fixed`, `chore: Random change you do not want in the user facing changelog`
-- Commits of `fix:` and `feat:` will automatically generate new pre-releases and `chore:` will not create a new release.
-- Users can apply your dev branch releases by enabling `pre-release` in Morphe Manager patch sources.
-- When your dev branch is ready and you want a stable release, merge dev branch to main (do not squash, and only merge).
-- **Always use semantic release (release.yml)**. Do not manually upload or creating releases by hand because many files must be updated and release.yml handles everything.
-
-## 🤓 Tips
-- See the [patcher documentation](https://github.com/MorpheApp/morphe-patcher/blob/main/docs/1_patcher_intro.md)
-  for more examples of creating patches and fingerprints.
-- Do not manually edit any generated files such as: `patches-list.json`, `patches-bundle.json`, `CHANGELOG.md`.
-  These files will be automatically updated in the release action.
-- Do not force push any semantic release commits or you will break the release. To 'redo' the last release then:
-  - Git drop the last dev/main semantic release commit you want to redo.
-  - Delete the release from the release area of this repo and delete the tag   
-  - Make any other changes you wish to do
-  - Force push dev/main branch
-  - A new replacement release will be created by `release.yml`
-
-
-<!-- The patches end tag is intentionally placed here so the first release will cleanup 
-     this readme of all developer instructions above. -->
 <!-- PATCHES_END -->
-
-#### How to use these patches
-
-Click here to add these patches to Morphe: https://morphe.software/add-source?github=xyz-user/xyz-patches
-
-Or manually add this repository url as a patch source in Morphe: https://github.com/xyz-user/xyz-patches
 
 ### 🛠️ Building
 
-To build UserXYZ Patches,
-you can follow the [Morphe documentation](https://github.com/MorpheApp/morphe-documentation).
+```
+./gradlew buildAndroid
+```
+
+Output: `patches/build/libs/patches-*.mpp`
+
+No Android SDK is required. The extension DEX is assembled from smali sources directly by the build.
 
 ## 📜 License
 
-UserXYZ Patches are licensed under the [GNU General Public License v3.0](LICENSE)
+Steam Link GalaxyXR Patches are licensed under the [GNU General Public License v3.0](LICENSE)

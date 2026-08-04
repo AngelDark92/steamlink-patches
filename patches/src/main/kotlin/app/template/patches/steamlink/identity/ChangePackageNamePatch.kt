@@ -3,8 +3,12 @@ package app.template.patches.steamlink.identity
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.patcher.patch.PatchException
-import app.morphe.util.asSequence
 import org.w3c.dom.Element
+import org.w3c.dom.NodeList
+
+private fun NodeList.asSequence(): Sequence<org.w3c.dom.Node> = sequence {
+    for (i in 0 until length) yield(item(i))
+}
 
 @Suppress("unused")
 val changePackageNamePatch = resourcePatch(
