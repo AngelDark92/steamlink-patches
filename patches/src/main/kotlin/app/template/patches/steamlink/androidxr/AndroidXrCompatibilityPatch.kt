@@ -1,6 +1,5 @@
 package app.template.patches.steamlink.androidxr
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
@@ -275,7 +274,7 @@ private val androidXrManifestPatch = resourcePatch {
 }
 
 // ---------------------------------------------------------------------------
-// Main patch: bytecode injection (DEX + extension)
+// Main patch: merge extension DEX (adds GalaxyXRPermissionActivity)
 // ---------------------------------------------------------------------------
 
 @Suppress("unused")
@@ -292,20 +291,4 @@ val androidXrCompatibilityPatch = bytecodePatch(
     dependsOn(androidXrManifestPatch)
 
     extendWith("extensions/extension.mpe")
-
-    execute {
-        // Inject XR spatial-pointer routing into SDLSurface.onTouch.
-        // GxrSdlBridge lives in org.libsdl.app so it has package-private access
-        // to SDLControllerManager.nativeAddJoystick and SDL.isControllerManagerReady.
-        SDLSurfaceOnTouchFingerprint.method.addInstructions(
-            0,
-            "invoke-static {p2}, Lorg/libsdl/app/GxrSdlBridge;->routeXrPointerAsMouse(Landroid/view/MotionEvent;)V",
-        )
-
-        // Inject XR hover routing into SDLGenericMotionListener_API14.onGenericMotionEvent.
-        SDLGenericMotionListenerOnGenericMotionEventFingerprint.method.addInstructions(
-            0,
-            "invoke-static {p2}, Lorg/libsdl/app/GxrSdlBridge;->routeXrPointerAsMouseGeneric(Landroid/view/MotionEvent;)V",
-        )
-    }
 }
