@@ -31,8 +31,9 @@ private val androidXrLibPatch = rawResourcePatch {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         File(libDir, "libgxr_xr_bridge.so").writeBytes(loadResource("libgxr_xr_bridge.so"))
 
-        // arslib ResourceIdProcessor requires ids.xml; APKs without <item type="id"> resources omit it
-        val idsFile = File(get("AndroidManifest.xml").parentFile!!, "res/values/ids.xml")
+        // arslib ResourceIdProcessor requires ids.xml; APKs without <item type="id"> resources omit it.
+        // "res/" paths resolve against the decoded package dir, not the raw apk root, so use get() directly.
+        val idsFile = get("res/values/ids.xml")
         if (!idsFile.exists()) {
             idsFile.parentFile!!.mkdirs()
             idsFile.writeText("""<?xml version="1.0" encoding="utf-8"?><resources/>""")
