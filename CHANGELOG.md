@@ -1,3 +1,9 @@
+## [1.1.3-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.2...v1.1.3-dev.1) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* update HmdOnlyPatch with corrected byte values and add GalaxyXR-Reusable-Patch to .gitignore ([0905eaa](https://github.com/AngelDark92/steamlink-patches/commit/0905eaaa66a2ec41ab8dbc2b6cad49f912f34975))
+
 ## [1.1.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.1...v1.1.2) (2026-08-04)
 
 ### 🐛 Bug Fixes
