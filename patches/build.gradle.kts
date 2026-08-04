@@ -1,12 +1,11 @@
 group = "app.template"
 
 patches {
-    // TODO: Update this section with your project details.
     about {
-        name = "UserXYZ Patches"
-        description = "Patches for apps I like"
-        source = "git@github.com:UserXYZ/morphe-patches.git"
-        author = "Awesome dev"
+        name = "Steam Link GalaxyXR Patches"
+        description = "Patches for Steam Link to support Samsung Galaxy XR hardware"
+        source = "https://github.com/AngelDark92/steamlink-patches"
+        author = "AngelDark92"
         contact = "na"
         website = "na"
         license = "GPLv3"
