@@ -1,3 +1,14 @@
+## [1.1.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.0.0...v1.1.0-dev.1) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* changed package name ([e5ad093](https://github.com/AngelDark92/steamlink-patches/commit/e5ad093f4c581ebb67870b9f2cdbf7d32de3793f))
+* clarify package name change to point to steamlinkvr ([c948785](https://github.com/AngelDark92/steamlink-patches/commit/c948785381b098d24f1d21c9447cc3ff683a4a40))
+
+### ✨ New Features
+
+* trigger new release ([fe3340b](https://github.com/AngelDark92/steamlink-patches/commit/fe3340ba1446fd322335de7454479019be919456))
+
 ## [1.0.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2026-08-04)
 
 ### ✨ New Features
