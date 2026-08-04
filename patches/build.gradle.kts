@@ -86,6 +86,10 @@ tasks.named("processResources") {
     dependsOn(assembleExtension)
 }
 
+tasks.named("sourcesJar") {
+    dependsOn(assembleExtension)
+}
+
 tasks {
     register<JavaExec>("generatePatchesList") {
         description = "Build patch with patch list"
