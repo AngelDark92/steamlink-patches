@@ -1,3 +1,9 @@
+## [1.2.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.0...v1.2.1-dev.1) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* Update README and add ids.xml creation for resource patches ([ef01292](https://github.com/AngelDark92/steamlink-patches/commit/ef0129256f1367d2d8ec5b2330186668a96e22b0))
+
 ## [1.2.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.3...v1.2.0) (2026-08-04)
 
 ### ✨ New Features
