@@ -7,7 +7,7 @@ import app.morphe.patcher.patch.Compatibility
 object Constants {
     val COMPATIBILITY_STEAM_LINK = Compatibility(
         name = "Steam Link",
-        packageName = "com.valvesoftware.steamlink",
+        packageName = "com.valvesoftware.steamlinkvr",
         apkFileType = ApkFileType.APK,
         appIconColor = 0x1B2838,
         targets = listOf(

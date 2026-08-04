@@ -6,12 +6,13 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR bridge native libraries, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
+
 Target APK: `com.valvesoftware.steamlinkvr` v2.0.22 (versionCode 5002244).
 
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.0.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.0.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;11 patches total
+> **[v1.1.0-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.1.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;11 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;10 patches</summary>
 <br>
