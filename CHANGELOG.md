@@ -2,7 +2,7 @@
 
 ### 🐛 Bug Fixes
 
-* changed package name ([e5ad093](https://github.com/AngelDark92/steamlink-patches/commit/e5ad093f4c581ebb67870b9f2cdbf7d32de3793f))
+* changed package name ([e5ad093](https://github.com/AngelDark92/steamlink-patches/commit/e5ad093f4c581ebb67870b9f2cdbf7d32de3793f)) which now points to steamlinkvr
 
 ## 1.0.0-dev.1 (2026-08-04)
 
