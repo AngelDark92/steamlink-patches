@@ -1,3 +1,9 @@
+## [1.1.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.1...v1.1.2-dev.1) (2026-08-04)
+
+### 🐛 Bug Fixes
+
+* update patching instructions and remove unused fingerprint objects ([053734c](https://github.com/AngelDark92/steamlink-patches/commit/053734c4edc61df7be929828731a3101af873e3b))
+
 ## [1.1.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.1.0...v1.1.1) (2026-08-04)
 
 ### 🐛 Bug Fixes
