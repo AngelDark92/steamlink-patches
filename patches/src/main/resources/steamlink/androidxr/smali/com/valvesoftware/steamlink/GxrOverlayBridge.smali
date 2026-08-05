@@ -14,23 +14,48 @@
 .end method
 
 .method public static isEnabled(Landroid/content/Context;)Z
-    .locals 3
+    .locals 5
 
     invoke-virtual {p0}, Landroid/content/Context;->getPackageManager()Landroid/content/pm/PackageManager;
 
     move-result-object v0
 
-    const-string v1, "android.permission.SYSTEM_ALERT_WINDOW"
-
     invoke-virtual {p0}, Landroid/content/Context;->getPackageName()Ljava/lang/String;
 
-    move-result-object v2
+    move-result-object v1
 
-    invoke-virtual {v0, v1, v2}, Landroid/content/pm/PackageManager;->checkPermission(Ljava/lang/String;Ljava/lang/String;)I
+    const/16 v2, 0x1000
 
-    move-result v0
+    invoke-virtual {v0, v1, v2}, Landroid/content/pm/PackageManager;->getPackageInfo(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;
 
-    if-nez v0, :disabled
+    move-result-object v0
+
+    iget-object v0, v0, Landroid/content/pm/PackageInfo;->requestedPermissions:[Ljava/lang/String;
+
+    if-eqz v0, :disabled
+
+    array-length v1, v0
+
+    const/4 v2, 0x0
+
+    :loop
+    if-ge v2, v1, :disabled
+
+    aget-object v3, v0, v2
+
+    const-string v4, "android.permission.SYSTEM_ALERT_WINDOW"
+
+    invoke-virtual {v4, v3}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v3
+
+    if-nez v3, :enabled
+
+    add-int/lit8 v2, v2, 0x1
+
+    goto :loop
+
+    :enabled
 
     const/4 v0, 0x1
 

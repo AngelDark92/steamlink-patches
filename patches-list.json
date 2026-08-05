@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.2.12",
+  "version": "1.2.11",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -25,13 +25,6 @@
               "version": "2.0.22",
               "versionCodes": null,
               "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
@@ -61,13 +54,6 @@
               "version": "2.0.22",
               "versionCodes": null,
               "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
@@ -100,7 +86,9 @@
       "name": "Device identity",
       "description": "Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched.",
       "default": true,
-      "dependencies": [],
+      "dependencies": [
+        "BytecodePatch"
+      ],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
@@ -114,13 +102,6 @@
               "version": "2.0.22",
               "versionCodes": null,
               "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
@@ -159,13 +140,6 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
               "versionCodes": null,
               "isExperimental": true,
               "minSdk": null,
@@ -209,13 +183,6 @@
               "version": "2.0.22",
               "versionCodes": null,
               "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
@@ -289,13 +256,6 @@
               "isExperimental": true,
               "minSdk": null,
               "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
             }
           ]
         }
@@ -318,13 +278,6 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
               "versionCodes": null,
               "isExperimental": true,
               "minSdk": null,
@@ -357,13 +310,6 @@
               "isExperimental": false,
               "minSdk": null,
               "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
             }
           ]
         }
@@ -392,13 +338,6 @@
               "isExperimental": true,
               "minSdk": null,
               "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
             }
           ]
         }
@@ -423,13 +362,6 @@
               "version": "2.0.22",
               "versionCodes": null,
               "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
@@ -496,13 +428,6 @@
               "isExperimental": true,
               "minSdk": null,
               "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
             }
           ]
         }
@@ -527,13 +452,6 @@
               "version": "2.0.22",
               "versionCodes": null,
               "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
@@ -573,13 +491,6 @@
               "version": "2.0.22",
               "versionCodes": null,
               "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
