@@ -17,7 +17,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.2.9](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.2.9)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;13 patches total
+> **[v1.2.10-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.2.10-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;12 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
 <br>
@@ -39,7 +39,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -49,7 +49,6 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Disable permission prompt](#disable-permission-prompt) | Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR. |  |
 | [Frame queue latency offset](#frame-queue-latency-offset) | Adds a fixed offset to VRLink's frame-queue latency budget to compensate for wireless pipeline delay. 'full' adds +32.768 ms; 'half' adds +16.384 ms. | • Offset size |
 | [Legacy two-layer renderer](#legacy-two-layer-renderer) | Restores the 5001712-era two-layer XR stream topology by skipping underside swapchain creation and submission added in 5002244. |  |
 | [Low-latency decoder](#low-latency-decoder) | Forces findBestDecoder() to always select the low-latency hardware decoder (KEY_LOW_LATENCY), reducing decode jitter from ~11 ms median to ≤8 ms on Galaxy XR. |  |

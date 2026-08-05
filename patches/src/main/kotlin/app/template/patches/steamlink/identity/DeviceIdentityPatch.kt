@@ -15,13 +15,13 @@ val deviceIdentityPatch = rawResourcePatch(
     name = "Device identity",
     description = "Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; " +
         "controller identity is unaffected). 'samsung-default' leaves the file untouched.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
 
     val profile by stringOption(
         key = "profile",
-        default = "samsung-default",
+        default = "meta-quest-pro",
         values = mapOf(
             "Samsung Galaxy XR (default, no change)" to "samsung-default",
             "Meta Quest Pro" to "meta-quest-pro",
