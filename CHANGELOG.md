@@ -1,3 +1,9 @@
+## [1.4.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.0...v1.4.1-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* add version codes for ARM64_V8A; remove experimental controller velocity patch ([f6b8436](https://github.com/AngelDark92/steamlink-patches/commit/f6b84366a7044a97b8cf773dacbd58e62e56d1dc))
+
 ## [1.4.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.3.0...v1.4.0) (2026-08-05)
 
 ### ✨ New Features

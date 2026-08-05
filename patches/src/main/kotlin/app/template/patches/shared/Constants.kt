@@ -12,7 +12,10 @@ object Constants {
         apkFileType = ApkFileType.APK,
         appIconColor = 0x1B2838,
         targets = listOf(
-            AppTarget(version = "2.0.22"),
+            AppTarget(
+                version = "2.0.22",
+                versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5002244),
+            ),
         )
     )
 
@@ -22,7 +25,10 @@ object Constants {
         apkFileType = ApkFileType.APK,
         appIconColor = 0x1B2838,
         targets = listOf(
-            AppTarget(version = "2.0.22", isExperimental = true),
+            AppTarget(
+                version = "2.0.22",
+                versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5002244),
+            ),
         )
     )
 
@@ -33,13 +39,9 @@ object Constants {
         appIconColor = 0x1B2838,
         targets = listOf(
             AppTarget(
-                version = "2.0.20",
-                versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5001712),
-                description = "HMD-only pose fix layout verified for versionCode 5001712.",
-            ),
-            AppTarget(
                 version = "2.0.22",
-                description = "HMD-only pose fix layouts verified for versionCodes 5002172, 5002206, and 5002244.",
+                versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5002244),
+                description = "HMD-only pose fix layout verified for versionCode 5002244.",
             )
         )
     )

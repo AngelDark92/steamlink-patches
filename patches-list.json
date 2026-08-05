@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.4.0",
+  "version": "1.4.1-dev.1",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -23,7 +23,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -52,7 +54,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -100,8 +104,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -165,7 +171,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -205,8 +213,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -246,7 +256,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -271,20 +283,13 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.20",
+              "version": "2.0.22",
               "versionCodes": {
-                "ARM64_V8A": 5001712
+                "ARM64_V8A": 5002244
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "HMD-only pose fix layout verified for versionCode 5001712."
-            },
-            {
-              "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
+              "description": "HMD-only pose fix layout verified for versionCode 5002244."
             }
           ]
         }
@@ -317,8 +322,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -343,8 +350,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -371,7 +380,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -399,8 +410,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -425,7 +438,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -489,8 +504,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -515,7 +532,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -554,7 +573,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
