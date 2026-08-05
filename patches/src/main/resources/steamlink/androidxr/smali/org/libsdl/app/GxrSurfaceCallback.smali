@@ -54,6 +54,52 @@
     return-void
 .end method
 
+# ─────────────────────────────────────────────────────────────────────────────
+# applyManagedPanelMetrics(SDLSurface owner, int width, int height)
+#
+# Called via a direct instruction patch injected at index 0 of the REAL
+# SDLSurface.surfaceChanged(), immediately followed by return-void. This is
+# necessary because morphe-patcher's extendWith() merge only ADDS methods
+# that are missing from the target class by signature -- it silently drops
+# any edits to a method that already exists in both the original class and
+# the bundled extension class (see ClassMerger.addMissingMethods). Since
+# surfaceChanged() pre-exists in the stock SDLSurface class, a full modified
+# copy of it bundled here would never actually run. Feeding the true surface
+# width/height at 1:1 scale (instead of the full physical combined-display
+# metrics) prevents the managed-panel launcher UI from being stretched.
+# ─────────────────────────────────────────────────────────────────────────────
+.method public static applyManagedPanelMetrics(Lorg/libsdl/app/SDLSurface;II)V
+    .locals 6
+
+    iget-object v0, p0, Lorg/libsdl/app/SDLSurface;->mDisplay:Landroid/view/Display;
+
+    invoke-virtual {v0}, Landroid/view/Display;->getRefreshRate()F
+
+    move-result v5
+
+    move v0, p1
+
+    move v1, p2
+
+    move v2, p1
+
+    move v3, p2
+
+    const/high16 v4, 0x3f800000    # 1.0f
+
+    invoke-static/range {v0 .. v5}, Lorg/libsdl/app/SDLActivity;->nativeSetScreenResolution(IIIIFF)V
+
+    invoke-static {}, Lorg/libsdl/app/SDLActivity;->onNativeResize()V
+
+    const-string v0, "SteamLinkGXR"
+
+    const-string v1, "Applied managed-panel surface metrics (direct patch)"
+
+    invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    return-void
+.end method
+
 .method public surfaceDestroyed(Landroid/view/SurfaceHolder;)V
     .locals 0
 

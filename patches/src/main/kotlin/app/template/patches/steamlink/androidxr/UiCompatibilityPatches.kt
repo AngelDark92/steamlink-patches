@@ -22,7 +22,7 @@ val managedPanelAspectPatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(androidXrUiExtensionPatch)
+    dependsOn(androidXrUiExtensionPatch, xrDirectInputFixPatch)
 }
 
 internal val xrUiInputConfigPatch = rawResourcePatch {
@@ -38,7 +38,7 @@ val xrUiInputPatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(androidXrUiExtensionPatch, xrUiInputConfigPatch)
+    dependsOn(androidXrUiExtensionPatch, xrUiInputConfigPatch, xrDirectInputFixPatch)
 }
 
 internal val appearOnTopManifestPatch = resourcePatch {
