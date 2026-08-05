@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.steamlink.binary.disablePermissionPromptNativePatch
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.File
@@ -27,9 +28,17 @@ private fun NodeList.asSequence(): Sequence<org.w3c.dom.Node> = sequence {
 // ---------------------------------------------------------------------------
 
 private val androidXrLibPatch = rawResourcePatch {
+    dependsOn(disablePermissionPromptNativePatch)
+
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         File(libDir, "libgxr_xr_bridge.so").writeBytes(loadResource("libgxr_xr_bridge.so"))
+
+        get("res/drawable-anydpi/ic_launcher_background.xml")
+            .writeBytes(loadResource("ic_launcher_background.xml"))
+        get("res/drawable-anydpi/ic_launcher_background_gradient.xml")
+            .writeBytes(loadResource("ic_launcher_background_gradient.xml"))
+        get("res/values/public.xml").writeBytes(loadResource("public.xml"))
 
         // arslib ResourceIdProcessor requires ids.xml; APKs without <item type="id"> resources omit it.
         // "res/" paths resolve against the decoded package dir, not the raw apk root, so use get() directly.
@@ -76,6 +85,42 @@ private val androidXrManifestPatch = resourcePatch {
 
             // Helper: append a uses-permission or uses-feature before <application>.
             fun addBeforeApp(el: Element) = manifest.insertBefore(el, app)
+
+            fun removeMatching(tag: String, predicate: (Element) -> Boolean) {
+                doc.getElementsByTagName(tag).asSequence()
+                    .filterIsInstance<Element>()
+                    .filter(predicate)
+                    .toList()
+                    .forEach { it.parentNode.removeChild(it) }
+            }
+
+            // Remove vendor-specific declarations replaced by Android XR/OpenXR.
+            removeMatching("uses-permission") {
+                val name = it.getAttribute("android:name")
+                name.startsWith("com.oculus.permission.") ||
+                    name.startsWith("com.picovr.permission.")
+            }
+            removeMatching("uses-feature") {
+                val name = it.getAttribute("android:name")
+                name.startsWith("oculus.software.") ||
+                    name.startsWith("com.oculus.feature.")
+            }
+            removeMatching("meta-data") {
+                val name = it.getAttribute("android:name")
+                name.startsWith("com.oculus.") ||
+                    name.startsWith("com.htc.vr.") ||
+                    name.startsWith("pvr.") ||
+                    name.startsWith("pxr.") ||
+                    name.startsWith("picovr.")
+            }
+            removeMatching("uses-native-library") {
+                it.getAttribute("android:name") == "libopenxr_forwardloader.oculus.so"
+            }
+            removeMatching("category") {
+                val name = it.getAttribute("android:name")
+                name == "com.oculus.intent.category.VR" ||
+                    name == "com.oculus.intent.category.2D"
+            }
 
             // ---- uses-permission additions ----------------------------------------
             val newPerms = listOf(
@@ -255,6 +300,19 @@ private val androidXrManifestPatch = resourcePatch {
                 .filterIsInstance<Element>()
                 .firstOrNull { it.getAttribute("android:name") == steamLinkName }
                 ?.let { steamLink ->
+                    steamLink.getElementsByTagName("intent-filter").asSequence()
+                        .filterIsInstance<Element>()
+                        .filter { filter ->
+                            filter.getElementsByTagName("category").asSequence()
+                                .filterIsInstance<Element>()
+                                .any {
+                                    it.getAttribute("android:name") ==
+                                        "android.intent.category.LAUNCHER"
+                                }
+                        }
+                        .toList()
+                        .forEach { steamLink.removeChild(it) }
+
                     val xrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
                     val hasMode = steamLink.getElementsByTagName("property").let { pl ->
                         (0 until pl.length).any {
@@ -289,8 +347,9 @@ val androidXrCompatibilityPatch = bytecodePatch(
     name = "Android XR compatibility",
     description = "Makes Steam Link fully functional on Samsung Galaxy XR. " +
         "Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, " +
-        "Galaxy XR bridge native libraries, the permission-bootstrap launcher activity, and " +
-        "the XR spatial-pointer SDL input bridge. This patch is required for Galaxy XR operation.",
+        "Galaxy XR bridge native libraries, safe permission handling, the launcher bootstrap, and " +
+        "managed-panel aspect correction with XR spatial-pointer button input. " +
+        "This patch is required for Galaxy XR operation.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
