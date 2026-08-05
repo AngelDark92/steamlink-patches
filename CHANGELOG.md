@@ -1,3 +1,10 @@
+## [1.2.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.10...v1.2.11) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Add package attribute to resources in public.xml ([e7e3390](https://github.com/AngelDark92/steamlink-patches/commit/e7e3390cc6da3e7657f6b649d5199be3ab19457e))
+* Merge pull request [#17](https://github.com/AngelDark92/steamlink-patches/issues/17) from AngelDark92/dev ([4807655](https://github.com/AngelDark92/steamlink-patches/commit/4807655d5716ab40fcdd7fa75bf665c56f72b464))
+
 ## [1.2.11-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.10...v1.2.11-dev.1) (2026-08-05)
 
 ### 🐛 Bug Fixes
