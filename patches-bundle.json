@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-05T14:07:24",
-  "description": "## [1.2.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.10...v1.2.11) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Add package attribute to resources in public.xml ([e7e3390](https://github.com/AngelDark92/steamlink-patches/commit/e7e3390cc6da3e7657f6b649d5199be3ab19457e))\n* Merge pull request [#17](https://github.com/AngelDark92/steamlink-patches/issues/17) from AngelDark92/dev ([4807655](https://github.com/AngelDark92/steamlink-patches/commit/4807655d5716ab40fcdd7fa75bf665c56f72b464))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.11/patches-1.2.11.mpp",
+  "created_at": "2026-08-05T14:14:19",
+  "description": "## [1.2.12-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.11...v1.2.12-dev.1) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Update README to clarify experimental patches usage and add supported versions ([5f72cb2](https://github.com/AngelDark92/steamlink-patches/commit/5f72cb2d997855511aa7025236b9fe4d3b859e5d))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.12-dev.1/patches-1.2.12-dev.1.mpp",
   "signature_download_url": "",
-  "version": "1.2.11"
+  "version": "1.2.12-dev.1"
 }

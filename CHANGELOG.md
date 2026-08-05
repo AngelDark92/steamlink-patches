@@ -1,3 +1,9 @@
+## [1.2.12-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.11...v1.2.12-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Update README to clarify experimental patches usage and add supported versions ([5f72cb2](https://github.com/AngelDark92/steamlink-patches/commit/5f72cb2d997855511aa7025236b9fe4d3b859e5d))
+
 ## [1.2.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.10...v1.2.11) (2026-08-05)
 
 ### 🐛 Bug Fixes
