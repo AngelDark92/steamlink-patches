@@ -3,6 +3,7 @@ package app.template.patches.steamlink.binary
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.rawResourcePatch
+import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import java.util.Locale
 
@@ -72,6 +73,19 @@ val oledCalibrationPatch = rawResourcePatch(
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
 
+    val profile by stringOption(
+        key = "profile",
+        default = "initial",
+        values = mapOf(
+            "Initial tested (gamma 1.06, saturation 1.12)" to "initial",
+            "Final balanced tested (gamma 1.20, saturation 1.45)" to "final-balanced",
+            "Custom gamma and saturation" to "custom",
+        ),
+        title = "Calibration profile",
+        description = "Tested profiles: Initial uses gamma 1.06 and saturation 1.12; Final balanced uses gamma 1.20 and saturation 1.45. Custom uses number inputs below.",
+        required = true,
+    )
+
     val gamma by floatOption(
         key = "gamma",
         default = 1.06f,
@@ -80,7 +94,7 @@ val oledCalibrationPatch = rawResourcePatch(
             "Final balanced (1.20)" to 1.20f,
         ),
         title = "Gamma",
-        description = "Gamma exponent. Initial APK value: 1.06. Allowed range: 0.50 to 2.50.",
+        description = "Used by Custom profile. Tested values: 1.06 (Initial) and 1.20 (Final balanced). Allowed range: 0.50 to 2.50.",
         required = true,
         validator = { value -> value != null && value in 0.50f..2.50f },
     )
@@ -93,7 +107,7 @@ val oledCalibrationPatch = rawResourcePatch(
             "Final balanced (1.45)" to 1.45f,
         ),
         title = "Saturation",
-        description = "Color saturation multiplier. Initial APK value: 1.12. Allowed range: 0.00 to 3.00.",
+        description = "Used by Custom profile. Tested values: 1.12 (Initial) and 1.45 (Final balanced). Allowed range: 0.00 to 3.00.",
         required = true,
         validator = { value -> value != null && value in 0.00f..3.00f },
     )
@@ -103,8 +117,14 @@ val oledCalibrationPatch = rawResourcePatch(
         val bytes = file.readBytes()
         val shaderPos = bytes.indexOfSubarray(SHADER_ANCHOR)
         if (shaderPos < 0) throw PatchException("GLSL shader header not found in libvrlink_scene.so")
+        val (selectedGamma, selectedSaturation) = when (profile) {
+            "initial" -> 1.06f to 1.12f
+            "final-balanced" -> 1.20f to 1.45f
+            "custom" -> gamma!! to saturation!!
+            else -> throw PatchException("Unknown OLED calibration profile: $profile")
+        }
         val result = bytes.copyOf()
-        paddedShader(gamma!!, saturation!!).copyInto(result, shaderPos)
+        paddedShader(selectedGamma, selectedSaturation).copyInto(result, shaderPos)
         file.writeBytes(result)
     }
 }

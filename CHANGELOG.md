@@ -1,3 +1,9 @@
+## [1.2.6-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.5...v1.2.6-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Update HMD-only pose fix to allow configurable offset and enhance OLED calibration options ([77f4f60](https://github.com/AngelDark92/steamlink-patches/commit/77f4f60e358f3b0000eafdb0b62595d1978624a5))
+
 ## [1.2.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.4...v1.2.5) (2026-08-05)
 
 ### 🐛 Bug Fixes
