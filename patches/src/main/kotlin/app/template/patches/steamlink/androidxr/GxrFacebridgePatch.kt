@@ -50,7 +50,7 @@ private val gxrFacebridgeManifestPatch = resourcePatch {
 val gxrFacebridgePatch = rawResourcePatch(
     name = "GXR face bridge",
     description = "Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
     dependsOn(gxrFacebridgeManifestPatch)

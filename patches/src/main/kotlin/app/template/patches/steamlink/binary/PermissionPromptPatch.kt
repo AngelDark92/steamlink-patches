@@ -2,7 +2,6 @@ package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.PatchException
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 
 // Replaces RequestAndroidPermissions() with `mov w0,#1; ret` so the runtime
 // permission dialog never fires and tears down the live XR stream.
@@ -39,12 +38,3 @@ internal val disablePermissionPromptNativePatch = rawResourcePatch {
     }
 }
 
-@Suppress("unused")
-val permissionPromptPatch = rawResourcePatch(
-    name = "Disable permission prompt",
-    description = "Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR.",
-    default = false,
-) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(disablePermissionPromptNativePatch)
-}

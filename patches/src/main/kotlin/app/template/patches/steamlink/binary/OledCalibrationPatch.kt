@@ -97,7 +97,7 @@ private fun findVideoShader(bytes: ByteArray): Int {
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
     description = "Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
 

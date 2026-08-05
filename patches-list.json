@@ -60,7 +60,7 @@
     {
       "name": "Device identity",
       "description": "Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched.",
-      "default": false,
+      "default": true,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -95,7 +95,7 @@
           "description": "Which HMD identity to report to SteamVR.",
           "required": true,
           "type": "kotlin.String",
-          "default": "samsung-default",
+          "default": "meta-quest-pro",
           "values": {
             "Samsung Galaxy XR (default, no change)": "samsung-default",
             "Meta Quest Pro": "meta-quest-pro",
@@ -103,41 +103,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "Disable permission prompt",
-      "description": "Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR.",
-      "default": false,
-      "dependencies": [
-        "RawResourcePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
     },
     {
       "name": "Frame queue latency offset",
@@ -188,7 +153,7 @@
     {
       "name": "GXR face bridge",
       "description": "Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest.",
-      "default": false,
+      "default": true,
       "dependencies": [
         "ResourcePatch"
       ],
@@ -223,7 +188,7 @@
     {
       "name": "HMD-only pose fix",
       "description": "Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths.",
-      "default": false,
+      "default": true,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -367,7 +332,7 @@
     {
       "name": "OLED color calibration",
       "description": "Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction.",
-      "default": false,
+      "default": true,
       "dependencies": [],
       "compatiblePackages": [
         {

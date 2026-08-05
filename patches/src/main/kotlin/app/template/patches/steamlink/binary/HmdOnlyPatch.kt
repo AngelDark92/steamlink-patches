@@ -163,7 +163,7 @@ private fun ByteArray.sha256(): String =
 val hmdOnlyPatch = rawResourcePatch(
     name = "HMD-only pose fix",
     description = "Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK_HMD_ONLY)
 
