@@ -327,13 +327,19 @@ private val androidXrManifestPatch = resourcePatch {
                         steamLink.insertBefore(prop, steamLink.firstChild)
                     }
 
-                    val hasLayout = steamLink.getElementsByTagName("layout").length > 0
-                    if (!hasLayout) {
-                        val layout = doc.createElement("layout")
-                        layout.setAttribute("android:defaultHeight", "800.0px")
-                        layout.setAttribute("android:defaultWidth", "1280.0px")
-                        steamLink.insertBefore(layout, steamLink.firstChild)
+                    // SDL compares managed-panel dimensions with the full side-by-side
+                    // display (7104x3840). Keep both at the same aspect ratio so its
+                    // physical-display fallback cannot stretch the launcher surface.
+                    val layouts = steamLink.getElementsByTagName("layout")
+                    val layout = if (layouts.length > 0) {
+                        layouts.item(0) as Element
+                    } else {
+                        doc.createElement("layout").also {
+                            steamLink.insertBefore(it, steamLink.firstChild)
+                        }
                     }
+                    layout.setAttribute("android:defaultWidth", "1280.0px")
+                    layout.setAttribute("android:defaultHeight", "692.0px")
                 }
         }
     }

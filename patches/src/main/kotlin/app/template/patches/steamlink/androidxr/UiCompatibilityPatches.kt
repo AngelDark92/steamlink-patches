@@ -18,7 +18,7 @@ internal val androidXrUiExtensionPatch = bytecodePatch {
 @Suppress("unused")
 val managedPanelAspectPatch = bytecodePatch(
     name = "Managed-panel aspect fix",
-    description = "Uses the actual Galaxy XR managed-panel surface dimensions instead of the headset's physical display metrics, fixing the stretched launcher UI.",
+    description = "Matches the Steam Link managed panel to Galaxy XR's combined stereo-display aspect ratio, preventing SDL physical-display metrics from stretching the launcher UI.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
