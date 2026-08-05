@@ -1,10 +1,10 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.2.8",
+  "version": "1.2.9-dev.1",
   "patches": [
     {
       "name": "Android XR compatibility",
-      "description": "Makes Steam Link fully functional on Samsung Galaxy XR. Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, Galaxy XR bridge native libraries, the permission-bootstrap launcher activity, and the XR spatial-pointer SDL input bridge. This patch is required for Galaxy XR operation.",
+      "description": "Makes Steam Link fully functional on Samsung Galaxy XR. Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, Galaxy XR bridge native libraries, safe permission handling, the launcher bootstrap, and managed-panel aspect correction with XR spatial-pointer button input. This patch is required for Galaxy XR operation.",
       "default": true,
       "dependencies": [
         "ResourcePatch"
@@ -108,7 +108,9 @@
       "name": "Disable permission prompt",
       "description": "Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR.",
       "default": false,
-      "dependencies": [],
+      "dependencies": [
+        "RawResourcePatch"
+      ],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
@@ -331,11 +333,9 @@
     },
     {
       "name": "No overlay permission",
-      "description": "Removes SYSTEM_ALERT_WINDOW usage so Steam Link installs and runs without the overlay permission prompt that tears down the XR stream.",
+      "description": "Removes SYSTEM_ALERT_WINDOW from builds that declare it. Steam Link 2.0.22/5002244 already has no overlay path, so this patch is a safe no-op there.",
       "default": false,
-      "dependencies": [
-        "ResourcePatch"
-      ],
+      "dependencies": [],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",

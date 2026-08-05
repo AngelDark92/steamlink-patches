@@ -1,8 +1,8 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.rawResourcePatch
+import app.morphe.patcher.patch.PatchException
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
-import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 
 // Replaces RequestAndroidPermissions() with `mov w0,#1; ret` so the runtime
 // permission dialog never fires and tears down the live XR stream.
@@ -15,6 +15,30 @@ private val REPLACE = byteArrayOf(
     0xc0.toByte(), 0x03.toByte(), 0x5f.toByte(), 0xd6.toByte(),
 )
 
+private const val REQUEST_ANDROID_PERMISSIONS_OFFSET = 0x1422c4
+
+internal val disablePermissionPromptNativePatch = rawResourcePatch {
+    execute {
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        val bytes = file.readBytes()
+        val current = bytes.copyOfRange(
+            REQUEST_ANDROID_PERMISSIONS_OFFSET,
+            REQUEST_ANDROID_PERMISSIONS_OFFSET + SEARCH.size,
+        )
+        when {
+            current.contentEquals(REPLACE) -> Unit
+            current.contentEquals(SEARCH) -> {
+                REPLACE.copyInto(bytes, REQUEST_ANDROID_PERMISSIONS_OFFSET)
+                file.writeBytes(bytes)
+            }
+            else -> throw PatchException(
+                "Unexpected RequestAndroidPermissions bytes at 0x" +
+                    REQUEST_ANDROID_PERMISSIONS_OFFSET.toString(16),
+            )
+        }
+    }
+}
+
 @Suppress("unused")
 val permissionPromptPatch = rawResourcePatch(
     name = "Disable permission prompt",
@@ -22,9 +46,5 @@ val permissionPromptPatch = rawResourcePatch(
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-
-    execute {
-        val file = get("lib/arm64-v8a/libvrlink_scene.so")
-        file.writeBytes(findUniqueAndReplace(file.readBytes(), SEARCH, REPLACE))
-    }
+    dependsOn(disablePermissionPromptNativePatch)
 }
