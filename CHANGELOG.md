@@ -1,3 +1,9 @@
+## [1.2.5-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.4...v1.2.5-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Correct device identity mapping and update version in patches-list.json ([c3263c6](https://github.com/AngelDark92/steamlink-patches/commit/c3263c66c8f8a4dd1b538cac4e081ba7305ec919))
+
 ## [1.2.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.3...v1.2.4) (2026-08-05)
 
 ### 🐛 Bug Fixes
