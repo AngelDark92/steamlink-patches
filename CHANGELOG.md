@@ -1,3 +1,9 @@
+## [1.2.8-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.7...v1.2.8-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Update README and enhance video dither patch logic for better state management ([550877d](https://github.com/AngelDark92/steamlink-patches/commit/550877d2000703b2f18e3b9ae3c7a37fdd81da57))
+
 ## [1.2.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.6...v1.2.7) (2026-08-05)
 
 ### 🐛 Bug Fixes
