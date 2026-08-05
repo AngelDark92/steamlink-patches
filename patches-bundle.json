@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-05T13:31:11",
-  "description": "## [1.2.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.8...v1.2.9) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Merge pull request [#15](https://github.com/AngelDark92/steamlink-patches/issues/15) from AngelDark92/dev ([ad46fff](https://github.com/AngelDark92/steamlink-patches/commit/ad46fffbb06d7bc6391b54bcacde2469054e666f))\n* Refactor code structure for improved readability and maintainability ([57edbd3](https://github.com/AngelDark92/steamlink-patches/commit/57edbd3771d91d211eda34257bd3b6ce0238d420))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.9/patches-1.2.9.mpp",
+  "created_at": "2026-08-05T13:50:25",
+  "description": "## [1.2.10-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.9...v1.2.10-dev.1) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Update default values for various patches to improve compatibility and functionality ([b7a1d9a](https://github.com/AngelDark92/steamlink-patches/commit/b7a1d9a8e338b15816e5ae8c84ea09a82830a79d))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.10-dev.1/patches-1.2.10-dev.1.mpp",
   "signature_download_url": "",
-  "version": "1.2.9"
+  "version": "1.2.10-dev.1"
 }
