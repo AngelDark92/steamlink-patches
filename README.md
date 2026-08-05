@@ -42,6 +42,8 @@ To download it:
 <summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
 <br>
 
+##### These patches have only been used for development purposes and debugging various problems, but they are here if you would like to try them out.
+
 **🎯 Supported versions:**
 
 | 🧪&nbsp;2.0.22 |
