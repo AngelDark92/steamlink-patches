@@ -7,9 +7,11 @@ import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import java.util.Locale
 
-// Unique prefix present in VRLink's embedded video fragment shader.
-// Used to locate the 1087-byte shader block in the .so without a fixed offset.
-private val SHADER_ANCHOR = "#version 300 es\n#extension GL_OES_EGL_image_external_essl3 : enable\n".toByteArray(Charsets.US_ASCII)
+// Unique line present in VRLink's embedded video fragment shader. Stock builds indent this line;
+// calibrated builds do not, so locate the line first and then walk back to the version directive.
+private val SHADER_EXTENSION =
+    "#extension GL_OES_EGL_image_external_essl3 : enable".toByteArray(Charsets.US_ASCII)
+private val SHADER_VERSION = "#version 300 es\n".toByteArray(Charsets.US_ASCII)
 private const val SHADER_SIZE = 1087
 
 // Initial calibration: gamma 1.06, saturation 1.12, zero-centred dither.
@@ -57,12 +59,38 @@ private fun paddedShader(gamma: Float, saturation: Float): ByteArray {
     }
 }
 
-private fun ByteArray.indexOfSubarray(pattern: ByteArray): Int {
+private fun ByteArray.indicesOfSubarray(pattern: ByteArray): List<Int> {
+    val matches = mutableListOf<Int>()
     outer@ for (i in 0..size - pattern.size) {
         for (j in pattern.indices) { if (this[i + j] != pattern[j]) continue@outer }
-        return i
+        matches += i
     }
-    return -1
+    return matches
+}
+
+private fun findVideoShader(bytes: ByteArray): Int {
+    val extensionMatches = bytes.indicesOfSubarray(SHADER_EXTENSION)
+    if (extensionMatches.size != 1) {
+        throw PatchException(
+            "Expected one video GLSL extension marker, found ${extensionMatches.size}"
+        )
+    }
+
+    val extensionPos = extensionMatches.single()
+    val searchStart = (extensionPos - 32).coerceAtLeast(0)
+    val shaderPos = (searchStart..extensionPos)
+        .firstOrNull { pos ->
+            pos + SHADER_VERSION.size <= bytes.size &&
+                bytes.sliceArray(pos until pos + SHADER_VERSION.size).contentEquals(SHADER_VERSION)
+        }
+        ?: throw PatchException("Video GLSL version directive not found before extension marker")
+
+    if (shaderPos + SHADER_SIZE >= bytes.size || bytes[shaderPos + SHADER_SIZE] != 0.toByte()) {
+        throw PatchException(
+            "Video GLSL block at 0x${shaderPos.toString(16)} lacks expected $SHADER_SIZE-byte NUL boundary"
+        )
+    }
+    return shaderPos
 }
 
 @Suppress("unused")
@@ -115,8 +143,7 @@ val oledCalibrationPatch = rawResourcePatch(
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
         val bytes = file.readBytes()
-        val shaderPos = bytes.indexOfSubarray(SHADER_ANCHOR)
-        if (shaderPos < 0) throw PatchException("GLSL shader header not found in libvrlink_scene.so")
+        val shaderPos = findVideoShader(bytes)
         val (selectedGamma, selectedSaturation) = when (profile) {
             "initial" -> 1.06f to 1.12f
             "final-balanced" -> 1.20f to 1.45f
