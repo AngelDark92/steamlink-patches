@@ -1,5 +1,6 @@
 package app.template.patches.steamlink.binary
 
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
@@ -13,7 +14,52 @@ private val SHADER_TAIL = (
 ).toByteArray(Charsets.US_ASCII)
 
 private val DISABLED = byteArrayOf('/'.code.toByte(), '/'.code.toByte()) + SHADER_TAIL
-private val ENABLED  = byteArrayOf(' '.code.toByte(), ' '.code.toByte()) + SHADER_TAIL
+private val ENABLED = byteArrayOf(' '.code.toByte(), ' '.code.toByte()) + SHADER_TAIL
+
+// OLED calibration uses zero-centred dither and has no stock dither line to uncomment.
+private val CALIBRATED_ENABLED = ") - .5) * .00292;".toByteArray(Charsets.US_ASCII)
+private val CALIBRATED_DISABLED = ") - .5) * .00000;".toByteArray(Charsets.US_ASCII)
+
+private fun ByteArray.countOccurrences(pattern: ByteArray): Int {
+    var count = 0
+    outer@ for (i in 0..size - pattern.size) {
+        for (j in pattern.indices) {
+            if (this[i + j] != pattern[j]) continue@outer
+        }
+        count++
+    }
+    return count
+}
+
+private fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
+    val stockDisabled = bytes.countOccurrences(DISABLED)
+    val stockEnabled = bytes.countOccurrences(ENABLED)
+    val calibratedDisabled = bytes.countOccurrences(CALIBRATED_DISABLED)
+    val calibratedEnabled = bytes.countOccurrences(CALIBRATED_ENABLED)
+    val stateCount = stockDisabled + stockEnabled + calibratedDisabled + calibratedEnabled
+
+    if (stateCount != 1) {
+        throw PatchException(
+            "Unsupported or ambiguous video dither state: " +
+                "stock disabled=$stockDisabled enabled=$stockEnabled, " +
+                "calibrated disabled=$calibratedDisabled enabled=$calibratedEnabled"
+        )
+    }
+
+    return when {
+        enabled && stockDisabled == 1 && stockEnabled == 0 ->
+            findUniqueAndReplace(bytes, DISABLED, ENABLED)
+        !enabled && stockDisabled == 0 && stockEnabled == 1 ->
+            findUniqueAndReplace(bytes, ENABLED, DISABLED)
+        enabled && calibratedDisabled == 1 && calibratedEnabled == 0 ->
+            findUniqueAndReplace(bytes, CALIBRATED_DISABLED, CALIBRATED_ENABLED)
+        !enabled && calibratedDisabled == 0 && calibratedEnabled == 1 ->
+            findUniqueAndReplace(bytes, CALIBRATED_ENABLED, CALIBRATED_DISABLED)
+        enabled && (stockEnabled == 1 || calibratedEnabled == 1) -> bytes
+        !enabled && (stockDisabled == 1 || calibratedDisabled == 1) -> bytes
+        else -> error("Unreachable dither state")
+    }
+}
 
 @Suppress("unused")
 val videoDitherPatch = rawResourcePatch(
@@ -34,9 +80,6 @@ val videoDitherPatch = rawResourcePatch(
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
         val bytes = file.readBytes()
-        file.writeBytes(
-            if (enable!!) findUniqueAndReplace(bytes, DISABLED, ENABLED)
-            else findUniqueAndReplace(bytes, ENABLED, DISABLED)
-        )
+        file.writeBytes(setDitherState(bytes, enable!!))
     }
 }

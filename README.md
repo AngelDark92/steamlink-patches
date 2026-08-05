@@ -10,7 +10,7 @@ Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. Th
 Target APK: `com.valvesoftware.steamlinkvr` v2.0.22 (versionCode 5002244).
 To download it:
 1. Open steam console `steam://open/console`
-2. In the steam console tab run `download_depot 250820 250824 2119048779288483694`
+2. In the steam console tab run `download_depot 250820 250824 634053834998054244`
 3. After steam reports download complete retrieve the apk from `C:\Program Files (x86)\Steam\steamapps\content\app_250820\depot_250824\drivers\vrlink\resources\android-steamlinkvr-release.apk` and copy it onto your headset
 4. Select it with Morphe and either run the default patches or enable expert mode to select the ones you want to enable.
 
