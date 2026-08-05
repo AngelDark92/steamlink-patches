@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-05T11:23:25",
-  "description": "## [1.2.7-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.6...v1.2.7-dev.1) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Refactor shader handling to improve video shader detection and validation ([b2ec794](https://github.com/AngelDark92/steamlink-patches/commit/b2ec7940c8a1dfd5315b9a4ff46f2238a2069009))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.7-dev.1/patches-1.2.7-dev.1.mpp",
+  "created_at": "2026-08-05T11:27:36",
+  "description": "## [1.2.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.6...v1.2.7) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Merge pull request [#13](https://github.com/AngelDark92/steamlink-patches/issues/13) from AngelDark92/dev ([483e402](https://github.com/AngelDark92/steamlink-patches/commit/483e402b58a8d76552b0c965ffa4ad31ddc5d995))\n* Refactor shader handling to improve video shader detection and validation ([b2ec794](https://github.com/AngelDark92/steamlink-patches/commit/b2ec7940c8a1dfd5315b9a4ff46f2238a2069009))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.7/patches-1.2.7.mpp",
   "signature_download_url": "",
-  "version": "1.2.7-dev.1"
+  "version": "1.2.7"
 }

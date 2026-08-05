@@ -1,3 +1,10 @@
+## [1.2.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.6...v1.2.7) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Merge pull request [#13](https://github.com/AngelDark92/steamlink-patches/issues/13) from AngelDark92/dev ([483e402](https://github.com/AngelDark92/steamlink-patches/commit/483e402b58a8d76552b0c965ffa4ad31ddc5d995))
+* Refactor shader handling to improve video shader detection and validation ([b2ec794](https://github.com/AngelDark92/steamlink-patches/commit/b2ec7940c8a1dfd5315b9a4ff46f2238a2069009))
+
 ## [1.2.7-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.6...v1.2.7-dev.1) (2026-08-05)
 
 ### 🐛 Bug Fixes
