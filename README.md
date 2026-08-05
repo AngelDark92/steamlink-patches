@@ -33,7 +33,7 @@ To download it:
 | [Device identity](#device-identity) | Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched. | • HMD identity |
 | [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. |  |
 | [HMD-only pose fix](#hmd-only-pose-fix) | Adds 78 ms to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. |  |
-| [OLED color calibration](#oled-color-calibration) | Replaces VRLink's embedded GLSL fragment shader with a Galaxy XR OLED-tuned version. Profile 'initial': gamma 1.06/sat 1.12. Profile 'final-balanced': gamma 1.20/sat 1.45. | • Calibration profile |
+| [OLED color calibration](#oled-color-calibration) | Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction. | • Gamma<br>• Saturation |
 | [Video dither](#video-dither) | Enables (or disables) the dormant GLSL dither term in VRLink's video fragment shader. Reduces 8-bit contouring on OLED displays. | • Enable dither |
 
 </details>

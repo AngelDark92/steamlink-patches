@@ -349,7 +349,7 @@
     },
     {
       "name": "OLED color calibration",
-      "description": "Replaces VRLink's embedded GLSL fragment shader with a Galaxy XR OLED-tuned version. Profile 'initial': gamma 1.06/sat 1.12. Profile 'final-balanced': gamma 1.20/sat 1.45.",
+      "description": "Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -380,15 +380,27 @@
       ],
       "options": [
         {
-          "key": "profile",
-          "title": "Calibration profile",
-          "description": "'initial' applies conservative correction; 'final-balanced' applies full correction.",
+          "key": "gamma",
+          "title": "Gamma",
+          "description": "Gamma exponent. Initial APK value: 1.06. Allowed range: 0.50 to 2.50.",
           "required": true,
-          "type": "kotlin.String",
-          "default": "initial",
+          "type": "kotlin.Float",
+          "default": 1.06,
           "values": {
-            "initial": "initial",
-            "final-balanced": "final-balanced"
+            "Initial APK (1.06)": 1.06,
+            "Final balanced (1.20)": 1.2
+          }
+        },
+        {
+          "key": "saturation",
+          "title": "Saturation",
+          "description": "Color saturation multiplier. Initial APK value: 1.12. Allowed range: 0.00 to 3.00.",
+          "required": true,
+          "type": "kotlin.Float",
+          "default": 1.12,
+          "values": {
+            "Initial APK (1.12)": 1.12,
+            "Final balanced (1.45)": 1.45
           }
         }
       ]

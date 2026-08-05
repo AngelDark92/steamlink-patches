@@ -1,9 +1,10 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.rawResourcePatch
-import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import java.util.Locale
 
 // Unique prefix present in VRLink's embedded video fragment shader.
 // Used to locate the 1087-byte shader block in the .so without a fixed offset.
@@ -42,17 +43,13 @@ void main()
     color.rgb = clamp(c + n, 0.0, 1.0) * fFadeAmount;
 """.trimStart('\n')
 
-// Final calibration: gamma 1.20, saturation 1.45 (stronger correction).
-private val FINAL_SHADER = INITIAL_SHADER
-    .replace("vec3(1.06)", "vec3(1.20)")
-    .replace("c, 1.12",   "c, 1.45")
-
-private fun paddedShader(profile: String): ByteArray {
-    val src = when (profile) {
-        "initial"       -> INITIAL_SHADER
-        "final-balanced" -> FINAL_SHADER
-        else -> throw PatchException("Unknown OLED calibration profile: $profile")
-    }.toByteArray(Charsets.US_ASCII)
+private fun paddedShader(gamma: Float, saturation: Float): ByteArray {
+    val gammaValue = String.format(Locale.US, "%.2f", gamma)
+    val saturationValue = String.format(Locale.US, "%.2f", saturation)
+    val src = INITIAL_SHADER
+        .replace("vec3(1.06)", "vec3($gammaValue)")
+        .replace("c, 1.12", "c, $saturationValue")
+        .toByteArray(Charsets.US_ASCII)
     if (src.size > SHADER_SIZE) throw PatchException("Calibration shader exceeds $SHADER_SIZE bytes (${src.size})")
     return src.copyOf(SHADER_SIZE).apply {
         for (i in src.size until SHADER_SIZE) this[i] = ' '.code.toByte()
@@ -70,18 +67,35 @@ private fun ByteArray.indexOfSubarray(pattern: ByteArray): Int {
 @Suppress("unused")
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
-    description = "Replaces VRLink's embedded GLSL fragment shader with a Galaxy XR OLED-tuned version. Profile 'initial': gamma 1.06/sat 1.12. Profile 'final-balanced': gamma 1.20/sat 1.45.",
+    description = "Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
 
-    val profile by stringOption(
-        key = "profile",
-        default = "initial",
-        values = mapOf("initial" to "initial", "final-balanced" to "final-balanced"),
-        title = "Calibration profile",
-        description = "'initial' applies conservative correction; 'final-balanced' applies full correction.",
+    val gamma by floatOption(
+        key = "gamma",
+        default = 1.06f,
+        values = mapOf(
+            "Initial APK (1.06)" to 1.06f,
+            "Final balanced (1.20)" to 1.20f,
+        ),
+        title = "Gamma",
+        description = "Gamma exponent. Initial APK value: 1.06. Allowed range: 0.50 to 2.50.",
         required = true,
+        validator = { value -> value != null && value in 0.50f..2.50f },
+    )
+
+    val saturation by floatOption(
+        key = "saturation",
+        default = 1.12f,
+        values = mapOf(
+            "Initial APK (1.12)" to 1.12f,
+            "Final balanced (1.45)" to 1.45f,
+        ),
+        title = "Saturation",
+        description = "Color saturation multiplier. Initial APK value: 1.12. Allowed range: 0.00 to 3.00.",
+        required = true,
+        validator = { value -> value != null && value in 0.00f..3.00f },
     )
 
     execute {
@@ -90,7 +104,7 @@ val oledCalibrationPatch = rawResourcePatch(
         val shaderPos = bytes.indexOfSubarray(SHADER_ANCHOR)
         if (shaderPos < 0) throw PatchException("GLSL shader header not found in libvrlink_scene.so")
         val result = bytes.copyOf()
-        paddedShader(profile!!).copyInto(result, shaderPos)
+        paddedShader(gamma!!, saturation!!).copyInto(result, shaderPos)
         file.writeBytes(result)
     }
 }
