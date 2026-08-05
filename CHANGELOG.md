@@ -1,3 +1,10 @@
+## [1.2.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.9...v1.2.10) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Merge pull request [#16](https://github.com/AngelDark92/steamlink-patches/issues/16) from AngelDark92/dev ([b143fe8](https://github.com/AngelDark92/steamlink-patches/commit/b143fe8a9e34418ffdcdfc4c58b3b465771b3e1e))
+* Update default values for various patches to improve compatibility and functionality ([b7a1d9a](https://github.com/AngelDark92/steamlink-patches/commit/b7a1d9a8e338b15816e5ae8c84ea09a82830a79d))
+
 ## [1.2.10-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.9...v1.2.10-dev.1) (2026-08-05)
 
 ### 🐛 Bug Fixes
