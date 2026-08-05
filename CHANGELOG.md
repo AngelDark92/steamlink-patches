@@ -1,3 +1,16 @@
+## [1.2.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.8...v1.2.9) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Merge pull request [#15](https://github.com/AngelDark92/steamlink-patches/issues/15) from AngelDark92/dev ([ad46fff](https://github.com/AngelDark92/steamlink-patches/commit/ad46fffbb06d7bc6391b54bcacde2469054e666f))
+* Refactor code structure for improved readability and maintainability ([57edbd3](https://github.com/AngelDark92/steamlink-patches/commit/57edbd3771d91d211eda34257bd3b6ce0238d420))
+
+## [1.2.9-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.8...v1.2.9-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Refactor code structure for improved readability and maintainability ([57edbd3](https://github.com/AngelDark92/steamlink-patches/commit/57edbd3771d91d211eda34257bd3b6ce0238d420))
+
 ## [1.2.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.7...v1.2.8) (2026-08-05)
 
 ### 🐛 Bug Fixes

@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-05T12:03:36",
-  "description": "## [1.2.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.7...v1.2.8) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Merge pull request [#14](https://github.com/AngelDark92/steamlink-patches/issues/14) from AngelDark92/dev ([b5b6437](https://github.com/AngelDark92/steamlink-patches/commit/b5b6437afb55e3d8408537f2812df1b7abef7431))\n* Update README and enhance video dither patch logic for better state management ([550877d](https://github.com/AngelDark92/steamlink-patches/commit/550877d2000703b2f18e3b9ae3c7a37fdd81da57))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.8/patches-1.2.8.mpp",
+  "created_at": "2026-08-05T13:31:11",
+  "description": "## [1.2.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.8...v1.2.9) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Merge pull request [#15](https://github.com/AngelDark92/steamlink-patches/issues/15) from AngelDark92/dev ([ad46fff](https://github.com/AngelDark92/steamlink-patches/commit/ad46fffbb06d7bc6391b54bcacde2469054e666f))\n* Refactor code structure for improved readability and maintainability ([57edbd3](https://github.com/AngelDark92/steamlink-patches/commit/57edbd3771d91d211eda34257bd3b6ce0238d420))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.9/patches-1.2.9.mpp",
   "signature_download_url": "",
-  "version": "1.2.8"
+  "version": "1.2.9"
 }
