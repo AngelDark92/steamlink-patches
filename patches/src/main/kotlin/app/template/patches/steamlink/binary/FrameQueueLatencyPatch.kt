@@ -2,7 +2,7 @@ package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 
 // Inside SetMaximumFrameQueueLatency, replaces `mov w19, w1` so the stored
@@ -19,7 +19,7 @@ val frameQueueLatencyPatch = rawResourcePatch(
     description = "Adds a fixed offset to VRLink's frame-queue latency budget to compensate for wireless pipeline delay. 'full' adds +32.768 ms; 'half' adds +16.384 ms.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
 
     val size by stringOption(
         key = "size",

@@ -4,7 +4,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 import org.w3c.dom.Element
 
@@ -47,9 +47,9 @@ private val noOverlayManifestPatch = resourcePatch {
 val noOverlayPatch = bytecodePatch(
     name = "No overlay permission",
     description = "Removes SYSTEM_ALERT_WINDOW usage so Steam Link installs and runs without the overlay permission prompt that tears down the XR stream.",
-    default = true,
+    default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
 
     dependsOn(noOverlayManifestPatch)
 

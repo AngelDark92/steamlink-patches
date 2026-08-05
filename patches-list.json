@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.2.3",
+  "version": "1.2.4-dev.2",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -58,9 +58,9 @@
       ]
     },
     {
-      "name": "Disable permission prompt",
-      "description": "Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR.",
-      "default": true,
+      "name": "Device identity",
+      "description": "Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched.",
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -88,6 +88,53 @@
           ]
         }
       ],
+      "options": [
+        {
+          "key": "profile",
+          "title": "HMD identity",
+          "description": "Which HMD identity to report to SteamVR.",
+          "required": true,
+          "type": "kotlin.String",
+          "default": "samsung-default",
+          "values": {
+            "samsung-default": "Samsung Galaxy XR (default, no change)",
+            "meta-quest-pro": "Meta Quest Pro",
+            "pico-4-pro": "PICO 4 Pro"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Disable permission prompt",
+      "description": "Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            },
+            {
+              "version": null,
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
       "options": []
     },
     {
@@ -98,7 +145,7 @@
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
           "apkFileType": "APK",
           "appIconColor": "#1B2838",
@@ -107,7 +154,7 @@
             {
               "version": "2.0.22",
               "versionCodes": null,
-              "isExperimental": false,
+              "isExperimental": true,
               "minSdk": null,
               "description": null
             },
@@ -187,17 +234,12 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
-              "description": null
-            },
-            {
-              "version": null,
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
+              "description": "HMD-only pose fix is verified only for versionCode 5002244."
             }
           ]
         }
@@ -212,7 +254,7 @@
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
           "apkFileType": "APK",
           "appIconColor": "#1B2838",
@@ -221,7 +263,7 @@
             {
               "version": "2.0.22",
               "versionCodes": null,
-              "isExperimental": false,
+              "isExperimental": true,
               "minSdk": null,
               "description": null
             },
@@ -240,12 +282,12 @@
     {
       "name": "Low-latency decoder",
       "description": "Forces findBestDecoder() to always select the low-latency hardware decoder (KEY_LOW_LATENCY), reducing decode jitter from ~11 ms median to ≤8 ms on Galaxy XR.",
-      "default": true,
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
           "apkFileType": "APK",
           "appIconColor": "#1B2838",
@@ -254,7 +296,7 @@
             {
               "version": "2.0.22",
               "versionCodes": null,
-              "isExperimental": false,
+              "isExperimental": true,
               "minSdk": null,
               "description": null
             },
@@ -273,14 +315,14 @@
     {
       "name": "No overlay permission",
       "description": "Removes SYSTEM_ALERT_WINDOW usage so Steam Link installs and runs without the overlay permission prompt that tears down the XR stream.",
-      "default": true,
+      "default": false,
       "dependencies": [
         "ResourcePatch"
       ],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
           "apkFileType": "APK",
           "appIconColor": "#1B2838",
@@ -289,7 +331,7 @@
             {
               "version": "2.0.22",
               "versionCodes": null,
-              "isExperimental": false,
+              "isExperimental": true,
               "minSdk": null,
               "description": null
             },
@@ -307,7 +349,7 @@
     },
     {
       "name": "OLED color calibration",
-      "description": "Replaces VRLink's embedded GLSL fragment shader with a Galaxy XR OLED-tuned version. Profile 'initial': gamma 1.06/sat 1.12. Profile 'final-balanced': gamma 1.20/sat 1.45.",
+      "description": "Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
@@ -338,15 +380,27 @@
       ],
       "options": [
         {
-          "key": "profile",
-          "title": "Calibration profile",
-          "description": "'initial' applies conservative correction; 'final-balanced' applies full correction.",
+          "key": "gamma",
+          "title": "Gamma",
+          "description": "Gamma exponent. Initial APK value: 1.06. Allowed range: 0.50 to 2.50.",
           "required": true,
-          "type": "kotlin.String",
-          "default": "initial",
+          "type": "kotlin.Float",
+          "default": 1.06,
           "values": {
-            "initial": "initial",
-            "final-balanced": "final-balanced"
+            "Initial APK (1.06)": 1.06,
+            "Final balanced (1.20)": 1.2
+          }
+        },
+        {
+          "key": "saturation",
+          "title": "Saturation",
+          "description": "Color saturation multiplier. Initial APK value: 1.12. Allowed range: 0.00 to 3.00.",
+          "required": true,
+          "type": "kotlin.Float",
+          "default": 1.12,
+          "values": {
+            "Initial APK (1.12)": 1.12,
+            "Final balanced (1.45)": 1.45
           }
         }
       ]
@@ -359,7 +413,7 @@
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
           "apkFileType": "APK",
           "appIconColor": "#1B2838",
@@ -368,7 +422,7 @@
             {
               "version": "2.0.22",
               "versionCodes": null,
-              "isExperimental": false,
+              "isExperimental": true,
               "minSdk": null,
               "description": null
             },

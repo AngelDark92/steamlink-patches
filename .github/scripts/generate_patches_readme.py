@@ -41,10 +41,10 @@ def pkg_emoji(pkg):
     """Return a standard package emoji regardless of the package name."""
     return "📦"
 
-# Group patches by package; patches with no compatiblePackages are universal.
+# Group patches by package and compatibility label; patches with no compatiblePackages are universal.
 # JSON structure: compatiblePackages is a list of objects with
 # { packageName, name, targets: [{ version, isExperimental, description }] }
-by_pkg = {}   # packageName -> { name, emoji, patches, targets }
+by_pkg = {}   # (packageName, compatibilityName) -> { name, emoji, patches, targets }
 universal = {}
 
 for patch in data["patches"]:
@@ -57,16 +57,17 @@ for patch in data["patches"]:
     for pkg_entry in cp:
         pkg  = pkg_entry["packageName"]
         name = pkg_entry.get("name") or pkg  # fall back to package name if no label
-        if pkg not in by_pkg:
-            by_pkg[pkg] = {
+        group = (pkg, name)
+        if group not in by_pkg:
+            by_pkg[group] = {
                 "name":    name,
                 "emoji":   pkg_emoji(pkg),
                 "patches": {},
                 "targets": pkg_entry.get("targets", []),
             }
         # Deduplicate patches that appear across multiple packages
-        if patch["name"] not in by_pkg[pkg]["patches"]:
-            by_pkg[pkg]["patches"][patch["name"]] = patch
+        if patch["name"] not in by_pkg[group]["patches"]:
+            by_pkg[group]["patches"][patch["name"]] = patch
 
 
 def anchor(name):
@@ -151,7 +152,7 @@ def build_content(expanded=False):
     ]
 
     # One spoiler per app, in the order they appear in the JSON
-    for pkg, entry in by_pkg.items():
+    for _group, entry in by_pkg.items():
         patches = list(entry["patches"].values())
         label   = f"{entry['emoji']} {entry['name']}"
         lines.append(spoiler(label, len(patches), entry["targets"], patches_table(patches), expanded))

@@ -1,7 +1,7 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 
 // Four targeted branch substitutions that skip the 5002244 "underside" swapchain
@@ -27,7 +27,7 @@ val legacyLayersPatch = rawResourcePatch(
     description = "Restores the 5001712-era two-layer XR stream topology by skipping underside swapchain creation and submission added in 5002244.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")

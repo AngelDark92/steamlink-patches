@@ -1,3 +1,15 @@
+## [1.2.4-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.4-dev.1...v1.2.4-dev.2) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Update OLED color calibration patch to support configurable gamma and saturation ([fe9d267](https://github.com/AngelDark92/steamlink-patches/commit/fe9d2672cb5c17564e159c8212124469b1d73de3))
+
+## [1.2.4-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.3...v1.2.4-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Update patches and README for v1.2.3 release ([cebb0d2](https://github.com/AngelDark92/steamlink-patches/commit/cebb0d292d69f1a851994715d53061821d93490f))
+
 ## [1.2.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.2...v1.2.3) (2026-08-04)
 
 ### 🐛 Bug Fixes
