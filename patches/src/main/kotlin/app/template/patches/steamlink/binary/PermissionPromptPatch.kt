@@ -1,7 +1,7 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 
 // Replaces RequestAndroidPermissions() with `mov w0,#1; ret` so the runtime
@@ -19,9 +19,9 @@ private val REPLACE = byteArrayOf(
 val permissionPromptPatch = rawResourcePatch(
     name = "Disable permission prompt",
     description = "Replaces VRLink's RequestAndroidPermissions with a no-op (return true) to prevent stream teardown on Galaxy XR.",
-    default = true,
+    default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")

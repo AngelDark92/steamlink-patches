@@ -2,10 +2,11 @@ package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY
 import app.template.patches.steamlink.util.BinaryPatchHelper.vaddrToFileOffset
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.security.MessageDigest
 
 // Injects an AArch64 trampoline that adds 78 ms to the HMD pose query time
 // and zeroes the six HMD velocity fields exported to SteamVR.
@@ -32,7 +33,6 @@ private fun buildBranch(pc: Long, target: Long): ByteArray {
 }
 
 // Find the last 32 bytes of the first PT_LOAD segment (two PLT entries = code cave).
-// Returns (fileOffset, vaddr) — assumes fileoff == vaddr for that segment.
 private fun findPltCave(bytes: ByteArray): Pair<Int, Long> {
     val phoff  = bytes.readU32LE(32)
     val phesz  = bytes.readU16LE(54)
@@ -45,13 +45,9 @@ private fun findPltCave(bytes: ByteArray): Pair<Int, Long> {
         val filesz  = bytes.readU64LE(base + 32).toInt()
         val caveOff = filesz - 32
         val caveVa  = vaddr + (filesz - 32).toLong()
-        // Sanity: both PLT entries must end with br x17
-        if (!bytes.sliceArray(caveOff + 12 until caveOff + 16).contentEquals(BR_X17) ||
-            !bytes.sliceArray(caveOff + 28 until caveOff + 32).contentEquals(BR_X17))
-            throw PatchException(
-                "PLT cave at 0x${caveOff.toString(16)} failed br-x17 check: " +
-                bytes.sliceArray(caveOff until caveOff + 32).toHex()
-            )
+        if (caveOff < 0 || caveOff + 32 > bytes.size) {
+            throw PatchException("Invalid PLT cave range at 0x${caveOff.toString(16)}")
+        }
         return Pair(caveOff, caveVa)
     }
     throw PatchException("No executable PT_LOAD segment found in ELF")
@@ -77,13 +73,19 @@ private fun isStrSUnsignedImm(word: Int, baseReg: Int, byteOffset: Int): Boolean
     (((word ushr 10) and 0xFFF) * 4) == byteOffset &&
     (word and 0x1F) != 31
 
+private fun isStrWzrX19(word: Int, byteOffset: Int): Boolean =
+    word == ByteBuffer.wrap(strWzrX19(byteOffset)).order(ByteOrder.LITTLE_ENDIAN).int
+
+private fun ByteArray.sha256(): String =
+    MessageDigest.getInstance("SHA-256").digest(this).toHex()
+
 @Suppress("unused")
 val hmdOnlyPatch = rawResourcePatch(
     name = "HMD-only pose fix",
     description = "Adds 78 ms to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_HMD_ONLY)
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
@@ -91,33 +93,53 @@ val hmdOnlyPatch = rawResourcePatch(
 
         // Locate PLT cave at end of first executable segment (version-agnostic).
         val (caveOff, caveVa) = findPltCave(mutable)
-
-        // Build and write trampoline into cave.
         val trampoline = ORIG_HOOK + TRAMPOLINE_BODY +
             buildBranch(caveVa + 16, HOOK_VADDR + 4) + NOP + NOP + NOP
-        trampoline.copyInto(mutable, caveOff)
-
-        // Hook: verify original instruction, then overwrite with branch to cave.
+        val patchedHook = buildBranch(HOOK_VADDR, caveVa)
         val hookOffset = vaddrToFileOffset(mutable, HOOK_VADDR, ORIG_HOOK.size)
         val hookActual = mutable.sliceArray(hookOffset until hookOffset + ORIG_HOOK.size)
+        val caveActual = mutable.sliceArray(caveOff until caveOff + trampoline.size)
+        val velocityOffsets = VELOCITY_VADDRS.map { vaddrToFileOffset(mutable, it, 4) }
+        val velocityWords = velocityOffsets.map { mutable.readU32LE(it) }
+
+        val alreadyPatched = hookActual.contentEquals(patchedHook) &&
+            caveActual.contentEquals(trampoline) &&
+            velocityWords.indices.all { isStrWzrX19(velocityWords[it], VELOCITY_OFFSETS[it]) }
+        if (alreadyPatched) return@execute
+
         if (!hookActual.contentEquals(ORIG_HOOK)) {
             throw PatchException(
-                "HMD hook precondition failed at 0x${hookOffset.toString(16)}: " +
-                "expected ${ORIG_HOOK.toHex()}, found ${hookActual.toHex()}"
+                "Unsupported libvrlink_scene.so for HMD-only pose fix: " +
+                "size=${mutable.size}, sha256=${mutable.sha256()}, " +
+                "hook@0x${hookOffset.toString(16)}=${hookActual.toHex()} " +
+                "(expected ${ORIG_HOOK.toHex()})"
             )
         }
-        buildBranch(HOOK_VADDR, caveVa).copyInto(mutable, hookOffset)
 
-        // Zero the six HMD velocity store instructions.
-        for (i in VELOCITY_VADDRS.indices) {
-            val off = vaddrToFileOffset(mutable, VELOCITY_VADDRS[i], 4)
-            val word = mutable.readU32LE(off)
-            if (!isStrSUnsignedImm(word, 19, VELOCITY_OFFSETS[i])) {
+        val originalCave =
+            caveActual.sliceArray(12 until 16).contentEquals(BR_X17) &&
+            caveActual.sliceArray(28 until 32).contentEquals(BR_X17)
+        if (!originalCave) {
+            throw PatchException(
+                "HMD trampoline cave precondition failed at 0x${caveOff.toString(16)}: " +
+                caveActual.toHex()
+            )
+        }
+
+        for (i in velocityWords.indices) {
+            if (!isStrSUnsignedImm(velocityWords[i], 19, VELOCITY_OFFSETS[i])) {
                 throw PatchException(
                     "Velocity store precondition failed at vaddr 0x${VELOCITY_VADDRS[i].toString(16)}: " +
-                    "word 0x${word.toUInt().toString(16)}"
+                    "word 0x${velocityWords[i].toUInt().toString(16)}"
                 )
             }
+        }
+
+        // All checks passed. Commit changes only now.
+        trampoline.copyInto(mutable, caveOff)
+        patchedHook.copyInto(mutable, hookOffset)
+        for (i in velocityOffsets.indices) {
+            val off = velocityOffsets[i]
             strWzrX19(VELOCITY_OFFSETS[i]).copyInto(mutable, off)
         }
 

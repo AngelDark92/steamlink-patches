@@ -1,7 +1,7 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 
 // In XRQLocateReferenceSpace, replaces `mov x2, x3` (copies XrTime to x2)
@@ -16,7 +16,7 @@ val predictionOffsetPatch = rawResourcePatch(
     description = "Adds +16.77 ms to the XrTime argument passed to xrLocateSpace, compensating for the Android XR runtime's local-display prediction being too early for a wireless stream.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
