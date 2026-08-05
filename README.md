@@ -17,7 +17,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.2.11](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.2.11)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;12 patches total
+> **[v1.2.12-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.2.12-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;12 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
 <br>
@@ -41,8 +41,6 @@ To download it:
 <details open>
 <summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
 <br>
-
-##### These patches have only been used for development purposes and debugging various problems, but they are here if you would like to try them out.
 
 **🎯 Supported versions:**
 
