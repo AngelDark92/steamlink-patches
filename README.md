@@ -17,7 +17,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.3.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.3.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;15 patches total
+> **[v1.4.0-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.4.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;16 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;9 patches</summary>
 <br>
@@ -42,7 +42,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -52,6 +52,7 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
+| [Controller velocity fix](#controller-velocity-fix) | Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws. | • Maximum sample gap (ms)<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
 | [Frame queue latency offset](#frame-queue-latency-offset) | Adds a fixed offset to VRLink's frame-queue latency budget to compensate for wireless pipeline delay. 'full' adds +32.768 ms; 'half' adds +16.384 ms. | • Offset size |
 | [Legacy two-layer renderer](#legacy-two-layer-renderer) | Restores the 5001712-era two-layer XR stream topology by skipping underside swapchain creation and submission added in 5002244. |  |
 | [Low-latency decoder](#low-latency-decoder) | Forces findBestDecoder() to always select the low-latency hardware decoder (KEY_LOW_LATENCY), reducing decode jitter from ~11 ms median to ≤8 ms on Galaxy XR. |  |
