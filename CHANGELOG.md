@@ -1,3 +1,9 @@
+## [1.2.9-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.8...v1.2.9-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Refactor code structure for improved readability and maintainability ([57edbd3](https://github.com/AngelDark92/steamlink-patches/commit/57edbd3771d91d211eda34257bd3b6ce0238d420))
+
 ## [1.2.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.7...v1.2.8) (2026-08-05)
 
 ### 🐛 Bug Fixes
