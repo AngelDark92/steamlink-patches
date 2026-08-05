@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.4.1",
+  "version": "1.4.2-dev.1",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -364,7 +364,7 @@
     },
     {
       "name": "Managed-panel aspect fix",
-      "description": "Uses the actual Galaxy XR managed-panel surface dimensions instead of the headset's physical display metrics, fixing the stretched launcher UI.",
+      "description": "Matches the Steam Link managed panel to Galaxy XR's combined stereo-display aspect ratio, preventing SDL physical-display metrics from stretching the launcher UI.",
       "default": true,
       "dependencies": [
         "BytecodePatch"

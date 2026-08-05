@@ -1,3 +1,9 @@
+## [1.4.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.1...v1.4.2-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* update managed-panel aspect description for clarity and accuracy ([fe8287e](https://github.com/AngelDark92/steamlink-patches/commit/fe8287edc8a526e5ee67791fed8592ae06e33593))
+
 ## [1.4.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.0...v1.4.1) (2026-08-05)
 
 ### 🐛 Bug Fixes
