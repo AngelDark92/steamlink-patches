@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-04T21:42:23",
-  "description": "## [1.2.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.2...v1.2.3) (2026-08-04)\n\n### 🐛 Bug Fixes\n\n* Merge pull request [#9](https://github.com/AngelDark92/steamlink-patches/issues/9) from AngelDark92/dev ([b5bbff5](https://github.com/AngelDark92/steamlink-patches/commit/b5bbff56a22308fb085fc81d6bb4d34d11e0b29f))\n* Update ids.xml file path for ResourceIdProcessor in AndroidXr and GxrFacebridge patches ([c1fd6cb](https://github.com/AngelDark92/steamlink-patches/commit/c1fd6cba3138ff948725369fab0f02026afef234))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.3/patches-1.2.3.mpp",
+  "created_at": "2026-08-05T09:46:09",
+  "description": "## [1.2.4-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.3...v1.2.4-dev.1) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Update patches and README for v1.2.3 release ([cebb0d2](https://github.com/AngelDark92/steamlink-patches/commit/cebb0d292d69f1a851994715d53061821d93490f))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.4-dev.1/patches-1.2.4-dev.1.mpp",
   "signature_download_url": "",
-  "version": "1.2.3"
+  "version": "1.2.4-dev.1"
 }
