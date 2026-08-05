@@ -130,5 +130,5 @@ node_modules/
 local.properties
 
 .agents
-android-steamlinkvr-release/**
+android-steamlinkvr-release**/
 GalaxyXR-Reusable-Patch/**
