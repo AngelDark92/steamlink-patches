@@ -23,9 +23,9 @@ val deviceIdentityPatch = rawResourcePatch(
         key = "profile",
         default = "samsung-default",
         values = mapOf(
-            "samsung-default" to "Samsung Galaxy XR (default, no change)",
-            "meta-quest-pro" to "Meta Quest Pro",
-            "pico-4-pro" to "PICO 4 Pro",
+            "Samsung Galaxy XR (default, no change)" to "samsung-default",
+            "Meta Quest Pro" to "meta-quest-pro",
+            "PICO 4 Pro" to "pico-4-pro",
         ),
         title = "HMD identity",
         description = "Which HMD identity to report to SteamVR.",
@@ -36,9 +36,9 @@ val deviceIdentityPatch = rawResourcePatch(
         // Tracking system, resource root and input/controller paths stay Samsung-based; only the
         // manufacturer/model/serial identity fields change.
         val fileName = when (profile) {
-            "samsung-default" -> return@execute
-            "meta-quest-pro" -> "hmd_config_meta_quest_pro.json"
-            "pico-4-pro" -> "hmd_config_pico_4_pro.json"
+            "samsung-default", "Samsung Galaxy XR (default, no change)" -> return@execute
+            "meta-quest-pro", "Meta Quest Pro" -> "hmd_config_meta_quest_pro.json"
+            "pico-4-pro", "PICO 4 Pro" -> "hmd_config_pico_4_pro.json"
             else -> throw PatchException("Unknown device identity profile: $profile")
         }
         get("assets/config/hmd_config.json").writeBytes(identityResource(fileName))
