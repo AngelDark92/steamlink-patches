@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.steamlink.androidxr.androidXrCompatibilityPatch
 
 private fun identityResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/identity/$name")
@@ -18,6 +19,7 @@ val deviceIdentityPatch = rawResourcePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(androidXrCompatibilityPatch)
 
     val profile by stringOption(
         key = "profile",
@@ -33,8 +35,6 @@ val deviceIdentityPatch = rawResourcePatch(
     )
 
     execute {
-        // Tracking system, resource root and input/controller paths stay Samsung-based; only the
-        // manufacturer/model/serial identity fields change.
         val fileName = when (profile) {
             "samsung-default", "Samsung Galaxy XR (default, no change)" -> return@execute
             "meta-quest-pro", "Meta Quest Pro" -> "hmd_config_meta_quest_pro.json"

@@ -5,39 +5,39 @@
   "staticProps": {
     "xrvst2": {
       "sTrackingSystem": "SamsungVST",
-      "sSerialNumber": "VRLINKHMDMETAQUESTPRO",
-      "sManufacturerName": "Meta",
-      "sModelNumber": "Meta Quest Pro",
+      "sSerialNumber": "VRLINKHMDGALAXYXR",
+      "sManufacturerName": "Samsung",
+      "sModelNumber": "Oculus Quest Pro",
       "sRenderModelName": "generic_hmd",
       "sResourceRoot": "vrlink",
       "sInputProfilePath": "{vrlink}/input/galaxy_xr_hmd_profile.json",
       "flLaserMouseHmdAngleDegrees": 0,
       "sControllerType": "galaxy_xr_hmd",
-      "sDeviceType": "SamsungVST/VRLINKHMDMETAQUESTPRO"
+      "sDeviceType": "SamsungVST/VRLINKHMDGALAXYXR"
     },
     "xrvst2ue": {
       "sTrackingSystem": "SamsungVST",
-      "sSerialNumber": "VRLINKHMDMETAQUESTPRO",
-      "sManufacturerName": "Meta",
-      "sModelNumber": "Meta Quest Pro",
+      "sSerialNumber": "VRLINKHMDGALAXYXR",
+      "sManufacturerName": "Samsung",
+      "sModelNumber": "Oculus Quest Pro",
       "sRenderModelName": "generic_hmd",
       "sResourceRoot": "vrlink",
       "sInputProfilePath": "{vrlink}/input/galaxy_xr_hmd_profile.json",
       "flLaserMouseHmdAngleDegrees": 0,
       "sControllerType": "galaxy_xr_hmd",
-      "sDeviceType": "SamsungVST/VRLINKHMDMETAQUESTPRO"
+      "sDeviceType": "SamsungVST/VRLINKHMDGALAXYXR"
     },
     "unknown": {
       "sTrackingSystem": "SamsungVST",
-      "sSerialNumber": "VRLINKHMDMETAQUESTPRO",
-      "sManufacturerName": "Meta",
-      "sModelNumber": "Meta Quest Pro",
+      "sSerialNumber": "VRLINKHMDGALAXYXR",
+      "sManufacturerName": "Samsung",
+      "sModelNumber": "Oculus Quest Pro",
       "sRenderModelName": "generic_hmd",
       "sResourceRoot": "vrlink",
       "sInputProfilePath": "{vrlink}/input/galaxy_xr_hmd_profile.json",
       "flLaserMouseHmdAngleDegrees": 0,
       "sControllerType": "galaxy_xr_hmd",
-      "sDeviceType": "SamsungVST/VRLINKHMDMETAQUESTPRO"
+      "sDeviceType": "SamsungVST/VRLINKHMDGALAXYXR"
     }
   },
   "input": {

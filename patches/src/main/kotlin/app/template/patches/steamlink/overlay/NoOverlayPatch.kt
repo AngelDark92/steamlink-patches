@@ -2,15 +2,17 @@ package app.template.patches.steamlink.overlay
 
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
+import app.template.patches.steamlink.androidxr.appearOnTopManifestPatch
 import org.w3c.dom.Element
 
 @Suppress("unused")
 val noOverlayPatch = resourcePatch(
     name = "No overlay permission",
-    description = "Removes SYSTEM_ALERT_WINDOW from builds that declare it. Steam Link 2.0.22/5002244 already has no overlay path, so this patch is a safe no-op there.",
+    description = "Disables the appear-on-top compositor-overlay path while preserving Android XR input and managed-panel aspect fixes.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
+    dependsOn(appearOnTopManifestPatch)
     finalize {
         document("AndroidManifest.xml").use { document ->
             val perms = document.getElementsByTagName("uses-permission")

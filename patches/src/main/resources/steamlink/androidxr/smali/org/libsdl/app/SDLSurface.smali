@@ -26,6 +26,8 @@
 
 .field private final scaleGestureDetector:Landroid/view/ScaleGestureDetector;
 
+.field private mGxrCallbackAttached:Z
+
 
 # direct methods
 .method protected constructor <init>(Landroid/content/Context;)V
@@ -274,6 +276,57 @@
 
 
 # virtual methods
+.method public dispatchGenericMotionEvent(Landroid/view/MotionEvent;)Z
+    .locals 1
+
+    invoke-static {p1}, Lorg/libsdl/app/GxrSdlBridge;->routeXrPointerAsMouseGeneric(Landroid/view/MotionEvent;)V
+
+    invoke-super {p0, p1}, Landroid/view/SurfaceView;->dispatchGenericMotionEvent(Landroid/view/MotionEvent;)Z
+
+    move-result v0
+
+    return v0
+.end method
+
+.method public dispatchTouchEvent(Landroid/view/MotionEvent;)Z
+    .locals 1
+
+    invoke-static {p1}, Lorg/libsdl/app/GxrSdlBridge;->routeXrPointerAsMouse(Landroid/view/MotionEvent;)V
+
+    invoke-super {p0, p1}, Landroid/view/SurfaceView;->dispatchTouchEvent(Landroid/view/MotionEvent;)Z
+
+    move-result v0
+
+    return v0
+.end method
+
+.method protected onAttachedToWindow()V
+    .locals 2
+
+    invoke-super {p0}, Landroid/view/SurfaceView;->onAttachedToWindow()V
+
+    iget-boolean v0, p0, Lorg/libsdl/app/SDLSurface;->mGxrCallbackAttached:Z
+
+    if-nez v0, :done
+
+    invoke-virtual {p0}, Lorg/libsdl/app/SDLSurface;->getHolder()Landroid/view/SurfaceHolder;
+
+    move-result-object v0
+
+    new-instance v1, Lorg/libsdl/app/GxrSurfaceCallback;
+
+    invoke-direct {v1, p0}, Lorg/libsdl/app/GxrSurfaceCallback;-><init>(Lorg/libsdl/app/SDLSurface;)V
+
+    invoke-interface {v0, v1}, Landroid/view/SurfaceHolder;->addCallback(Landroid/view/SurfaceHolder$Callback;)V
+
+    const/4 v0, 0x1
+
+    iput-boolean v0, p0, Lorg/libsdl/app/SDLSurface;->mGxrCallbackAttached:Z
+
+    :done
+    return-void
+.end method
+
 .method protected enableSensor(IZ)V
     .locals 1
 
