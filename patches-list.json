@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.2.4",
+  "version": "1.2.5-dev.1",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -97,9 +97,9 @@
           "type": "kotlin.String",
           "default": "samsung-default",
           "values": {
-            "samsung-default": "Samsung Galaxy XR (default, no change)",
-            "meta-quest-pro": "Meta Quest Pro",
-            "pico-4-pro": "PICO 4 Pro"
+            "Samsung Galaxy XR (default, no change)": "samsung-default",
+            "Meta Quest Pro": "meta-quest-pro",
+            "PICO 4 Pro": "pico-4-pro"
           }
         }
       ]
