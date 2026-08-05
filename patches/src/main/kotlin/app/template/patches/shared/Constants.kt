@@ -13,7 +13,6 @@ object Constants {
         appIconColor = 0x1B2838,
         targets = listOf(
             AppTarget(version = "2.0.22"),
-            AppTarget(version = null, isExperimental = true)
         )
     )
 
@@ -24,7 +23,6 @@ object Constants {
         appIconColor = 0x1B2838,
         targets = listOf(
             AppTarget(version = "2.0.22", isExperimental = true),
-            AppTarget(version = null, isExperimental = true)
         )
     )
 

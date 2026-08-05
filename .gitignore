@@ -65,6 +65,8 @@ hs_err_pid*
 
 # CMake
 cmake-build-*/
+extensions/controller-velocity-layer/build-*/
+.android-sdk/
 
 # Mongo Explorer plugin
 .idea/**/mongoSettings.xml
