@@ -1,3 +1,10 @@
+## [1.4.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.3.0...v1.4.0) (2026-08-05)
+
+### ✨ New Features
+
+* Add controller velocity layer and related patches ([def3c9d](https://github.com/AngelDark92/steamlink-patches/commit/def3c9dc0798992142f052545237b6f471339627))
+* Merge pull request [#20](https://github.com/AngelDark92/steamlink-patches/issues/20) from AngelDark92/dev ([eb55ee4](https://github.com/AngelDark92/steamlink-patches/commit/eb55ee4b4491d8f67e01c8907a9f1ca8b13510f3))
+
 ## [1.4.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.3.0...v1.4.0-dev.1) (2026-08-05)
 
 ### ✨ New Features
