@@ -17,9 +17,9 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.4.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.4.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;16 patches total
+> **[v1.4.3-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.4.3-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;17 patches total
 <details open>
-<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;9 patches</summary>
+<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;10 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -37,6 +37,7 @@ To download it:
 | [Managed-panel aspect fix](#managed-panel-aspect-fix) | Matches the Steam Link managed panel to Galaxy XR's combined stereo-display aspect ratio, preventing SDL physical-display metrics from stretching the launcher UI. |  |
 | [OLED color calibration](#oled-color-calibration) | Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction. | • Calibration profile<br>• Gamma<br>• Saturation |
 | [Video dither](#video-dither) | Enables (or disables) the dormant GLSL dither term in VRLink's video fragment shader. Reduces 8-bit contouring on OLED displays. | • Enable dither |
+| [XR direct input & metrics fix](#xr-direct-input-metrics-fix) | Directly patches the real SDLSurface.surfaceChanged()/onTouch() and SDLGenericMotionListener_API14.onGenericMotion() method bodies in the original app classes, since the extension DEX merge cannot override methods that already exist there. Applies the managed-panel aspect fix and Galaxy XR pointer routing to the code paths that actually execute. |  |
 | [XR launcher input](#xr-launcher-input) | Routes Galaxy XR spatial-pointer, controller, and XR_EXT_hand_interaction events to Steam Link launcher mouse/select input. |  |
 
 </details>
