@@ -1,3 +1,9 @@
+## [1.3.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.12...v1.3.0-dev.1) (2026-08-05)
+
+### ✨ New Features
+
+* Add Galaxy XR compatibility patches and enhancements ([a9fad10](https://github.com/AngelDark92/steamlink-patches/commit/a9fad10a2d612722fcfb1bdd6b18935ae3c6a2f8))
+
 ## [1.2.12](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.11...v1.2.12) (2026-08-05)
 
 ### 🐛 Bug Fixes

@@ -16,6 +16,12 @@ private val gxrFacebridgeLibPatch = rawResourcePatch {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         File(libDir, "libgxr_face_bridge.so").writeBytes(facebridgeResource("libgxr_face_bridge.so"))
 
+        val layerManifest = get(
+            "assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_face_bridge.json",
+        )
+        layerManifest.parentFile!!.mkdirs()
+        layerManifest.writeBytes(facebridgeResource("XR_APILAYER_local_GalaxyXR_face_bridge.json"))
+
         // arslib ResourceIdProcessor requires ids.xml; APKs without <item type="id"> resources omit it.
         // "res/" paths resolve against the decoded package dir, not the raw apk root, so use get() directly.
         val idsFile = get("res/values/ids.xml")

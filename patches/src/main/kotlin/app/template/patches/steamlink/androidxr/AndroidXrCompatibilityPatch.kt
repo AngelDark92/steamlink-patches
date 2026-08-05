@@ -61,6 +61,7 @@ private val androidXrConfigPatch = rawResourcePatch {
         get("assets/config/hmd_config.json").writeBytes(loadResource("hmd_config.json"))
         get("assets/config/controller_config.json").writeBytes(loadResource("controller_config.json"))
         get("assets/config/ui_config.json").writeBytes(loadResource("ui_config.json"))
+        get("assets/config/default_config.json").writeBytes(loadResource("default_config.json"))
         get("assets/webui/dash/index.html").writeBytes(loadResource("index.html"))
     }
 }
@@ -354,7 +355,10 @@ val androidXrCompatibilityPatch = bytecodePatch(
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
 
-    dependsOn(androidXrManifestPatch)
-
-    extendWith("extensions/extension.mpe")
+    dependsOn(
+        androidXrManifestPatch,
+        androidXrUiExtensionPatch,
+        xrUiInputConfigPatch,
+        appearOnTopManifestPatch,
+    )
 }
