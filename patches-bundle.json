@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-05T09:55:07",
-  "description": "## [1.2.4-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.4-dev.1...v1.2.4-dev.2) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Update OLED color calibration patch to support configurable gamma and saturation ([fe9d267](https://github.com/AngelDark92/steamlink-patches/commit/fe9d2672cb5c17564e159c8212124469b1d73de3))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.4-dev.2/patches-1.2.4-dev.2.mpp",
+  "created_at": "2026-08-05T09:58:20",
+  "description": "## [1.2.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.2.3...v1.2.4) (2026-08-05)\n\n### 🐛 Bug Fixes\n\n* Merge pull request [#10](https://github.com/AngelDark92/steamlink-patches/issues/10) from AngelDark92/dev ([3fd256f](https://github.com/AngelDark92/steamlink-patches/commit/3fd256fd383a4f91027805c711bceed5678e164c))\n* Update OLED color calibration patch to support configurable gamma and saturation ([fe9d267](https://github.com/AngelDark92/steamlink-patches/commit/fe9d2672cb5c17564e159c8212124469b1d73de3))\n* Update patches and README for v1.2.3 release ([cebb0d2](https://github.com/AngelDark92/steamlink-patches/commit/cebb0d292d69f1a851994715d53061821d93490f))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.2.4/patches-1.2.4.mpp",
   "signature_download_url": "",
-  "version": "1.2.4-dev.2"
+  "version": "1.2.4"
 }
