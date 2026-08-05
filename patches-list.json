@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.4.0",
+  "version": "1.2.11",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -23,7 +23,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -52,7 +54,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -83,71 +87,6 @@
       ]
     },
     {
-      "name": "Controller velocity fix",
-      "description": "Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
-      "default": false,
-      "dependencies": [
-        "BytecodePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": [
-        {
-          "key": "maxDeltaMs",
-          "title": "Maximum sample gap (ms)",
-          "description": "Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
-          "required": true,
-          "type": "kotlin.Int",
-          "default": 50,
-          "values": null
-        },
-        {
-          "key": "smoothing",
-          "title": "Derived velocity smoothing",
-          "description": "Previous-output weight. 0 gives minimum lag; higher values reduce jitter. Allowed range: 0.0 to 0.9.",
-          "required": true,
-          "type": "kotlin.Float",
-          "default": 0.0,
-          "values": null
-        },
-        {
-          "key": "maxLinearSpeed",
-          "title": "Maximum linear speed (m/s)",
-          "description": "Falls back to runtime velocity above this derived speed. Allowed range: 1 to 50 m/s.",
-          "required": true,
-          "type": "kotlin.Float",
-          "default": 20.0,
-          "values": null
-        },
-        {
-          "key": "maxAngularSpeed",
-          "title": "Maximum angular speed (rad/s)",
-          "description": "Falls back to runtime velocity above this derived speed. Allowed range: 1 to 100 rad/s.",
-          "required": true,
-          "type": "kotlin.Float",
-          "default": 50.0,
-          "values": null
-        }
-      ]
-    },
-    {
       "name": "Device identity",
       "description": "Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched.",
       "default": true,
@@ -165,7 +104,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -205,8 +146,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -246,7 +189,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -271,20 +216,13 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.20",
+              "version": "2.0.22",
               "versionCodes": {
-                "ARM64_V8A": 5001712
+                "ARM64_V8A": 5002244
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "HMD-only pose fix layout verified for versionCode 5001712."
-            },
-            {
-              "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
+              "description": "HMD-only pose fix layout verified for versionCode 5002244."
             }
           ]
         }
@@ -317,8 +255,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -343,8 +283,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -371,7 +313,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -399,8 +343,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -425,7 +371,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -489,8 +437,10 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
               "minSdk": null,
               "description": null
             }
@@ -515,7 +465,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -554,7 +506,9 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": null,
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
               "isExperimental": false,
               "minSdk": null,
               "description": null
