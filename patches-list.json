@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.4.2",
+  "version": "1.4.3-dev.1",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -367,6 +367,7 @@
       "description": "Matches the Steam Link managed panel to Galaxy XR's combined stereo-display aspect ratio, preventing SDL physical-display metrics from stretching the launcher UI.",
       "default": true,
       "dependencies": [
+        "BytecodePatch",
         "BytecodePatch"
       ],
       "compatiblePackages": [
@@ -555,12 +556,43 @@
       ]
     },
     {
+      "name": "XR direct input & metrics fix",
+      "description": "Directly patches the real SDLSurface.surfaceChanged()/onTouch() and SDLGenericMotionListener_API14.onGenericMotion() method bodies in the original app classes, since the extension DEX merge cannot override methods that already exist there. Applies the managed-panel aspect fix and Galaxy XR pointer routing to the code paths that actually execute.",
+      "default": true,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002244
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "XR launcher input",
       "description": "Routes Galaxy XR spatial-pointer, controller, and XR_EXT_hand_interaction events to Steam Link launcher mouse/select input.",
       "default": true,
       "dependencies": [
         "BytecodePatch",
-        "RawResourcePatch"
+        "RawResourcePatch",
+        "BytecodePatch"
       ],
       "compatiblePackages": [
         {

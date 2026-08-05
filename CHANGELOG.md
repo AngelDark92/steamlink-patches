@@ -1,3 +1,10 @@
+## [1.4.3-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.2...v1.4.3-dev.1) (2026-08-05)
+
+### 🐛 Bug Fixes
+
+* Merge pull request [#24](https://github.com/AngelDark92/steamlink-patches/issues/24) from AngelDark92/angeldark92-debug-vr-input-crash ([27f3820](https://github.com/AngelDark92/steamlink-patches/commit/27f382007865b80e8498d88d7ddc8776afb9ec00))
+* patch SDLSurface/SDLGenericMotionListener methods directly instead of via extension merge ([116fa4f](https://github.com/AngelDark92/steamlink-patches/commit/116fa4ffd49fbe43a7d97bdeda52e68db97b996d))
+
 ## [1.4.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.1...v1.4.2) (2026-08-05)
 
 ### 🐛 Bug Fixes
