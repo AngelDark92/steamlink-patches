@@ -92,6 +92,10 @@ val xrManifestCapabilityPackPatch = resourcePatch(
             val app = manifest.getElementsByTagName("application").item(0) as Element
 
             // Make SDK targeting explicit for Android XR so installs are not flagged as legacy-targeted.
+            manifest.setAttribute("android:minSdkVersion", "29")
+            manifest.setAttribute("android:targetSdkVersion", "36")
+            manifest.removeAttribute("android:maxSdkVersion")
+
             val usesSdkNodes = manifest.getElementsByTagName("uses-sdk")
             val usesSdk = if (usesSdkNodes.length > 0) {
                 usesSdkNodes.item(0) as Element
@@ -378,20 +382,4 @@ val xrInputRoutingConfigPatch = rawResourcePatch(
     execute {
         get("assets/config/ui_config.json").writeBytes(loadResource("ui_config.json"))
     }
-}
-
-@Suppress("unused")
-val androidXrCompatibilityPatch = bytecodePatch(
-    name = "Android XR compatibility",
-    description = "Legacy bundle patch that enables the full XR core, manifest, launcher bootstrap, and baseline config stack. Prefer selecting individual XR patches for granular control.",
-    default = false,
-) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(
-        xrCoreRuntimePatch,
-        xrDeviceConfigBaselinePatch,
-        xrManifestCapabilityPackPatch,
-        xrLauncherBootstrapPatch,
-        xrInputRoutingConfigPatch,
-    )
 }
