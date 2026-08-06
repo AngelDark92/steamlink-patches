@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.5.0",
+  "version": "1.5.0-dev.2",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -232,15 +232,6 @@
           "appIconColor": "#1B2838",
           "signatures": null,
           "targets": [
-            {
-              "version": "2.0.20",
-              "versionCodes": {
-                "ARM64_V8A": 5001712
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "HMD-only pose fix layout verified for versionCode 5001712."
-            },
             {
               "version": "2.0.22",
               "versionCodes": null,
