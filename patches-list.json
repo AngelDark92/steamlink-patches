@@ -1,15 +1,46 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.5.0",
+  "version": "1.6.0-dev.1",
   "patches": [
     {
       "name": "Android XR compatibility",
-      "description": "Makes Steam Link fully functional on Samsung Galaxy XR. Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, Galaxy XR bridge native libraries, safe permission handling, the launcher bootstrap, and managed-panel aspect correction with XR spatial-pointer button input. This patch is required for Galaxy XR operation.",
-      "default": true,
+      "description": "Legacy bundle patch that enables the full XR core, manifest, launcher bootstrap, and baseline config stack. Prefer selecting individual XR patches for granular control.",
+      "default": false,
+      "dependencies": [
+        "BytecodePatch",
+        "RawResourcePatch",
+        "ResourcePatch",
+        "ResourcePatch",
+        "RawResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Appear on top",
+      "description": "Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
+      "default": false,
       "dependencies": [
         "ResourcePatch",
-        "BytecodePatch",
-        "RawResourcePatch"
+        "ResourcePatch"
       ],
       "compatiblePackages": [
         {
@@ -122,7 +153,7 @@
       "description": "Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched.",
       "default": true,
       "dependencies": [
-        "BytecodePatch"
+        "RawResourcePatch"
       ],
       "compatiblePackages": [
         {
@@ -201,15 +232,6 @@
           "appIconColor": "#1B2838",
           "signatures": null,
           "targets": [
-            {
-              "version": "2.0.20",
-              "versionCodes": {
-                "ARM64_V8A": 5001712
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "HMD-only pose fix layout verified for versionCode 5001712."
-            },
             {
               "version": "2.0.22",
               "versionCodes": null,
@@ -331,6 +353,175 @@
           "values": null
         }
       ]
+    },
+    {
+      "name": "XR Core Runtime",
+      "description": "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
+      "default": true,
+      "dependencies": [
+        "RawResourcePatch",
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "XR Device Config Baseline",
+      "description": "Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets.",
+      "default": true,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "XR Input Routing Config",
+      "description": "Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "XR Launcher Bootstrap (Home Space)",
+      "description": "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
+      "default": true,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "XR Manifest Capability Pack",
+      "description": "Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties.",
+      "default": true,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "XR direct input and panel metrics",
+      "description": "Experimental: directly patches SDL surface/motion methods for managed-panel metrics and XR pointer routing. Disable if startup turns black.",
+      "default": false,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
     }
   ]
 }

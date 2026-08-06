@@ -17,9 +17,9 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.5.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.5.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;8 patches total
+> **[v1.6.0-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.6.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;15 patches total
 <details open>
-<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
+<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;13 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -29,12 +29,19 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Android XR compatibility](#android-xr-compatibility) | Makes Steam Link fully functional on Samsung Galaxy XR. Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, Galaxy XR bridge native libraries, safe permission handling, the launcher bootstrap, and managed-panel aspect correction with XR spatial-pointer button input. This patch is required for Galaxy XR operation. |  |
+| [Android XR compatibility](#android-xr-compatibility) | Legacy bundle patch that enables the full XR core, manifest, launcher bootstrap, and baseline config stack. Prefer selecting individual XR patches for granular control. |  |
+| [Appear on top](#appear-on-top) | Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup. |  |
 | [Device identity](#device-identity) | Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched. | • HMD identity |
 | [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. |  |
 | [HMD-only pose fix](#hmd-only-pose-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. | • Pose offset (ms) |
 | [OLED color calibration](#oled-color-calibration) | Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction. | • Calibration profile<br>• Gamma<br>• Saturation |
 | [Video dither](#video-dither) | Enables (or disables) the dormant GLSL dither term in VRLink's video fragment shader. Reduces 8-bit contouring on OLED displays. | • Enable dither |
+| [XR Core Runtime](#xr-core-runtime) | Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches. |  |
+| [XR Device Config Baseline](#xr-device-config-baseline) | Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets. |  |
+| [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. |  |
+| [XR Launcher Bootstrap (Home Space)](#xr-launcher-bootstrap-home-space) | Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring. |  |
+| [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. |  |
+| [XR direct input and panel metrics](#xr-direct-input-and-panel-metrics) | Experimental: directly patches SDL surface/motion methods for managed-panel metrics and XR pointer routing. Disable if startup turns black. |  |
 
 </details>
 
