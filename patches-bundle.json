@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-06T15:42:20",
-  "description": "## [1.6.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0...v1.6.0) (2026-08-06)\n\n### 🐛 Bug Fixes\n\n* Merge pull request [#29](https://github.com/AngelDark92/steamlink-patches/issues/29) from AngelDark92/dev ([556420f](https://github.com/AngelDark92/steamlink-patches/commit/556420fc3e15bde9f0afdc3bcb9e4524f6bd1584))\n* Update patches and configurations for XR compatibility and functionality enhancements ([98cb52d](https://github.com/AngelDark92/steamlink-patches/commit/98cb52d3b92133fd81510b7d7ffbbddf5191ecbd))\n\n### ✨ New Features\n\n* Add test variants for overlay handling and permission management ([5b79c54](https://github.com/AngelDark92/steamlink-patches/commit/5b79c543384994509d347c5d6738f761fc805398))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.6.0/patches-1.6.0.mpp",
+  "created_at": "2026-08-06T16:40:40",
+  "description": "## [1.6.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.6.0...v1.6.1-dev.1) (2026-08-06)\n\n### 🐛 Bug Fixes\n\n* more patches ([a68e117](https://github.com/AngelDark92/steamlink-patches/commit/a68e1174be68f4e847efefd7dabb738735a209cd))\n* Update patch list and improve Android XR compatibility handling ([a9adf0e](https://github.com/AngelDark92/steamlink-patches/commit/a9adf0e991dd4ba145f0e04b7f6859118ba171d1))\n* update patch list and improve compatibility for Steam Link HMD-only builds ([45c55fc](https://github.com/AngelDark92/steamlink-patches/commit/45c55fc5fef25d31e4e11ec055e95d0ad876b3c3))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.6.1-dev.1/patches-1.6.1-dev.1.mpp",
   "signature_download_url": "",
-  "version": "1.6.0"
+  "version": "1.6.1-dev.1"
 }
