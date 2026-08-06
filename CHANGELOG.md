@@ -1,3 +1,16 @@
+## [1.4.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.3...v1.4.4) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* enhance DirectInputFixPatch with direct method body modifications and improved instruction handling ([ec3e549](https://github.com/AngelDark92/steamlink-patches/commit/ec3e54904c1557e306873d1c64a05ebc3b2d0383))
+* Merge pull request [#26](https://github.com/AngelDark92/steamlink-patches/issues/26) from AngelDark92/dev ([a25b6e0](https://github.com/AngelDark92/steamlink-patches/commit/a25b6e0742852b6762d3699db18ddc103483543e))
+
+## [1.4.4-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.3...v1.4.4-dev.1) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* enhance DirectInputFixPatch with direct method body modifications and improved instruction handling ([ec3e549](https://github.com/AngelDark92/steamlink-patches/commit/ec3e54904c1557e306873d1c64a05ebc3b2d0383))
+
 ## [1.4.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.2...v1.4.3) (2026-08-05)
 
 ### 🐛 Bug Fixes
