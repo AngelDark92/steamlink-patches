@@ -15,12 +15,16 @@ import java.util.jar.Manifest
 
 fun main() {
     val patchFiles = setOf(
-        File("build/libs/").listFiles { file ->
-            val fileName = file.name
-            !fileName.contains("javadoc") &&
-                    !fileName.contains("sources") &&
-                    fileName.endsWith(".mpp")
-        }!!.first()
+        File("build/libs/")
+            .listFiles { file ->
+                val fileName = file.name
+                !fileName.contains("javadoc") &&
+                        !fileName.contains("sources") &&
+                        fileName.endsWith(".mpp")
+            }
+            ?.sortedByDescending { it.lastModified() }
+            ?.firstOrNull()
+            ?: error("No built patch archive found in build/libs")
     )
     val loadedPatches = loadPatchesFromJar(patchFiles)
     val patchClassLoader = URLClassLoader(patchFiles.map { it.toURI().toURL() }.toTypedArray())

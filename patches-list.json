@@ -3,38 +3,6 @@
   "version": "1.5.1-dev.1",
   "patches": [
     {
-      "name": "Android XR compatibility",
-      "description": "Legacy bundle patch that enables the full XR core, manifest, launcher bootstrap, and baseline config stack. Prefer selecting individual XR patches for granular control.",
-      "default": false,
-      "dependencies": [
-        "BytecodePatch",
-        "RawResourcePatch",
-        "ResourcePatch",
-        "ResourcePatch",
-        "RawResourcePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
       "name": "Appear on top",
       "description": "Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
       "default": false,
