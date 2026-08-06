@@ -1,10 +1,18 @@
 package app.template.patches.steamlink.androidxr
 
+import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.steamlink.binary.disablePermissionPromptNativePatch
+import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.builder.BuilderInstruction
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction10x
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction3rc
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.File
@@ -22,6 +30,27 @@ private fun loadResource(name: String): ByteArray =
 private fun NodeList.asSequence(): Sequence<org.w3c.dom.Node> = sequence {
     for (i in 0 until length) yield(item(i))
 }
+
+// v-register for smali "p<index>" register, assuming no wide (J/D) parameters.
+private fun MutableMethod.pRegister(index: Int): Int {
+    val registerCount = implementation!!.registerCount
+    val paramWords = parameterTypes.size + if (AccessFlags.STATIC.isSet(accessFlags)) 0 else 1
+    return registerCount - paramWords + index
+}
+
+private fun invokeStaticRange(
+    definingClass: String,
+    methodName: String,
+    parameterTypes: List<String>,
+    returnType: String,
+    startRegister: Int,
+    registerCount: Int,
+): BuilderInstruction = BuilderInstruction3rc(
+    Opcode.INVOKE_STATIC_RANGE,
+    startRegister,
+    registerCount,
+    ImmutableMethodReference(definingClass, methodName, parameterTypes, returnType),
+)
 
 // ---------------------------------------------------------------------------
 // Sub-patch 1: inject native bridge libraries
@@ -332,6 +361,68 @@ private val androidXrManifestPatch = resourcePatch {
     }
 }
 
+private val androidXrInputAndMetricsPatch = bytecodePatch {
+    dependsOn(androidXrUiExtensionPatch)
+
+    execute {
+        // Replace SDLSurface.surfaceChanged() behavior with managed-panel dimensions
+        // before original SDL metrics can stretch the launcher surface.
+        mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
+            .first { it.name == "surfaceChanged" && it.parameterTypes.size == 4 }
+            .apply {
+                addInstruction(
+                    0,
+                    invokeStaticRange(
+                        "Lorg/libsdl/app/GxrSurfaceCallback;",
+                        "applyManagedPanelMetrics",
+                        listOf(
+                            "Lorg/libsdl/app/SDLSurface;",
+                            "Landroid/view/SurfaceHolder;",
+                            "I", "I", "I",
+                        ),
+                        "V",
+                        pRegister(0),
+                        5,
+                    ),
+                )
+                addInstruction(1, BuilderInstruction10x(Opcode.RETURN_VOID))
+            }
+
+        // Route Android XR pointer/controller/hand interaction through SDL mouse input.
+        mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
+            .first { it.name == "onTouch" && it.parameterTypes.size == 2 }
+            .apply {
+                addInstruction(
+                    0,
+                    invokeStaticRange(
+                        "Lorg/libsdl/app/GxrSdlBridge;",
+                        "routeXrPointerAsMouse",
+                        listOf("Landroid/view/MotionEvent;"),
+                        "V",
+                        pRegister(2),
+                        1,
+                    ),
+                )
+            }
+
+        mutableClassDefBy("Lorg/libsdl/app/SDLGenericMotionListener_API14;").methods
+            .first { it.name == "onGenericMotion" && it.parameterTypes.size == 2 }
+            .apply {
+                addInstruction(
+                    0,
+                    invokeStaticRange(
+                        "Lorg/libsdl/app/GxrSdlBridge;",
+                        "routeXrPointerAsMouseGeneric",
+                        listOf("Landroid/view/MotionEvent;"),
+                        "V",
+                        pRegister(2),
+                        1,
+                    ),
+                )
+            }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Main patch: merge extension DEX (adds GalaxyXRPermissionActivity)
 // ---------------------------------------------------------------------------
@@ -352,6 +443,6 @@ val androidXrCompatibilityPatch = bytecodePatch(
         androidXrManifestPatch,
         androidXrUiExtensionPatch,
         xrUiInputConfigPatch,
-        appearOnTopManifestPatch,
+        androidXrInputAndMetricsPatch,
     )
 }

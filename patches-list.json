@@ -10,38 +10,7 @@
         "ResourcePatch",
         "BytecodePatch",
         "RawResourcePatch",
-        "ResourcePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "Appear on top",
-      "description": "Requests appear-on-top permission before launch and installs the 2x2 transparent compositor overlay used by the full-resolution Galaxy XR path.",
-      "default": true,
-      "dependencies": [
-        "BytecodePatch",
-        "ResourcePatch"
+        "BytecodePatch"
       ],
       "compatiblePackages": [
         {
@@ -198,47 +167,6 @@
       ]
     },
     {
-      "name": "Frame queue latency offset",
-      "description": "Adds a fixed offset to VRLink's frame-queue latency budget to compensate for wireless pipeline delay. 'full' adds +32.768 ms; 'half' adds +16.384 ms.",
-      "default": false,
-      "dependencies": [],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": [
-        {
-          "key": "size",
-          "title": "Offset size",
-          "description": "'full' (+32.768 ms) suits ~25-30 ms wireless pipelines; 'half' (+16.384 ms) suits ~15-20 ms pipelines.",
-          "required": true,
-          "type": "kotlin.String",
-          "default": "half",
-          "values": {
-            "full": "full",
-            "half": "half"
-          }
-        }
-      ]
-    },
-    {
       "name": "GXR face bridge",
       "description": "Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest.",
       "default": true,
@@ -307,123 +235,6 @@
       ]
     },
     {
-      "name": "Legacy two-layer renderer",
-      "description": "Restores the 5001712-era two-layer XR stream topology by skipping underside swapchain creation and submission added in 5002244.",
-      "default": false,
-      "dependencies": [],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "Low-latency decoder",
-      "description": "Forces findBestDecoder() to always select the low-latency hardware decoder (KEY_LOW_LATENCY), reducing decode jitter from ~11 ms median to ≤8 ms on Galaxy XR.",
-      "default": false,
-      "dependencies": [],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "Managed-panel aspect fix",
-      "description": "Matches the Steam Link managed panel to Galaxy XR's combined stereo-display aspect ratio, preventing SDL physical-display metrics from stretching the launcher UI.",
-      "default": true,
-      "dependencies": [
-        "BytecodePatch",
-        "BytecodePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "No overlay permission",
-      "description": "Disables the appear-on-top compositor-overlay path while preserving Android XR input and managed-panel aspect fixes.",
-      "default": false,
-      "dependencies": [
-        "ResourcePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
       "name": "OLED color calibration",
       "description": "Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction.",
       "default": true,
@@ -490,34 +301,6 @@
       ]
     },
     {
-      "name": "Pose prediction offset",
-      "description": "Adds +16.77 ms to the XrTime argument passed to xrLocateSpace, compensating for the Android XR runtime's local-display prediction being too early for a wireless stream.",
-      "default": false,
-      "dependencies": [],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
       "name": "Video dither",
       "description": "Enables (or disables) the dormant GLSL dither term in VRLink's video fragment shader. Reduces 8-bit contouring on OLED displays.",
       "default": true,
@@ -554,68 +337,6 @@
           "values": null
         }
       ]
-    },
-    {
-      "name": "XR direct input & metrics fix",
-      "description": "Directly patches the real SDLSurface.surfaceChanged()/onTouch() and SDLGenericMotionListener_API14.onGenericMotion() method bodies in the original app classes, since the extension DEX merge cannot override methods that already exist there. Applies the managed-panel aspect fix and Galaxy XR pointer routing to the code paths that actually execute.",
-      "default": true,
-      "dependencies": [
-        "BytecodePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "XR launcher input",
-      "description": "Routes Galaxy XR spatial-pointer, controller, and XR_EXT_hand_interaction events to Steam Link launcher mouse/select input.",
-      "default": true,
-      "dependencies": [
-        "BytecodePatch",
-        "RawResourcePatch",
-        "BytecodePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
     }
   ]
 }

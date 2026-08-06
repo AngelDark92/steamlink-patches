@@ -17,9 +17,9 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.4.6-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.4.6-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;17 patches total
+> **[v1.4.6-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.4.6-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;8 patches total
 <details open>
-<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;10 patches</summary>
+<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -30,20 +30,16 @@ To download it:
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [Android XR compatibility](#android-xr-compatibility) | Makes Steam Link fully functional on Samsung Galaxy XR. Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, Galaxy XR bridge native libraries, safe permission handling, the launcher bootstrap, and managed-panel aspect correction with XR spatial-pointer button input. This patch is required for Galaxy XR operation. |  |
-| [Appear on top](#appear-on-top) | Requests appear-on-top permission before launch and installs the 2x2 transparent compositor overlay used by the full-resolution Galaxy XR path. |  |
 | [Device identity](#device-identity) | Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched. | • HMD identity |
 | [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. |  |
 | [HMD-only pose fix](#hmd-only-pose-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. | • Pose offset (ms) |
-| [Managed-panel aspect fix](#managed-panel-aspect-fix) | Matches the Steam Link managed panel to Galaxy XR's combined stereo-display aspect ratio, preventing SDL physical-display metrics from stretching the launcher UI. |  |
 | [OLED color calibration](#oled-color-calibration) | Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction. | • Calibration profile<br>• Gamma<br>• Saturation |
 | [Video dither](#video-dither) | Enables (or disables) the dormant GLSL dither term in VRLink's video fragment shader. Reduces 8-bit contouring on OLED displays. | • Enable dither |
-| [XR direct input & metrics fix](#xr-direct-input-metrics-fix) | Directly patches the real SDLSurface.surfaceChanged()/onTouch() and SDLGenericMotionListener_API14.onGenericMotion() method bodies in the original app classes, since the extension DEX merge cannot override methods that already exist there. Applies the managed-panel aspect fix and Galaxy XR pointer routing to the code paths that actually execute. |  |
-| [XR launcher input](#xr-launcher-input) | Routes Galaxy XR spatial-pointer, controller, and XR_EXT_hand_interaction events to Steam Link launcher mouse/select input. |  |
 
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -54,11 +50,6 @@ To download it:
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [Controller velocity fix](#controller-velocity-fix) | Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws. | • Maximum sample gap (ms)<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
-| [Frame queue latency offset](#frame-queue-latency-offset) | Adds a fixed offset to VRLink's frame-queue latency budget to compensate for wireless pipeline delay. 'full' adds +32.768 ms; 'half' adds +16.384 ms. | • Offset size |
-| [Legacy two-layer renderer](#legacy-two-layer-renderer) | Restores the 5001712-era two-layer XR stream topology by skipping underside swapchain creation and submission added in 5002244. |  |
-| [Low-latency decoder](#low-latency-decoder) | Forces findBestDecoder() to always select the low-latency hardware decoder (KEY_LOW_LATENCY), reducing decode jitter from ~11 ms median to ≤8 ms on Galaxy XR. |  |
-| [No overlay permission](#no-overlay-permission) | Disables the appear-on-top compositor-overlay path while preserving Android XR input and managed-panel aspect fixes. |  |
-| [Pose prediction offset](#pose-prediction-offset) | Adds +16.77 ms to the XrTime argument passed to xrLocateSpace, compensating for the Android XR runtime's local-display prediction being too early for a wireless stream. |  |
 
 </details>
 
