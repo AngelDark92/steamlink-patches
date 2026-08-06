@@ -1,3 +1,9 @@
+## [1.4.6-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.2...v1.4.6-dev.3) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Add splash screen text during permission request in GalaxyXRPermissionActivity ([4448b18](https://github.com/AngelDark92/steamlink-patches/commit/4448b18a6aa805bf0c52d691dddcdfa331db85b7))
+
 ## [1.4.6-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.1...v1.4.6-dev.2) (2026-08-06)
 
 ### 🐛 Bug Fixes
