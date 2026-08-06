@@ -17,6 +17,7 @@ private val appearOnTopManifestPatch = resourcePatch {
         document("AndroidManifest.xml").use { document ->
             val manifest = document.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element
+            // Required by GxrOverlayBridge to add a TYPE_APPLICATION_OVERLAY compositor signal window
             val permission = "android.permission.SYSTEM_ALERT_WINDOW"
             val permissions = document.getElementsByTagName("uses-permission")
             val exists = (0 until permissions.length)
@@ -43,8 +44,10 @@ val appearOnTopPatch = bytecodePatch(
 
 private val noOverlayTestSmaliPatch = rawResourcePatch {
     execute {
+        // Replaces production overlay bridge with a no-op (no TYPE_APPLICATION_OVERLAY window created)
         get("smali/com/valvesoftware/steamlink/GxrOverlayBridge.smali")
             .writeBytes(loadOptionalXrResource("smali/test_variants/GxrOverlayBridge_NoOverlay.smali"))
+        // Replaces permission activity with a stub that skips SYSTEM_ALERT_WINDOW request and goes directly to VRLink
         get("smali/com/valvesoftware/steamlink/GalaxyXRPermissionActivity.smali")
             .writeBytes(loadOptionalXrResource("smali/test_variants/GalaxyXRPermissionActivity_NoOverlay_NoPermission.smali"))
     }

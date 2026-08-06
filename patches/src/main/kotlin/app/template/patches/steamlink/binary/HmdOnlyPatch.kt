@@ -14,12 +14,16 @@ import java.security.MessageDigest
 // Injects an AArch64 trampoline that adds a configurable offset to the HMD pose query time
 // and zeroes the six HMD velocity fields exported to SteamVR.
 // Controller paths are not modified.
+// Target function: _ZN13QSVLDeviceHmd7GetPoseER10XRQContextR12PackedPose_t (QSVLDeviceHmd::GetPose)
 
+// `ldr x2,[sp,#8]` — loads pose query timestamp into X2; replaced by B <cave> to inject offset
 private val ORIG_HOOK = byteArrayOf(0xe2.toByte(), 0x07, 0x40, 0xf9.toByte())
 
 private data class VelocityPatch(
     val vaddr: Long,
+    // Byte offset of the velocity float(s) within the PackedPose_t struct, relative to X19 base
     val byteOffset: Int,
+    // paired=true: two floats stored as STUR D (64-bit); false: single float STR W (32-bit)
     val paired: Boolean = false,
 )
 
@@ -86,6 +90,8 @@ private val NOP = byteArrayOf(0x1f, 0x20, 0x03, 0xd5.toByte())
 private val BR_X17 = byteArrayOf(0x20, 0x02, 0x1f, 0xd6.toByte())
 
 private fun buildTrampolineBody(offsetMs: Int): ByteArray {
+    // Encode offsetMs as nanoseconds (ms * 1e6), split across MOVZ (bits 0-15) + MOVK lsl#16 (bits 16-31)
+    // into X16, then ADD X2, X2, X16 adds the nanosecond delta to the pose query timestamp in X2
     val offsetNs = offsetMs.toLong() * 1_000_000L
     val low = (offsetNs and 0xFFFF).toInt()
     val high = ((offsetNs ushr 16) and 0xFFFF).toInt()
@@ -128,7 +134,7 @@ private fun findPltCave(bytes: ByteArray): Pair<Int, Long> {
 }
 
 private fun strWzrX19(byteOffset: Int): ByteArray {
-    // STR WZR, [X19, #byteOffset]: opcode 0xB9, Rn=19, Rt=31 (WZR)
+    // STR WZR, [X19, #byteOffset]: zeroes a 32-bit velocity float field at [x19+byteOffset] in PackedPose_t
     val imm12 = byteOffset / 4
     val word = 0xB9000000.toInt() or (imm12 shl 10) or (19 shl 5) or 31
     return ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(word).array()
@@ -177,7 +183,8 @@ val hmdOnlyPatch = rawResourcePatch(
         key = "offsetMs",
         default = 78,
         title = "Pose offset (ms)",
-        description = "Milliseconds added to HMD pose-query time. Tested default: 78 ms. Allowed range: 0 to 4000 ms.",
+        // 78 ms tested default for Galaxy XR; max 4000 ms (4 s) practical upper bound
+        description = "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 78 ms. Allowed range: 0 to 4000 ms.",
         required = true,
         validator = { value -> value != null && value in 0..4000 },
     )

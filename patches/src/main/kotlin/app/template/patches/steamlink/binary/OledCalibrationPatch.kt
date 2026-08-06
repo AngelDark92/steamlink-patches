@@ -9,12 +9,17 @@ import java.util.Locale
 
 // Unique line present in VRLink's embedded video fragment shader. Stock builds indent this line;
 // calibrated builds do not, so locate the line first and then walk back to the version directive.
+// COUPLING: VideoDitherPatch detects the calibrated shader output via CALIBRATED_ENABLED/DISABLED patterns.
 private val SHADER_EXTENSION =
     "#extension GL_OES_EGL_image_external_essl3 : enable".toByteArray(Charsets.US_ASCII)
 private val SHADER_VERSION = "#version 300 es\n".toByteArray(Charsets.US_ASCII)
+// Fixed padded size of the in-binary GLSL block; NUL byte at shaderPos+SHADER_SIZE is the boundary marker
 private const val SHADER_SIZE = 1087
 
 // Initial calibration: gamma 1.06, saturation 1.12, zero-centred dither.
+// Key GLSL values: D2020-approximating 3×3 color matrix (_valve1_d2020d709),
+// gamma via pow(clamp(c,0,1), vec3(GAMMA)), saturation via mix(vec3(luma), c, SATURATION),
+// zero-centred dither term (fract(...)-.5)*SCALE fed by uniform UniDitherOffsets (vec4).
 private val INITIAL_SHADER = """#version 300 es
 #extension GL_OES_EGL_image_external_essl3 : enable
 precision mediump float;
@@ -110,7 +115,7 @@ val oledCalibrationPatch = rawResourcePatch(
             "Custom gamma and saturation" to "custom",
         ),
         title = "Calibration profile",
-        description = "Tested profiles: Initial uses gamma 1.06 and saturation 1.12; Final balanced uses gamma 1.20 and saturation 1.45. Custom uses number inputs below.",
+        description = "libvrlink_scene.so GLSL fragment shader (1087-byte block, GL_OES_EGL_image_external_essl3 anchor). Initial: pow vec3(1.06)/mix 1.12; Final balanced: 1.20/1.45; Custom: use fields below.",
         required = true,
     )
 
@@ -122,7 +127,7 @@ val oledCalibrationPatch = rawResourcePatch(
             "Final balanced (1.20)" to 1.20f,
         ),
         title = "Gamma",
-        description = "Used by Custom profile. Tested values: 1.06 (Initial) and 1.20 (Final balanced). Allowed range: 0.50 to 2.50.",
+        description = "libvrlink_scene.so GLSL: pow(clamp(c,0,1), vec3(GAMMA)). Used by Custom profile. Tested: 1.06 (Initial), 1.20 (Final balanced). Allowed range: 0.50 to 2.50.",
         required = true,
         validator = { value -> value != null && value in 0.50f..2.50f },
     )
@@ -135,7 +140,7 @@ val oledCalibrationPatch = rawResourcePatch(
             "Final balanced (1.45)" to 1.45f,
         ),
         title = "Saturation",
-        description = "Used by Custom profile. Tested values: 1.12 (Initial) and 1.45 (Final balanced). Allowed range: 0.00 to 3.00.",
+        description = "libvrlink_scene.so GLSL: mix(vec3(luma), c, SATURATION). Used by Custom profile. Tested: 1.12 (Initial), 1.45 (Final balanced). Allowed range: 0.00 to 3.00.",
         required = true,
         validator = { value -> value != null && value in 0.00f..3.00f },
     )

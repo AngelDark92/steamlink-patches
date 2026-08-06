@@ -21,7 +21,7 @@ val changePackageNamePatch = resourcePatch(
         default = "Default",
         values = mapOf("Default" to "Default"),
         title = "Package name",
-        description = "New package name, e.g. com.valvesoftware.steamlink.gxr. Leave 'Default' to append '.gxr' automatically.",
+        description = "AndroidManifest.xml manifest@package; also updates permission/uses-permission@android:name (custom perms only) and provider@android:authorities. Leave 'Default' to append '.gxr'.",
         required = true,
     ) {
         it == "Default" || it!!.matches(Regex("^[a-z]\\w*(\\.[a-z]\\w*)+$"))
@@ -34,6 +34,7 @@ val changePackageNamePatch = resourcePatch(
         if (newName == original) throw PatchException("New package name equals original: $original")
 
         document("AndroidManifest.xml").use { document ->
+            // AndroidManifest.xml: manifest@package attribute (top-level package identifier)
             document.documentElement.setAttribute("package", newName)
 
             // Update custom permissions declared by this package.
