@@ -249,6 +249,15 @@ private val androidXrManifestPatch = resourcePatch {
                 filter.appendChild(launcherCat)
                 activity.appendChild(filter)
 
+                // Same managed-panel aspect as SteamLink below: this activity is the actual
+                // launcher entry point, so it's what's on screen (permission prompts / the
+                // "splash") before SteamLink even starts. Without this it has no declared
+                // panel size and the system falls back to an unrelated default aspect.
+                val gxrLayout = doc.createElement("layout")
+                gxrLayout.setAttribute("android:defaultWidth", "1280.0px")
+                gxrLayout.setAttribute("android:defaultHeight", "692.0px")
+                activity.appendChild(gxrLayout)
+
                 // Insert as the first activity in <application>.
                 val firstActivity = app.getElementsByTagName("activity").item(0)
                 app.insertBefore(activity, firstActivity)
