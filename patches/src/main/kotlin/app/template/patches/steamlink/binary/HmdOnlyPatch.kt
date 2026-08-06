@@ -4,6 +4,8 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.intOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244
 import app.template.patches.steamlink.util.BinaryPatchHelper.vaddrToFileOffset
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -165,7 +167,11 @@ val hmdOnlyPatch = rawResourcePatch(
     description = "Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_HMD_ONLY)
+    compatibleWith(
+        COMPATIBILITY_STEAM_LINK_HMD_ONLY,
+        COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172,
+        COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244,
+    )
 
     val offsetMs by intOption(
         key = "offsetMs",
