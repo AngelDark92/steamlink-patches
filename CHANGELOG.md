@@ -1,3 +1,9 @@
+## [1.4.6-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.5...v1.4.6-dev.1) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* add layout attributes for GXR launcher activity to define panel size ([cf73da5](https://github.com/AngelDark92/steamlink-patches/commit/cf73da51a33a1a6b9dcab94bef80c4c8890a2f33))
+
 ## [1.4.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.4...v1.4.5) (2026-08-06)
 
 ### 🐛 Bug Fixes
