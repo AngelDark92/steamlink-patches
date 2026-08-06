@@ -1,3 +1,9 @@
+## [1.4.6-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.1...v1.4.6-dev.2) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* update Android XR manifest to adjust layout dimensions and remove unnecessary properties ([9c7b79e](https://github.com/AngelDark92/steamlink-patches/commit/9c7b79e4fc8b3f659d9ae4682b46a6afd56a4ddd))
+
 ## [1.4.6-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.5...v1.4.6-dev.1) (2026-08-06)
 
 ### 🐛 Bug Fixes
