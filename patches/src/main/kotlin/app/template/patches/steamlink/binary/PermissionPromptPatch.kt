@@ -14,26 +14,34 @@ private val REPLACE = byteArrayOf(
     0xc0.toByte(), 0x03.toByte(), 0x5f.toByte(), 0xd6.toByte(),
 )
 
-private const val REQUEST_ANDROID_PERMISSIONS_OFFSET = 0x1422c4
+private const val REQUEST_ANDROID_PERMISSIONS_OFFSET_5002244 = 0x1422c4
+private const val LIBVRLINK_SCENE_SIZE_5002244 = 2_251_920
 
 internal val disablePermissionPromptNativePatch = rawResourcePatch {
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
         val bytes = file.readBytes()
-        val current = bytes.copyOfRange(
-            REQUEST_ANDROID_PERMISSIONS_OFFSET,
-            REQUEST_ANDROID_PERMISSIONS_OFFSET + SEARCH.size,
-        )
+        val offset = REQUEST_ANDROID_PERMISSIONS_OFFSET_5002244
+
+        if (offset + SEARCH.size > bytes.size) {
+            return@execute
+        }
+
+        val current = bytes.copyOfRange(offset, offset + SEARCH.size)
         when {
             current.contentEquals(REPLACE) -> Unit
             current.contentEquals(SEARCH) -> {
-                REPLACE.copyInto(bytes, REQUEST_ANDROID_PERMISSIONS_OFFSET)
+                REPLACE.copyInto(bytes, offset)
                 file.writeBytes(bytes)
             }
-            else -> throw PatchException(
+            bytes.size == LIBVRLINK_SCENE_SIZE_5002244 -> throw PatchException(
                 "Unexpected RequestAndroidPermissions bytes at 0x" +
-                    REQUEST_ANDROID_PERMISSIONS_OFFSET.toString(16),
+                    offset.toString(16),
             )
+            else -> {
+                // Unknown binary layout (for example 5002172/5002206): skip instead of
+                // crashing the entire Android XR compatibility chain.
+            }
         }
     }
 }

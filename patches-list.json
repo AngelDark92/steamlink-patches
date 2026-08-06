@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.4.6-dev.4",
+  "version": "1.4.6-dev.3",
   "patches": [
     {
       "name": "Android XR compatibility",
@@ -23,9 +23,7 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
+              "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -73,10 +71,8 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
-              "isExperimental": false,
+              "versionCodes": null,
+              "isExperimental": true,
               "minSdk": null,
               "description": null
             }
@@ -140,9 +136,7 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
+              "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -184,9 +178,7 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
+              "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -211,13 +203,20 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
-                "ARM64_V8A": 5002244
+                "ARM64_V8A": 5001712
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "HMD-only pose fix layout verified for versionCode 5002244."
+              "description": "HMD-only pose fix layout verified for versionCode 5001712."
+            },
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
             }
           ]
         }
@@ -250,9 +249,7 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
+              "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
@@ -316,9 +313,7 @@
           "targets": [
             {
               "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244
-              },
+              "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
               "description": null
