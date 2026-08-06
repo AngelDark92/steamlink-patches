@@ -1,3 +1,9 @@
+## [1.4.6-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.3...v1.4.6-dev.4) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Update patches and remove deprecated features for improved compatibility ([3227658](https://github.com/AngelDark92/steamlink-patches/commit/322765837b7bec3670486c8ce1a7824289e7b0b2))
+
 ## [1.4.6-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.2...v1.4.6-dev.3) (2026-08-06)
 
 ### 🐛 Bug Fixes
