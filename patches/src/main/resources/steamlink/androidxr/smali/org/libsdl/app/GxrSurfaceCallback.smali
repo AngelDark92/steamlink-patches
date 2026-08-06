@@ -55,7 +55,7 @@
 .end method
 
 # ─────────────────────────────────────────────────────────────────────────────
-# applyManagedPanelMetrics(SDLSurface owner, int width, int height)
+# applyManagedPanelMetrics(SDLSurface owner, SurfaceHolder holder, int format, int width, int height)
 #
 # Called via a direct instruction patch injected at index 0 of the REAL
 # SDLSurface.surfaceChanged(), immediately followed by return-void. This is
@@ -67,8 +67,15 @@
 # copy of it bundled here would never actually run. Feeding the true surface
 # width/height at 1:1 scale (instead of the full physical combined-display
 # metrics) prevents the managed-panel launcher UI from being stretched.
+#
+# Signature mirrors surfaceChanged()'s own params 1:1 (owner in place of
+# `this`) so the caller can pass p0..p4 as one contiguous invoke-static/range
+# block -- surfaceChanged's real v-registers can exceed 15, which the fixed
+# 4-bit register slots of invoke-static (format 35c) cannot address; only a
+# contiguous range is required for invoke-static/range (format 3rc). holder
+# and format are unused here, kept only to preserve contiguity.
 # ─────────────────────────────────────────────────────────────────────────────
-.method public static applyManagedPanelMetrics(Lorg/libsdl/app/SDLSurface;II)V
+.method public static applyManagedPanelMetrics(Lorg/libsdl/app/SDLSurface;Landroid/view/SurfaceHolder;III)V
     .locals 6
 
     iget-object v0, p0, Lorg/libsdl/app/SDLSurface;->mDisplay:Landroid/view/Display;
@@ -77,13 +84,13 @@
 
     move-result v5
 
-    move v0, p1
+    move v0, p3
 
-    move v1, p2
+    move v1, p4
 
-    move v2, p1
+    move v2, p3
 
-    move v3, p2
+    move v3, p4
 
     const/high16 v4, 0x3f800000    # 1.0f
 

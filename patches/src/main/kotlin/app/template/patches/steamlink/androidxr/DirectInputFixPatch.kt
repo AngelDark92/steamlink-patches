@@ -8,7 +8,7 @@ import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.BuilderInstruction
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction10x
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction35c
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction3rc
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference
 
 // ---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodRefere
 //
 // The fix is to edit the REAL method bodies directly, in-place, via
 // mutableClassDefBy(). Instructions are built as raw dexlib2
-// BuilderInstruction objects (BuilderInstruction35c/10x) instead of smali
+// BuilderInstruction objects (BuilderInstruction3rc/10x) instead of smali
 // strings: morphe-patcher's InlineSmaliCompiler (used by the
 // addInstruction(index, "smali string") overload) can silently return a
 // ClassDef with zero methods for some inline invoke-static bodies -- no
@@ -41,6 +41,14 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodRefere
 // "Collection is empty" (NoSuchElementException). Confirmed by decompiling
 // InlineSmaliCompiler in morphe-patcher 1.7.0. Building instructions
 // directly bypasses that ANTLR-based compiler entirely.
+//
+// invoke-static (format 35c) also only encodes registers in a 4-bit nibble
+// (v0..v15); real methods with many locals routinely have parameter
+// registers above v15 (e.g. v22), which throws "Invalid register" at build
+// time. invoke-static/range (format 3rc) has no such limit but requires a
+// CONTIGUOUS register block, so surfaceChanged's call passes its full
+// p0..p4 parameter range (owner instead of `this`) rather than cherry-
+// picking non-contiguous p0/p3/p4.
 // ---------------------------------------------------------------------------
 
 // v-register for smali "p<index>" register, assuming no wide (J/D) parameters.
@@ -50,21 +58,19 @@ private fun MutableMethod.pRegister(index: Int): Int {
     return registerCount - paramWords + index
 }
 
-private fun invokeStatic(
+private fun invokeStaticRange(
     definingClass: String,
     methodName: String,
     parameterTypes: List<String>,
     returnType: String,
-    vararg registers: Int,
-): BuilderInstruction {
-    val r = IntArray(5) { registers.getOrElse(it) { 0 } }
-    return BuilderInstruction35c(
-        Opcode.INVOKE_STATIC,
-        registers.size,
-        r[0], r[1], r[2], r[3], r[4],
-        ImmutableMethodReference(definingClass, methodName, parameterTypes, returnType),
-    )
-}
+    startRegister: Int,
+    registerCount: Int,
+): BuilderInstruction = BuilderInstruction3rc(
+    Opcode.INVOKE_STATIC_RANGE,
+    startRegister,
+    registerCount,
+    ImmutableMethodReference(definingClass, methodName, parameterTypes, returnType),
+)
 
 @Suppress("unused")
 internal val xrDirectInputFixPatch = bytecodePatch(
@@ -90,12 +96,17 @@ internal val xrDirectInputFixPatch = bytecodePatch(
             .apply {
                 addInstruction(
                     0,
-                    invokeStatic(
+                    invokeStaticRange(
                         "Lorg/libsdl/app/GxrSurfaceCallback;",
                         "applyManagedPanelMetrics",
-                        listOf("Lorg/libsdl/app/SDLSurface;", "I", "I"),
+                        listOf(
+                            "Lorg/libsdl/app/SDLSurface;",
+                            "Landroid/view/SurfaceHolder;",
+                            "I", "I", "I",
+                        ),
                         "V",
-                        pRegister(0), pRegister(3), pRegister(4),
+                        pRegister(0),
+                        5,
                     ),
                 )
                 addInstruction(1, BuilderInstruction10x(Opcode.RETURN_VOID))
@@ -108,12 +119,13 @@ internal val xrDirectInputFixPatch = bytecodePatch(
             .apply {
                 addInstruction(
                     0,
-                    invokeStatic(
+                    invokeStaticRange(
                         "Lorg/libsdl/app/GxrSdlBridge;",
                         "routeXrPointerAsMouse",
                         listOf("Landroid/view/MotionEvent;"),
                         "V",
                         pRegister(2),
+                        1,
                     ),
                 )
             }
@@ -123,12 +135,13 @@ internal val xrDirectInputFixPatch = bytecodePatch(
             .apply {
                 addInstruction(
                     0,
-                    invokeStatic(
+                    invokeStaticRange(
                         "Lorg/libsdl/app/GxrSdlBridge;",
                         "routeXrPointerAsMouseGeneric",
                         listOf("Landroid/view/MotionEvent;"),
                         "V",
                         pRegister(2),
+                        1,
                     ),
                 )
             }
