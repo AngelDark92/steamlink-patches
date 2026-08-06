@@ -1,3 +1,10 @@
+## [1.4.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.4...v1.4.5) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Merge pull request [#27](https://github.com/AngelDark92/steamlink-patches/issues/27) from AngelDark92/dev ([596c07d](https://github.com/AngelDark92/steamlink-patches/commit/596c07d1b2d49b4b19b05895a3ca15edf7a0771c))
+* update applyManagedPanelMetrics method signature to include SurfaceHolder and adjust invokeStatic calls for contiguous register handling ([07a5f80](https://github.com/AngelDark92/steamlink-patches/commit/07a5f8008ac810087b46e2db5f1900606ba9adb9))
+
 ## [1.4.5-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.4...v1.4.5-dev.1) (2026-08-06)
 
 ### 🐛 Bug Fixes
