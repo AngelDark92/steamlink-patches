@@ -1,3 +1,9 @@
+## [1.5.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0...v1.5.1-dev.1) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Update patches and configurations for XR compatibility and functionality enhancements ([98cb52d](https://github.com/AngelDark92/steamlink-patches/commit/98cb52d3b92133fd81510b7d7ffbbddf5191ecbd))
+
 ## [1.5.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.5...v1.5.0) (2026-08-06)
 
 ### 🐛 Bug Fixes
