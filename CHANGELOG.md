@@ -1,3 +1,11 @@
+## [1.6.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.6.0...v1.6.1-dev.1) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* more patches ([a68e117](https://github.com/AngelDark92/steamlink-patches/commit/a68e1174be68f4e847efefd7dabb738735a209cd))
+* Update patch list and improve Android XR compatibility handling ([a9adf0e](https://github.com/AngelDark92/steamlink-patches/commit/a9adf0e991dd4ba145f0e04b7f6859118ba171d1))
+* update patch list and improve compatibility for Steam Link HMD-only builds ([45c55fc](https://github.com/AngelDark92/steamlink-patches/commit/45c55fc5fef25d31e4e11ec055e95d0ad876b3c3))
+
 ## [1.6.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0...v1.6.0) (2026-08-06)
 
 ### 🐛 Bug Fixes
