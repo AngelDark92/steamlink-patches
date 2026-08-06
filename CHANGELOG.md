@@ -1,3 +1,9 @@
+## [1.5.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0-dev.1...v1.5.0-dev.2) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Update smali file input handling in assembleExtension task to exclude test variants ([d0dcd22](https://github.com/AngelDark92/steamlink-patches/commit/d0dcd227687020c712fe11b01f4c4cdd2f7422e3))
+
 ## [1.5.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.5...v1.5.0-dev.1) (2026-08-06)
 
 ### ✨ New Features
