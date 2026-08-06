@@ -9,8 +9,7 @@
       "dependencies": [
         "ResourcePatch",
         "BytecodePatch",
-        "RawResourcePatch",
-        "BytecodePatch"
+        "RawResourcePatch"
       ],
       "compatiblePackages": [
         {
