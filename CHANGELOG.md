@@ -1,3 +1,9 @@
+## [1.5.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.5...v1.5.0-dev.1) (2026-08-06)
+
+### ✨ New Features
+
+* Implement instrumentation and logging for OpenXR system properties and overlay lifecycle ([5884039](https://github.com/AngelDark92/steamlink-patches/commit/5884039dfc0d8748db2759f989772b866d6978f5))
+
 ## [1.4.6-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.4...v1.4.6-dev.5) (2026-08-06)
 
 ### 🐛 Bug Fixes
