@@ -1,3 +1,14 @@
+## [1.7.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.6.1-dev.1...v1.7.0-dev.1) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Add patches for Galaxy XR compatibility and enhancements ([96baf0c](https://github.com/AngelDark92/steamlink-patches/commit/96baf0c2e79177e02ddb067868ea1042bd677243))
+* update compatibility details and patch versions for Steam Link ([207c0b9](https://github.com/AngelDark92/steamlink-patches/commit/207c0b97bbec83c4f67db31e6561cff3f9af3c9f))
+
+### ✨ New Features
+
+* add experimental overlay and no-permission test patches for Steam Link ([8bfcecc](https://github.com/AngelDark92/steamlink-patches/commit/8bfcecc0413f12fab1caa6a70393ca0ac2d784f0))
+
 ## [1.6.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.6.0...v1.6.1-dev.1) (2026-08-06)
 
 ### 🐛 Bug Fixes
