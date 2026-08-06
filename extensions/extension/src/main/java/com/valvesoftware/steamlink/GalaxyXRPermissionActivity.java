@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +31,12 @@ public class GalaxyXRPermissionActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        TextView splash = new TextView(this);
+        splash.setText("Launching Steam Link...");
+        splash.setGravity(Gravity.CENTER);
+        splash.setTextSize(20);
+        setContentView(splash);
 
         List<String> missing = new ArrayList<>();
         for (String perm : REQUIRED_PERMISSIONS) {
