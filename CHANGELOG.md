@@ -1,3 +1,9 @@
+## [1.6.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.1-dev.1...v1.6.0-dev.1) (2026-08-06)
+
+### ✨ New Features
+
+* Add test variants for overlay handling and permission management ([5b79c54](https://github.com/AngelDark92/steamlink-patches/commit/5b79c543384994509d347c5d6738f761fc805398))
+
 ## [1.5.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0...v1.5.1-dev.1) (2026-08-06)
 
 ### 🐛 Bug Fixes
