@@ -46,7 +46,7 @@ object Constants {
         appIconColor = 0x1B2838,
         targets = listOf(
             AppTarget(
-                version = "2.0.20",
+                version = "2.0.22",
                 versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5002172),
                 description = "HMD-only pose fix layout verified for build 5002172.",
             )
@@ -60,7 +60,7 @@ object Constants {
         appIconColor = 0x1B2838,
         targets = listOf(
             AppTarget(
-                version = "2.0.20",
+                version = "2.0.22",
                 versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5002244),
                 description = "HMD-only pose fix layout verified for build 5002244.",
             )
