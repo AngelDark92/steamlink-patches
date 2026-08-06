@@ -30,7 +30,9 @@ val deviceIdentityPatch = rawResourcePatch(
             "PICO 4 Pro" to "pico-4-pro",
         ),
         title = "HMD identity",
-        description = "Which HMD identity to report to SteamVR.",
+        // Overrides assets/config/hmd_config.json: sTrackingSystem, sSerialNumber, sManufacturerName,
+        // sModelNumber, sControllerType, sDeviceType, sInputProfilePath, requestedExtensions
+        description = "assets/config/hmd_config.json: overwrites sSerialNumber, sManufacturerName, sModelNumber, sControllerType, sDeviceType, sInputProfilePath, requestedExtensions.",
         required = true,
     )
 

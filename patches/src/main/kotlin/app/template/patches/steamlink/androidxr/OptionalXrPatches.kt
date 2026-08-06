@@ -1,44 +1,23 @@
 package app.template.patches.steamlink.androidxr
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
-import com.android.tools.smali.dexlib2.AccessFlags
-import com.android.tools.smali.dexlib2.Opcode
-import com.android.tools.smali.dexlib2.builder.BuilderInstruction
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction10x
-import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction3rc
-import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
 
-// v-register for smali "p<index>" register, assuming no wide (J/D) parameters.
-private fun MutableMethod.pRegister(index: Int): Int {
-    val registerCount = implementation!!.registerCount
-    val paramWords = parameterTypes.size + if (AccessFlags.STATIC.isSet(accessFlags)) 0 else 1
-    return registerCount - paramWords + index
-}
-
-private fun invokeStaticRange(
-    definingClass: String,
-    methodName: String,
-    parameterTypes: List<String>,
-    returnType: String,
-    startRegister: Int,
-    registerCount: Int,
-): BuilderInstruction = BuilderInstruction3rc(
-    Opcode.INVOKE_STATIC_RANGE,
-    startRegister,
-    registerCount,
-    ImmutableMethodReference(definingClass, methodName, parameterTypes, returnType),
-)
+private fun loadOptionalXrResource(name: String): ByteArray =
+    (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
+        ?: error("Missing bundled resource: steamlink/androidxr/$name"))
+        .use { it.readBytes() }
 
 private val appearOnTopManifestPatch = resourcePatch {
     finalize {
         document("AndroidManifest.xml").use { document ->
             val manifest = document.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element
+            // Required by GxrOverlayBridge to add a TYPE_APPLICATION_OVERLAY compositor signal window
             val permission = "android.permission.SYSTEM_ALERT_WINDOW"
             val permissions = document.getElementsByTagName("uses-permission")
             val exists = (0 until permissions.length)
@@ -56,74 +35,40 @@ private val appearOnTopManifestPatch = resourcePatch {
 @Suppress("unused")
 val appearOnTopPatch = bytecodePatch(
     name = "Appear on top",
-    description = "Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
-    default = false,
+    description = "Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
+    default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
     dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
 }
 
+private val noOverlayTestSmaliPatch = rawResourcePatch {
+    execute {
+        // Replaces production overlay bridge with a no-op (no TYPE_APPLICATION_OVERLAY window created)
+        get("smali/com/valvesoftware/steamlink/GxrOverlayBridge.smali")
+            .writeBytes(loadOptionalXrResource("smali/test_variants/GxrOverlayBridge_NoOverlay.smali"))
+        // Replaces permission activity with a stub that skips SYSTEM_ALERT_WINDOW request and goes directly to VRLink
+        get("smali/com/valvesoftware/steamlink/GalaxyXRPermissionActivity.smali")
+            .writeBytes(loadOptionalXrResource("smali/test_variants/GalaxyXRPermissionActivity_NoOverlay_NoPermission.smali"))
+    }
+}
+
 @Suppress("unused")
-val xrDirectInputAndPanelMetricsPatch = bytecodePatch(
-    name = "XR direct input and panel metrics",
-    description = "Experimental: directly patches SDL surface/motion methods for managed-panel metrics and XR pointer routing. Disable if startup turns black.",
+val overlayBaselineTestPatch = bytecodePatch(
+    name = "TEST EXPERIMENTAL - Baseline Overlay Flow",
+    description = "A/B test baseline. Keeps launcher bootstrap plus overlay permission flow (Appear on top behavior). Enable this OR the No-Overlay test patch, not both.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(xrCoreRuntimePatch)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
+    dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
+}
 
-    execute {
-        mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
-            .first { it.name == "surfaceChanged" && it.parameterTypes.size == 4 }
-            .apply {
-                addInstruction(
-                    0,
-                    invokeStaticRange(
-                        "Lorg/libsdl/app/GxrSurfaceCallback;",
-                        "applyManagedPanelMetrics",
-                        listOf(
-                            "Lorg/libsdl/app/SDLSurface;",
-                            "Landroid/view/SurfaceHolder;",
-                            "I", "I", "I",
-                        ),
-                        "V",
-                        pRegister(0),
-                        5,
-                    ),
-                )
-                addInstruction(1, BuilderInstruction10x(Opcode.RETURN_VOID))
-            }
-
-        mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
-            .first { it.name == "onTouch" && it.parameterTypes.size == 2 }
-            .apply {
-                addInstruction(
-                    0,
-                    invokeStaticRange(
-                        "Lorg/libsdl/app/GxrSdlBridge;",
-                        "routeXrPointerAsMouse",
-                        listOf("Landroid/view/MotionEvent;"),
-                        "V",
-                        pRegister(2),
-                        1,
-                    ),
-                )
-            }
-
-        mutableClassDefBy("Lorg/libsdl/app/SDLGenericMotionListener_API14;").methods
-            .first { it.name == "onGenericMotion" && it.parameterTypes.size == 2 }
-            .apply {
-                addInstruction(
-                    0,
-                    invokeStaticRange(
-                        "Lorg/libsdl/app/GxrSdlBridge;",
-                        "routeXrPointerAsMouseGeneric",
-                        listOf("Landroid/view/MotionEvent;"),
-                        "V",
-                        pRegister(2),
-                        1,
-                    ),
-                )
-            }
-    }
+@Suppress("unused")
+val noOverlayNoPermissionTestPatch = rawResourcePatch(
+    name = "TEST EXPERIMENTAL - No Overlay / No Permission",
+    description = "A/B test variant. Replaces GalaxyXRPermissionActivity and GxrOverlayBridge with no-overlay/no-permission-request smali for crash reproduction and comparison.",
+    default = false,
+) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
+    dependsOn(xrLauncherBootstrapPatch, noOverlayTestSmaliPatch)
 }

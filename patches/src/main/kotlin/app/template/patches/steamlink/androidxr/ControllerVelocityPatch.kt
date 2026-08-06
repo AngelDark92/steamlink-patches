@@ -4,12 +4,15 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.intOption
 import app.morphe.patcher.patch.rawResourcePatch
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+// 16-byte ASCII identifier embedded in libgxr_controller_velocity.so; uniquely locates the config block
 private val CONFIG_MAGIC = "GXRVELCFG0000001".encodeToByteArray()
+// Total config block size: 16B magic + 4B version + 12B padding + 8B maxDeltaNs + 4B maxLinear + 4B maxAngular + 4B smoothing = 56
 private const val CONFIG_SIZE = 56
 
 private fun velocityResource(name: String): ByteArray =
@@ -43,9 +46,13 @@ private fun configuredVelocityLibrary(
     val bytes = velocityResource("libgxr_controller_velocity.so").copyOf()
     val offset = bytes.findUniqueConfig()
     ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).apply {
+        // +32: maxDeltaNs int64 (ms×1_000_000; fallback threshold for pose sample gap)
         putLong(offset + 32, maxDeltaMs.toLong() * 1_000_000L)
+        // +40: maxLinearSpeed float32 (m/s; clamp to runtime velocity above this derived speed)
         putFloat(offset + 40, maxLinearSpeed)
+        // +44: maxAngularSpeed float32 (rad/s; clamp to runtime velocity above this derived speed)
         putFloat(offset + 44, maxAngularSpeed)
+        // +48: smoothing float32 (EMA weight for previous-frame output; 0 = no smoothing)
         putFloat(offset + 48, smoothing)
     }
     return bytes
@@ -57,14 +64,14 @@ val controllerVelocityPatch = rawResourcePatch(
     description = "Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
+    compatibleWith(COMPATIBILITY_STEAM_LINK, COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
     dependsOn(xrCoreRuntimePatch)
 
     val maxDeltaMs by intOption(
         key = "maxDeltaMs",
         default = 50,
         title = "Maximum sample gap (ms)",
-        description = "Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
+        description = "libgxr_controller_velocity.so config+32 (int64 ns = value×1e6). Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
         required = true,
         validator = { value -> value != null && value in 5..100 },
     )
@@ -72,7 +79,7 @@ val controllerVelocityPatch = rawResourcePatch(
         key = "smoothing",
         default = 0.0f,
         title = "Derived velocity smoothing",
-        description = "Previous-output weight. 0 gives minimum lag; higher values reduce jitter. Allowed range: 0.0 to 0.9.",
+        description = "libgxr_controller_velocity.so config+48 (float32 EMA weight). 0 = no smoothing, minimum lag; higher values reduce jitter. Allowed range: 0.0 to 0.9.",
         required = true,
         validator = { value -> value != null && value in 0.0f..0.9f },
     )
@@ -80,7 +87,7 @@ val controllerVelocityPatch = rawResourcePatch(
         key = "maxLinearSpeed",
         default = 20.0f,
         title = "Maximum linear speed (m/s)",
-        description = "Falls back to runtime velocity above this derived speed. Allowed range: 1 to 50 m/s.",
+        description = "libgxr_controller_velocity.so config+40 (float32 m/s). Falls back to runtime velocity above this derived linear speed. Allowed range: 1 to 50 m/s.",
         required = true,
         validator = { value -> value != null && value in 1.0f..50.0f },
     )
@@ -88,7 +95,7 @@ val controllerVelocityPatch = rawResourcePatch(
         key = "maxAngularSpeed",
         default = 50.0f,
         title = "Maximum angular speed (rad/s)",
-        description = "Falls back to runtime velocity above this derived speed. Allowed range: 1 to 100 rad/s.",
+        description = "libgxr_controller_velocity.so config+44 (float32 rad/s). Falls back to runtime velocity above this derived angular speed. Allowed range: 1 to 100 rad/s.",
         required = true,
         validator = { value -> value != null && value in 1.0f..100.0f },
     )

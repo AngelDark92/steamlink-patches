@@ -32,12 +32,16 @@ private val androidXrLibPatch = rawResourcePatch {
 
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
+        // OpenXR runtime bridge native library for Galaxy XR platform integration
         File(libDir, "libgxr_xr_bridge.so").writeBytes(loadResource("libgxr_xr_bridge.so"))
 
+        // res/drawable-anydpi/ic_launcher_background.xml — replaces stock Valve solid-blue background
         get("res/drawable-anydpi/ic_launcher_background.xml")
             .writeBytes(loadResource("ic_launcher_background.xml"))
+        // res/drawable-anydpi/ic_launcher_background_gradient.xml — new gradient drawable (resource id 0x7f010000)
         get("res/drawable-anydpi/ic_launcher_background_gradient.xml")
             .writeBytes(loadResource("ic_launcher_background_gradient.xml"))
+        // res/values/public.xml — assigns stable resource IDs for ic_launcher_background_gradient (0x7f010000) and ic_launcher (0x7f010001/0x7f030000)
         get("res/values/public.xml").writeBytes(loadResource("public.xml"))
 
         // arslib ResourceIdProcessor requires ids.xml; APKs without <item type="id"> resources omit it.
@@ -72,7 +76,9 @@ val xrDeviceConfigBaselinePatch = rawResourcePatch(
     execute {
         get("assets/config/hmd_config.json").writeBytes(loadResource("hmd_config.json"))
         get("assets/config/controller_config.json").writeBytes(loadResource("controller_config.json"))
+        // assets/config/default_config.json — preflight.ignore_microphone_muted=false
         get("assets/config/default_config.json").writeBytes(loadResource("default_config.json"))
+        // assets/webui/dash/index.html — Steam Link dashboard HTML bootstrap
         get("assets/webui/dash/index.html").writeBytes(loadResource("index.html"))
     }
 }
@@ -91,7 +97,11 @@ val xrManifestCapabilityPackPatch = resourcePatch(
             val manifest = doc.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element
 
-            // Make SDK targeting explicit for Android XR so installs are not flagged as legacy-targeted.
+            // uses-sdk: minSdkVersion=29 (Android 10) + targetSdkVersion=36 (Android XR platform)
+            manifest.setAttribute("android:minSdkVersion", "29")
+            manifest.setAttribute("android:targetSdkVersion", "36")
+            manifest.removeAttribute("android:maxSdkVersion")
+
             val usesSdkNodes = manifest.getElementsByTagName("uses-sdk")
             val usesSdk = if (usesSdkNodes.length > 0) {
                 usesSdkNodes.item(0) as Element
@@ -126,6 +136,7 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                     .forEach { it.parentNode.removeChild(it) }
             }
 
+            // Strip all Oculus/Meta/Pico/HTC platform declarations; Android XR uses different namespaces
             removeMatching("uses-permission") {
                 val name = it.getAttribute("android:name")
                 name.startsWith("com.oculus.permission.") ||
@@ -144,20 +155,25 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                     name.startsWith("pxr.") ||
                     name.startsWith("picovr.")
             }
+            // libopenxr_forwardloader.oculus.so is Meta's proprietary forwarding loader; not present on Android XR
             removeMatching("uses-native-library") {
                 it.getAttribute("android:name") == "libopenxr_forwardloader.oculus.so"
             }
             removeMatching("category") {
                 val name = it.getAttribute("android:name")
+                // Oculus 2D/VR intent categories — not recognised on Android XR
                 name == "com.oculus.intent.category.VR" ||
                     name == "com.oculus.intent.category.2D"
             }
 
             val newPerms = listOf(
+                // OpenXR runtime and system service binding permissions (Khronos OpenXR 1.1 spec)
                 "org.khronos.openxr.permission.OPENXR",
                 "org.khronos.openxr.permission.OPENXR_SYSTEM",
+                // Location permissions required by OpenXR spatial anchor APIs on Android XR
                 "android.permission.ACCESS_COARSE_LOCATION",
                 "android.permission.ACCESS_FINE_LOCATION",
+                // Android XR platform permissions for XR_ANDROID_hand_tracking and XR_ANDROID_eye_gaze
                 "android.permission.HAND_TRACKING",
                 "android.permission.EYE_TRACKING_FINE",
             )
@@ -171,8 +187,11 @@ val xrManifestCapabilityPackPatch = resourcePatch(
 
             data class FeatureDef(val name: String, val required: Boolean, val version: String? = null)
             val newFeatures = listOf(
+                // android.hardware.vr.headtracking v1: 6-DOF HMD tracking hardware feature declaration
                 FeatureDef("android.hardware.vr.headtracking", true, "1"),
+                // android.software.xr.api.openxr v0x10001: OpenXR 1.1 platform runtime feature
                 FeatureDef("android.software.xr.api.openxr", true, "0x10001"),
+                // Input device capabilities; optional so app installs without controller/eye hardware
                 FeatureDef("android.hardware.xr.input.controller", false),
                 FeatureDef("android.hardware.xr.input.hand_tracking", false),
                 FeatureDef("android.hardware.xr.input.eye_tracking", false),
@@ -200,8 +219,10 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                     }
                 }
             if (!hasOpenXrQuery) {
+                // <queries> block: allows runtime discovery of OpenXR broker providers and service intents
                 val queries = doc.createElement("queries")
                 val provider = doc.createElement("provider")
+                // org.khronos.openxr.runtime_broker / system_runtime_broker: OpenXR runtime discovery authorities
                 provider.setAttribute(
                     "android:authorities",
                     "org.khronos.openxr.runtime_broker;org.khronos.openxr.system_runtime_broker",
@@ -220,6 +241,7 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                 manifest.insertBefore(queries, app)
             }
 
+            // libopenxr.google.so: Android XR's OpenXR loader; optional so non-XR builds aren't blocked
             val nativeLibName = "libopenxr.google.so"
             val hasNativeLib = app.getElementsByTagName("uses-native-library").let { nl ->
                 (0 until nl.length).any {
@@ -233,6 +255,7 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                 app.insertBefore(nativeLib, app.firstChild)
             }
 
+            // android.window.PROPERTY_XR_BOUNDARY_TYPE_RECOMMENDED: hints spatial OS to use large boundary for full-space apps
             val xrBoundaryMeta = "android.window.PROPERTY_XR_BOUNDARY_TYPE_RECOMMENDED"
             val hasBoundaryMeta = app.getElementsByTagName("property").let { pl ->
                 (0 until pl.length).any {
@@ -285,6 +308,7 @@ val xrLauncherBootstrapPatch = resourcePatch(
                 filter.appendChild(launcherCat)
                 activity.appendChild(filter)
 
+                // android:defaultWidth/Height 1280×800px: initial 2D panel size for Home Space display
                 val gxrLayout = doc.createElement("layout")
                 gxrLayout.setAttribute("android:defaultWidth", "1280.0px")
                 gxrLayout.setAttribute("android:defaultHeight", "800.0px")
@@ -308,6 +332,7 @@ val xrLauncherBootstrapPatch = resourcePatch(
                     if (!hasMode) {
                         val prop = doc.createElement("property")
                         prop.setAttribute("android:name", xrStartMode)
+                        // XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED: VRLink owns the full XR frame, no spatial OS chrome
                         prop.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED")
                         vrLink.insertBefore(prop, vrLink.firstChild)
                     }
@@ -328,6 +353,7 @@ val xrLauncherBootstrapPatch = resourcePatch(
                             f
                         }
                         val cat = doc.createElement("category")
+                        // org.khronos.openxr.intent.category.IMMERSIVE_HMD: marks VRLink as an OpenXR HMD entry point
                         cat.setAttribute("android:name", immersiveHmd)
                         filter.appendChild(cat)
                     }
@@ -378,20 +404,4 @@ val xrInputRoutingConfigPatch = rawResourcePatch(
     execute {
         get("assets/config/ui_config.json").writeBytes(loadResource("ui_config.json"))
     }
-}
-
-@Suppress("unused")
-val androidXrCompatibilityPatch = bytecodePatch(
-    name = "Android XR compatibility",
-    description = "Legacy bundle patch that enables the full XR core, manifest, launcher bootstrap, and baseline config stack. Prefer selecting individual XR patches for granular control.",
-    default = false,
-) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(
-        xrCoreRuntimePatch,
-        xrDeviceConfigBaselinePatch,
-        xrManifestCapabilityPackPatch,
-        xrLauncherBootstrapPatch,
-        xrInputRoutingConfigPatch,
-    )
 }

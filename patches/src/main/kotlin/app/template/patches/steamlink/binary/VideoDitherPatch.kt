@@ -8,15 +8,19 @@ import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplac
 
 // The video fragment shader ships with the dither line commented out with "//" prefix.
 // Enabling changes those two bytes to spaces, activating the dither at runtime.
+// COUPLING: oledCalibrationPatch replaces the entire 1087-byte shader block first; this patch
+// must then target the calibrated variant patterns below instead of the stock ones.
 private val SHADER_TAIL = (
     "color.rgb += fract(UniDitherOffsets.a * .43 + UniDitherOffsets.rgb + " +
     "gl_FragCoord.x * 1.67 + gl_FragCoord.y * 1.127 ) * .00292;"
 ).toByteArray(Charsets.US_ASCII)
 
+// Stock shader: 2-byte comment toggle — "//" (disabled) ↔ "  " two spaces (enabled)
 private val DISABLED = byteArrayOf('/'.code.toByte(), '/'.code.toByte()) + SHADER_TAIL
 private val ENABLED = byteArrayOf(' '.code.toByte(), ' '.code.toByte()) + SHADER_TAIL
 
-// OLED calibration uses zero-centred dither and has no stock dither line to uncomment.
+// Calibrated shader (written by oledCalibrationPatch): dither scale constant *.00292 ↔ *.00000
+// Located inside the zero-centred expression `(fract(...) - .5) * .00292`
 private val CALIBRATED_ENABLED = ") - .5) * .00292;".toByteArray(Charsets.US_ASCII)
 private val CALIBRATED_DISABLED = ") - .5) * .00000;".toByteArray(Charsets.US_ASCII)
 
@@ -73,7 +77,7 @@ val videoDitherPatch = rawResourcePatch(
         key = "enable",
         default = true,
         title = "Enable dither",
-        description = "True to uncomment the dither line; false to recomment it.",
+        description = "libvrlink_scene.so GLSL: stock shader toggles '//' on color.rgb+=fract(...)*.00292; calibrated (post-oledCalibration) shader toggles *.00292 vs *.00000.",
         required = true,
     )
 

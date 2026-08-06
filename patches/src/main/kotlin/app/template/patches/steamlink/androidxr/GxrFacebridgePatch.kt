@@ -14,8 +14,10 @@ private fun facebridgeResource(name: String): ByteArray =
 private val gxrFacebridgeLibPatch = rawResourcePatch {
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
+        // OpenXR implicit API layer: bridges XR_FB_face_tracking2 (Meta) → XR_ANDROID_face_tracking
         File(libDir, "libgxr_face_bridge.so").writeBytes(facebridgeResource("libgxr_face_bridge.so"))
 
+        // Layer manifest key: api_layer.name="XR_APILAYER_local_GalaxyXR_face_bridge", disable_env=GXR_DISABLE_FACE_BRIDGE
         val layerManifest = get(
             "assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_face_bridge.json",
         )
@@ -39,6 +41,7 @@ private val gxrFacebridgeManifestPatch = resourcePatch {
         document("AndroidManifest.xml").use { doc ->
             val manifest = doc.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element
+            // Android XR platform permission for XR_ANDROID_face_tracking access
             val perm = "android.permission.FACE_TRACKING"
             val alreadyPresent = (0 until doc.getElementsByTagName("uses-permission").length)
                 .map { doc.getElementsByTagName("uses-permission").item(it) as Element }
