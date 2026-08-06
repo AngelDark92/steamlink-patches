@@ -144,7 +144,7 @@
 
     const-string v0, "SteamLinkGXR"
 
-    const-string v1, "Installed compositor overlay"
+    const-string v1, "Installed compositor overlay (TYPE_APPLICATION_OVERLAY 0x7f6)"
 
     invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
     :try_end
@@ -158,6 +158,10 @@
     move-exception v0
 
     const-string v1, "SteamLinkGXR"
+    
+    const-string v2, "Failed to create overlay"
+    
+    invoke-static {v1, v2, v0}, Landroid/util/Log;->e(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
 
     const-string v2, "Failed to install compositor overlay"
 

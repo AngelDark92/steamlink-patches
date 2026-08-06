@@ -235,11 +235,6 @@ private val androidXrManifestPatch = resourcePatch {
                 activity.setAttribute("android:screenOrientation", "landscape")
                 activity.setAttribute("android:theme", "@android:style/Theme.Black.NoTitleBar.Fullscreen")
 
-                val xrProp = doc.createElement("property")
-                xrProp.setAttribute("android:name", "android.window.PROPERTY_XR_ACTIVITY_START_MODE")
-                xrProp.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
-                activity.appendChild(xrProp)
-
                 val filter = doc.createElement("intent-filter")
                 val mainAction = doc.createElement("action")
                 mainAction.setAttribute("android:name", "android.intent.action.MAIN")
@@ -248,6 +243,12 @@ private val androidXrManifestPatch = resourcePatch {
                 filter.appendChild(mainAction)
                 filter.appendChild(launcherCat)
                 activity.appendChild(filter)
+
+                // Keep the bootstrap in Home Space so Android XR provides panel controls and input.
+                val gxrLayout = doc.createElement("layout")
+                gxrLayout.setAttribute("android:defaultWidth", "1280.0px")
+                gxrLayout.setAttribute("android:defaultHeight", "800.0px")
+                activity.appendChild(gxrLayout)
 
                 // Insert as the first activity in <application>.
                 val firstActivity = app.getElementsByTagName("activity").item(0)
@@ -314,22 +315,8 @@ private val androidXrManifestPatch = resourcePatch {
                         .toList()
                         .forEach { steamLink.removeChild(it) }
 
-                    val xrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
-                    val hasMode = steamLink.getElementsByTagName("property").let { pl ->
-                        (0 until pl.length).any {
-                            (pl.item(it) as Element).getAttribute("android:name") == xrStartMode
-                        }
-                    }
-                    if (!hasMode) {
-                        val prop = doc.createElement("property")
-                        prop.setAttribute("android:name", xrStartMode)
-                        prop.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
-                        steamLink.insertBefore(prop, steamLink.firstChild)
-                    }
-
-                    // SDL compares managed-panel dimensions with the full side-by-side
-                    // display (7104x3840). Keep both at the same aspect ratio so its
-                    // physical-display fallback cannot stretch the launcher surface.
+                    // Preserve the stock panel size; the direct SDL metrics hook below prevents
+                    // the physical 7104x3840 display from replacing the panel dimensions.
                     val layouts = steamLink.getElementsByTagName("layout")
                     val layout = if (layouts.length > 0) {
                         layouts.item(0) as Element
@@ -339,7 +326,7 @@ private val androidXrManifestPatch = resourcePatch {
                         }
                     }
                     layout.setAttribute("android:defaultWidth", "1280.0px")
-                    layout.setAttribute("android:defaultHeight", "692.0px")
+                    layout.setAttribute("android:defaultHeight", "800.0px")
                 }
         }
     }
@@ -365,6 +352,5 @@ val androidXrCompatibilityPatch = bytecodePatch(
         androidXrManifestPatch,
         androidXrUiExtensionPatch,
         xrUiInputConfigPatch,
-        appearOnTopManifestPatch,
     )
 }

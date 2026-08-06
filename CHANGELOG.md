@@ -1,3 +1,45 @@
+## [1.5.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0-dev.1...v1.5.0-dev.2) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Update smali file input handling in assembleExtension task to exclude test variants ([d0dcd22](https://github.com/AngelDark92/steamlink-patches/commit/d0dcd227687020c712fe11b01f4c4cdd2f7422e3))
+
+## [1.5.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.5...v1.5.0-dev.1) (2026-08-06)
+
+### ✨ New Features
+
+* Implement instrumentation and logging for OpenXR system properties and overlay lifecycle ([5884039](https://github.com/AngelDark92/steamlink-patches/commit/5884039dfc0d8748db2759f989772b866d6978f5))
+
+## [1.4.6-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.4...v1.4.6-dev.5) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Update version numbers and improve compatibility handling in patches ([a1ddde1](https://github.com/AngelDark92/steamlink-patches/commit/a1ddde1511cab4c6e1fe35d24ad177ebdbe33f5f))
+
+## [1.4.6-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.3...v1.4.6-dev.4) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Update patches and remove deprecated features for improved compatibility ([3227658](https://github.com/AngelDark92/steamlink-patches/commit/322765837b7bec3670486c8ce1a7824289e7b0b2))
+
+## [1.4.6-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.2...v1.4.6-dev.3) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Add splash screen text during permission request in GalaxyXRPermissionActivity ([4448b18](https://github.com/AngelDark92/steamlink-patches/commit/4448b18a6aa805bf0c52d691dddcdfa331db85b7))
+
+## [1.4.6-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.6-dev.1...v1.4.6-dev.2) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* update Android XR manifest to adjust layout dimensions and remove unnecessary properties ([9c7b79e](https://github.com/AngelDark92/steamlink-patches/commit/9c7b79e4fc8b3f659d9ae4682b46a6afd56a4ddd))
+
+## [1.4.6-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.5...v1.4.6-dev.1) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* add layout attributes for GXR launcher activity to define panel size ([cf73da5](https://github.com/AngelDark92/steamlink-patches/commit/cf73da51a33a1a6b9dcab94bef80c4c8890a2f33))
+
 ## [1.4.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.4.4...v1.4.5) (2026-08-06)
 
 ### 🐛 Bug Fixes

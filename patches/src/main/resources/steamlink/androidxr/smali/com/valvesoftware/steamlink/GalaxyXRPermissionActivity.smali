@@ -108,6 +108,20 @@
 
     invoke-super {p0, p1}, Landroid/app/Activity;->onCreate(Landroid/os/Bundle;)V
 
+    new-instance v0, Landroid/widget/TextView;
+    invoke-direct {v0, p0}, Landroid/widget/TextView;-><init>(Landroid/content/Context;)V
+
+    const-string v1, "Launching Steam Link..."
+    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setText(Ljava/lang/CharSequence;)V
+
+    const/16 v1, 0x11
+    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setGravity(I)V
+
+    const/high16 v1, 0x41a00000    # 20.0f
+    invoke-virtual {v0, v1}, Landroid/widget/TextView;->setTextSize(F)V
+
+    invoke-virtual {p0, v0}, Landroid/app/Activity;->setContentView(Landroid/view/View;)V
+
     const-string v0, "android.permission.HAND_TRACKING"
 
     invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
@@ -117,14 +131,6 @@
     if-nez v1, :request_permissions
 
     const-string v0, "android.permission.EYE_TRACKING_FINE"
-
-    invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
-
-    move-result v1
-
-    if-nez v1, :request_permissions
-
-    const-string v0, "android.permission.FACE_TRACKING"
 
     invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
 
@@ -153,7 +159,7 @@
     return-void
 
     :request_permissions
-    const/4 v0, 0x5
+    const/4 v0, 0x4
 
     new-array v0, v0, [Ljava/lang/String;
 
@@ -171,17 +177,11 @@
 
     const/4 v1, 0x2
 
-    const-string v2, "android.permission.FACE_TRACKING"
-
-    aput-object v2, v0, v1
-
-    const/4 v1, 0x3
-
     const-string v2, "android.permission.RECORD_AUDIO"
 
     aput-object v2, v0, v1
 
-    const/4 v1, 0x4
+    const/4 v1, 0x3
 
     const-string v2, "android.permission.BLUETOOTH_CONNECT"
 

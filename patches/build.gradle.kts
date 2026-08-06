@@ -58,9 +58,15 @@ val assembleExtension by tasks.registering(JavaExec::class) {
     description = "Assemble extension smali files to extension.mpe (no Android SDK required)"
 
     val smaliSrcDir = file("src/main/resources/steamlink/androidxr/smali")
+    val smaliSources =
+        fileTree(smaliSrcDir) {
+            include("**/*.smali")
+            // Exclude test variants that redefine production classes.
+            exclude("test_variants/**")
+        }
     val outputFile = extensionOutputDir.map { it.file("extensions/extension.mpe") }
 
-    inputs.dir(smaliSrcDir)
+    inputs.files(smaliSources)
     outputs.file(outputFile)
 
     classpath = smaliAssembler
@@ -72,7 +78,7 @@ val assembleExtension by tasks.registering(JavaExec::class) {
             "a",
             "-a", "33",
             "-o", out.absolutePath,
-            smaliSrcDir.absolutePath,
+            *smaliSources.files.map { it.absolutePath }.sorted().toTypedArray(),
         )
     }
 }
