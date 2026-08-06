@@ -1,3 +1,20 @@
+## [1.6.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0...v1.6.0) (2026-08-06)
+
+### 🐛 Bug Fixes
+
+* Merge pull request [#29](https://github.com/AngelDark92/steamlink-patches/issues/29) from AngelDark92/dev ([556420f](https://github.com/AngelDark92/steamlink-patches/commit/556420fc3e15bde9f0afdc3bcb9e4524f6bd1584))
+* Update patches and configurations for XR compatibility and functionality enhancements ([98cb52d](https://github.com/AngelDark92/steamlink-patches/commit/98cb52d3b92133fd81510b7d7ffbbddf5191ecbd))
+
+### ✨ New Features
+
+* Add test variants for overlay handling and permission management ([5b79c54](https://github.com/AngelDark92/steamlink-patches/commit/5b79c543384994509d347c5d6738f761fc805398))
+
+## [1.6.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.1-dev.1...v1.6.0-dev.1) (2026-08-06)
+
+### ✨ New Features
+
+* Add test variants for overlay handling and permission management ([5b79c54](https://github.com/AngelDark92/steamlink-patches/commit/5b79c543384994509d347c5d6738f761fc805398))
+
 ## [1.5.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.5.0...v1.5.1-dev.1) (2026-08-06)
 
 ### 🐛 Bug Fixes
