@@ -50,41 +50,52 @@ private val androidXrLibPatch = rawResourcePatch {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Sub-patch 2: replace config / webui assets
-// ---------------------------------------------------------------------------
+@Suppress("unused")
+val xrCoreRuntimePatch = bytecodePatch(
+    name = "XR Core Runtime",
+    description = "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(androidXrLibPatch, androidXrUiExtensionPatch)
+}
 
-private val androidXrConfigPatch = rawResourcePatch {
-    dependsOn(androidXrLibPatch)
+@Suppress("unused")
+val xrDeviceConfigBaselinePatch = rawResourcePatch(
+    name = "XR Device Config Baseline",
+    description = "Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(xrCoreRuntimePatch)
 
     execute {
         get("assets/config/hmd_config.json").writeBytes(loadResource("hmd_config.json"))
         get("assets/config/controller_config.json").writeBytes(loadResource("controller_config.json"))
-        get("assets/config/ui_config.json").writeBytes(loadResource("ui_config.json"))
         get("assets/config/default_config.json").writeBytes(loadResource("default_config.json"))
         get("assets/webui/dash/index.html").writeBytes(loadResource("index.html"))
     }
 }
 
-// ---------------------------------------------------------------------------
-// Sub-patch 3: manifest – permissions, features, queries, activities
-// ---------------------------------------------------------------------------
-
-private val androidXrManifestPatch = resourcePatch {
-    dependsOn(androidXrConfigPatch)
+@Suppress("unused")
+val xrManifestCapabilityPackPatch = resourcePatch(
+    name = "XR Manifest Capability Pack",
+    description = "Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(xrCoreRuntimePatch)
 
     finalize {
         document("AndroidManifest.xml").use { doc ->
             val manifest = doc.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element
 
-            // Helper: find existing element by tag+android:name attribute value.
             fun exists(tag: String, name: String): Boolean =
                 doc.getElementsByTagName(tag).asSequence()
                     .filterIsInstance<Element>()
                     .any { it.getAttribute("android:name") == name }
 
-            // Helper: append a uses-permission or uses-feature before <application>.
             fun addBeforeApp(el: Element) = manifest.insertBefore(el, app)
 
             fun removeMatching(tag: String, predicate: (Element) -> Boolean) {
@@ -95,7 +106,6 @@ private val androidXrManifestPatch = resourcePatch {
                     .forEach { it.parentNode.removeChild(it) }
             }
 
-            // Remove vendor-specific declarations replaced by Android XR/OpenXR.
             removeMatching("uses-permission") {
                 val name = it.getAttribute("android:name")
                 name.startsWith("com.oculus.permission.") ||
@@ -123,7 +133,6 @@ private val androidXrManifestPatch = resourcePatch {
                     name == "com.oculus.intent.category.2D"
             }
 
-            // ---- uses-permission additions ----------------------------------------
             val newPerms = listOf(
                 "org.khronos.openxr.permission.OPENXR",
                 "org.khronos.openxr.permission.OPENXR_SYSTEM",
@@ -140,7 +149,6 @@ private val androidXrManifestPatch = resourcePatch {
                 }
             }
 
-            // ---- uses-feature additions -------------------------------------------
             data class FeatureDef(val name: String, val required: Boolean, val version: String? = null)
             val newFeatures = listOf(
                 FeatureDef("android.hardware.vr.headtracking", true, "1"),
@@ -159,7 +167,6 @@ private val androidXrManifestPatch = resourcePatch {
                 }
             }
 
-            // ---- <queries> block for OpenXR runtime and VirtualHere ---------------
             val existingQueries = manifest.getElementsByTagName("queries")
             val hasOpenXrQuery = (0 until existingQueries.length)
                 .map { existingQueries.item(it) as Element }
@@ -193,7 +200,6 @@ private val androidXrManifestPatch = resourcePatch {
                 manifest.insertBefore(queries, app)
             }
 
-            // ---- Application-level meta-data / native library --------------------
             val nativeLibName = "libopenxr.google.so"
             val hasNativeLib = app.getElementsByTagName("uses-native-library").let { nl ->
                 (0 until nl.length).any {
@@ -219,8 +225,23 @@ private val androidXrManifestPatch = resourcePatch {
                 prop.setAttribute("android:value", "XR_BOUNDARY_TYPE_LARGE")
                 app.insertBefore(prop, app.firstChild)
             }
+        }
+    }
+}
 
-            // ---- GalaxyXRPermissionActivity: add as new launcher -----------------
+@Suppress("unused")
+val xrLauncherBootstrapPatch = resourcePatch(
+    name = "XR Launcher Bootstrap (Home Space)",
+    description = "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(xrManifestCapabilityPackPatch)
+
+    finalize {
+        document("AndroidManifest.xml").use { doc ->
+            val app = doc.documentElement.getElementsByTagName("application").item(0) as Element
+
             val gxrActivityName = "com.valvesoftware.steamlink.GalaxyXRPermissionActivity"
             val hasGxrActivity = app.getElementsByTagName("activity").let { al ->
                 (0 until al.length).any {
@@ -244,18 +265,15 @@ private val androidXrManifestPatch = resourcePatch {
                 filter.appendChild(launcherCat)
                 activity.appendChild(filter)
 
-                // Keep the bootstrap in Home Space so Android XR provides panel controls and input.
                 val gxrLayout = doc.createElement("layout")
                 gxrLayout.setAttribute("android:defaultWidth", "1280.0px")
                 gxrLayout.setAttribute("android:defaultHeight", "800.0px")
                 activity.appendChild(gxrLayout)
 
-                // Insert as the first activity in <application>.
                 val firstActivity = app.getElementsByTagName("activity").item(0)
                 app.insertBefore(activity, firstActivity)
             }
 
-            // ---- VRLink activity: add XR start mode + IMMERSIVE_HMD category ----
             val vrLinkName = "com.valvesoftware.steamlink.VRLink"
             app.getElementsByTagName("activity").asSequence()
                 .filterIsInstance<Element>()
@@ -274,7 +292,6 @@ private val androidXrManifestPatch = resourcePatch {
                         vrLink.insertBefore(prop, vrLink.firstChild)
                     }
 
-                    // Add IMMERSIVE_HMD category to the existing intent-filter, or create one.
                     val immersiveHmd = "org.khronos.openxr.intent.category.IMMERSIVE_HMD"
                     val hasImmersiveHmd = vrLink.getElementsByTagName("category").let { cl ->
                         (0 until cl.length).any {
@@ -296,7 +313,6 @@ private val androidXrManifestPatch = resourcePatch {
                     }
                 }
 
-            // ---- SteamLink activity: add XR start mode + window layout ----------
             val steamLinkName = "com.valvesoftware.steamlink.SteamLink"
             app.getElementsByTagName("activity").asSequence()
                 .filterIsInstance<Element>()
@@ -315,8 +331,6 @@ private val androidXrManifestPatch = resourcePatch {
                         .toList()
                         .forEach { steamLink.removeChild(it) }
 
-                    // Preserve the stock panel size; the direct SDL metrics hook below prevents
-                    // the physical 7104x3840 display from replacing the panel dimensions.
                     val layouts = steamLink.getElementsByTagName("layout")
                     val layout = if (layouts.length > 0) {
                         layouts.item(0) as Element
@@ -332,25 +346,32 @@ private val androidXrManifestPatch = resourcePatch {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Main patch: merge extension DEX (adds GalaxyXRPermissionActivity)
-// ---------------------------------------------------------------------------
+@Suppress("unused")
+val xrInputRoutingConfigPatch = rawResourcePatch(
+    name = "XR Input Routing Config",
+    description = "Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(xrLauncherBootstrapPatch)
+
+    execute {
+        get("assets/config/ui_config.json").writeBytes(loadResource("ui_config.json"))
+    }
+}
 
 @Suppress("unused")
 val androidXrCompatibilityPatch = bytecodePatch(
     name = "Android XR compatibility",
-    description = "Makes Steam Link fully functional on Samsung Galaxy XR. " +
-        "Adds Android XR / OpenXR permissions and features, HMD and controller identity configs, " +
-        "Galaxy XR bridge native libraries, safe permission handling, the launcher bootstrap, and " +
-        "managed-panel aspect correction with XR spatial-pointer button input. " +
-        "This patch is required for Galaxy XR operation.",
-    default = true,
+    description = "Legacy bundle patch that enables the full XR core, manifest, launcher bootstrap, and baseline config stack. Prefer selecting individual XR patches for granular control.",
+    default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
-
     dependsOn(
-        androidXrManifestPatch,
-        androidXrUiExtensionPatch,
-        xrUiInputConfigPatch,
+        xrCoreRuntimePatch,
+        xrDeviceConfigBaselinePatch,
+        xrManifestCapabilityPackPatch,
+        xrLauncherBootstrapPatch,
+        xrInputRoutingConfigPatch,
     )
 }

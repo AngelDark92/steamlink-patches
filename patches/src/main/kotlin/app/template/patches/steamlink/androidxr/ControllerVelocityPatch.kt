@@ -58,7 +58,7 @@ val controllerVelocityPatch = rawResourcePatch(
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(androidXrCompatibilityPatch)
+    dependsOn(xrCoreRuntimePatch)
 
     val maxDeltaMs by intOption(
         key = "maxDeltaMs",

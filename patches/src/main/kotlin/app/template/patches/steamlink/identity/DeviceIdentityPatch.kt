@@ -4,7 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
-import app.template.patches.steamlink.androidxr.androidXrCompatibilityPatch
+import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 
 private fun identityResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/identity/$name")
@@ -19,7 +19,7 @@ val deviceIdentityPatch = rawResourcePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(androidXrCompatibilityPatch)
+    dependsOn(xrDeviceConfigBaselinePatch)
 
     val profile by stringOption(
         key = "profile",
