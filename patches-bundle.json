@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-07T14:52:14",
-  "description": "## [1.9.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.6...v1.9.0-dev.7) (2026-08-07)\n\n### 🐛 Bug Fixes\n\n* Add new experimental patches and update APK resource handling ([1072212](https://github.com/AngelDark92/steamlink-patches/commit/1072212985a6926125ee35ad13351d03f1a0d104))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.9.0-dev.7/patches-1.9.0-dev.7.mpp",
+  "created_at": "2026-08-07T15:28:41",
+  "description": "## [1.9.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.7...v1.9.0-dev.8) (2026-08-07)\n\n### 🐛 Bug Fixes\n\n* refactoring patches for Steam Link integration and remove experimental variants ([4b095ec](https://github.com/AngelDark92/steamlink-patches/commit/4b095ec1cc5217e1deec9e8f827561812e8a3749))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.9.0-dev.8/patches-1.9.0-dev.8.mpp",
   "signature_download_url": "",
-  "version": "1.9.0-dev.7"
+  "version": "1.9.0-dev.8"
 }

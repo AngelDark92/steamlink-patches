@@ -17,9 +17,9 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.9.0-dev.7](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.9.0-dev.7)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;17 patches total
+> **[v1.9.0-dev.8](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.9.0-dev.8)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;13 patches total
 <details open>
-<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;12 patches</summary>
+<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;13 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -31,6 +31,7 @@ To download it:
 |----------|----------------|-----------|
 | [Appear on top](#appear-on-top) | Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup. |  |
 | [Change package name](#change-package-name) | Renames the app package so it can be installed alongside the original Steam Link. Default appends '.gxr'. Changing the package name may break features that rely on the original identity. | • Package name |
+| [Controller velocity fix](#controller-velocity-fix) | Derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws. | • Maximum sample gap (ms)<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
 | [Device identity](#device-identity) | Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched. | • HMD identity |
 | [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. |  |
 | [HMD-only pose fix](#hmd-only-pose-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. | • Pose offset (ms) |
@@ -41,25 +42,6 @@ To download it:
 | [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. |  |
 | [XR Launcher Bootstrap (Home Space)](#xr-launcher-bootstrap-home-space) | Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring. |  |
 | [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. |  |
-
-</details>
-
-<details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
-<br>
-
-**🎯 Supported versions:**
-
-| 🧪&nbsp;2.0.22 |
-| :---: |
-
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| [Controller velocity fix](#controller-velocity-fix) | Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws. | • Maximum sample gap (ms)<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
-| [TEST EXPERIMENTAL - Baseline Overlay Flow](#test-experimental-baseline-overlay-flow) | A/B test baseline. Keeps launcher bootstrap plus overlay permission flow (Appear on top behavior). Enable this OR the No-Overlay test patch, not both. |  |
-| [TEST EXPERIMENTAL - Legacy Two-Layer Renderer Probe](#test-experimental-legacy-two-layer-renderer-probe) | A/B probe: applies the known 5002244 four-offset patch set to skip underside swapchain creation/submission and restore the legacy two-layer stream topology. |  |
-| [TEST EXPERIMENTAL - No Overlay / No Permission](#test-experimental-no-overlay-no-permission) | A/B test variant. Replaces GalaxyXRPermissionActivity and GxrOverlayBridge with no-overlay/no-permission-request smali for crash reproduction and comparison. |  |
-| [TEST EXPERIMENTAL - Old Scene requestExit Bridge](#test-experimental-old-scene-requestexit-bridge) | A/B probe adapter: rewrites VRLink requestExit() from JNI-native to Java finishAndRemoveTask() without requiring old-scene binary replacement. |  |
 
 </details>
 

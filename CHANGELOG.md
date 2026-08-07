@@ -1,3 +1,9 @@
+## [1.9.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.7...v1.9.0-dev.8) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* refactoring patches for Steam Link integration and remove experimental variants ([4b095ec](https://github.com/AngelDark92/steamlink-patches/commit/4b095ec1cc5217e1deec9e8f827561812e8a3749))
+
 ## [1.9.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.6...v1.9.0-dev.7) (2026-08-07)
 
 ### 🐛 Bug Fixes
