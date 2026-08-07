@@ -1,3 +1,9 @@
+## [1.9.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.3...v1.9.0-dev.4) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Remove old scene renderer probe patch and related code ([d0067c9](https://github.com/AngelDark92/steamlink-patches/commit/d0067c9c82d9da842a2145b0d5e2dccc376fa741))
+
 ## [1.9.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.2...v1.9.0-dev.3) (2026-08-07)
 
 ### 🐛 Bug Fixes
