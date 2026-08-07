@@ -138,7 +138,23 @@
 
     if-nez v1, :request_permissions
 
+    const-string v0, "android.permission.FACE_TRACKING"
+
+    invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
+
+    move-result v1
+
+    if-nez v1, :request_permissions
+
     const-string v0, "android.permission.RECORD_AUDIO"
+
+    invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
+
+    move-result v1
+
+    if-nez v1, :request_permissions
+
+    const-string v0, "android.permission.BLUETOOTH_CONNECT"
 
     invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
 
@@ -151,7 +167,7 @@
     return-void
 
     :request_permissions
-    const/4 v0, 0x3
+    const/4 v0, 0x5
 
     new-array v0, v0, [Ljava/lang/String;
 
@@ -169,7 +185,19 @@
 
     const/4 v1, 0x2
 
+    const-string v2, "android.permission.FACE_TRACKING"
+
+    aput-object v2, v0, v1
+
+    const/4 v1, 0x3
+
     const-string v2, "android.permission.RECORD_AUDIO"
+
+    aput-object v2, v0, v1
+
+    const/4 v1, 0x4
+
+    const-string v2, "android.permission.BLUETOOTH_CONNECT"
 
     aput-object v2, v0, v1
 

@@ -35,6 +35,12 @@ private val androidXrLibPatch = rawResourcePatch {
         // OpenXR runtime bridge native library for Galaxy XR platform integration
         File(libDir, "libgxr_xr_bridge.so").writeBytes(loadResource("libgxr_xr_bridge.so"))
 
+        val xrBridgeManifest = get(
+            "assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_xr_bridge.json",
+        )
+        xrBridgeManifest.parentFile!!.mkdirs()
+        xrBridgeManifest.writeBytes(loadResource("XR_APILAYER_local_GalaxyXR_xr_bridge.json"))
+
         // res/drawable-anydpi/ic_launcher_background.xml — replaces stock Valve solid-blue background
         get("res/drawable-anydpi/ic_launcher_background.xml")
             .writeBytes(loadResource("ic_launcher_background.xml"))
@@ -61,7 +67,7 @@ val xrCoreRuntimePatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(androidXrLibPatch, androidXrUiExtensionPatch)
+    dependsOn(androidXrLibPatch, androidXrUiExtensionPatch, xrDirectInputFixPatch)
 }
 
 @Suppress("unused")
@@ -176,6 +182,8 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                 // Android XR platform permissions for XR_ANDROID_hand_tracking and XR_ANDROID_eye_gaze
                 "android.permission.HAND_TRACKING",
                 "android.permission.EYE_TRACKING_FINE",
+                "android.permission.FACE_TRACKING",
+                "android.permission.BLUETOOTH_CONNECT",
             )
             for (perm in newPerms) {
                 if (!exists("uses-permission", perm)) {
