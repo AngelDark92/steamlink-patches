@@ -62,6 +62,10 @@ private fun ByteArray.sha256Hex(): String =
 
 private fun ByteArray.hexBytes(): String = joinToString(" ") { "%02x".format(it) }
 
+private fun decodedRawRootFromLibAnchor(libFile: File): File =
+    libFile.parentFile?.parentFile?.parentFile
+        ?: throw PatchException("Unable to derive decoded APK raw-resource root from ${libFile.absolutePath}")
+
 private fun findVrLinkSmali(apkRoot: File): File {
     val smaliRoots = apkRoot.listFiles()
         ?.filter { it.isDirectory && it.name.startsWith("smali") }
@@ -140,7 +144,7 @@ val oldSceneRequestExitBridgePatch = rawResourcePatch(
     compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
 
     execute {
-        val apkRoot = get("AndroidManifest.xml").parentFile
+        val apkRoot = decodedRawRootFromLibAnchor(get("lib/arm64-v8a/libvrlink_scene.so"))
         val vrlinkSmali = findVrLinkSmali(apkRoot)
         val original = vrlinkSmali.readText()
         val lineEnding = if (original.contains("\r\n")) "\r\n" else "\n"

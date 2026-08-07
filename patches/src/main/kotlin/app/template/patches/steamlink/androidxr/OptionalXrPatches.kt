@@ -14,6 +14,10 @@ private fun loadOptionalXrResource(name: String): ByteArray =
         ?: error("Missing bundled resource: steamlink/androidxr/$name"))
         .use { it.readBytes() }
 
+private fun decodedRawRootFromLibAnchor(libFile: File): File =
+    libFile.parentFile?.parentFile?.parentFile
+        ?: throw PatchException("Unable to derive decoded APK raw-resource root from ${libFile.absolutePath}")
+
 private fun findAndroidXrSmaliFile(apkRoot: File, relativePath: String): File {
     val smaliRoots = apkRoot.listFiles()
         ?.filter { it.isDirectory && it.name.startsWith("smali") }
@@ -62,7 +66,7 @@ val appearOnTopPatch = bytecodePatch(
 
 private val noOverlayTestSmaliPatch = rawResourcePatch {
     execute {
-        val apkRoot = get("AndroidManifest.xml").parentFile
+        val apkRoot = decodedRawRootFromLibAnchor(get("lib/arm64-v8a/libvrlink_scene.so"))
         // Replaces production overlay bridge with a no-op (no TYPE_APPLICATION_OVERLAY window created)
         findAndroidXrSmaliFile(apkRoot, "com/valvesoftware/steamlink/GxrOverlayBridge.smali")
             .writeBytes(loadOptionalXrResource("smali/test_variants/GxrOverlayBridge_NoOverlay.smali"))
