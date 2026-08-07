@@ -17,7 +17,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.9.0-dev.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.9.0-dev.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;15 patches total
+> **[v1.9.0-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.9.0-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;17 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;12 patches</summary>
 <br>
@@ -45,7 +45,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -58,6 +58,8 @@ To download it:
 | [Controller velocity fix](#controller-velocity-fix) | Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws. | • Maximum sample gap (ms)<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
 | [TEST EXPERIMENTAL - Baseline Overlay Flow](#test-experimental-baseline-overlay-flow) | A/B test baseline. Keeps launcher bootstrap plus overlay permission flow (Appear on top behavior). Enable this OR the No-Overlay test patch, not both. |  |
 | [TEST EXPERIMENTAL - No Overlay / No Permission](#test-experimental-no-overlay-no-permission) | A/B test variant. Replaces GalaxyXRPermissionActivity and GxrOverlayBridge with no-overlay/no-permission-request smali for crash reproduction and comparison. |  |
+| [TEST EXPERIMENTAL - Old Scene Renderer Probe (2.0.20)](#test-experimental-old-scene-renderer-probe-2-0-20) | A/B probe: replaces libvrlink_scene.so with the supplied 2.0.20 scene renderer binary for first-screen controller-input regression testing. |  |
+| [TEST EXPERIMENTAL - Old Scene requestExit Bridge](#test-experimental-old-scene-requestexit-bridge) | A/B probe adapter: rewrites VRLink requestExit() from JNI-native to Java finishAndRemoveTask() for 2.0.20 scene-library compatibility. |  |
 
 </details>
 

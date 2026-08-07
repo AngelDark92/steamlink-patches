@@ -1,3 +1,9 @@
+## [1.9.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.2...v1.9.0-dev.3) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* trigger release ([c15e65b](https://github.com/AngelDark92/steamlink-patches/commit/c15e65bc1286ed6d8bb0928c1362d41c19f05e1b))
+
 ## [1.9.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.1...v1.9.0-dev.2) (2026-08-07)
 
 ### 🐛 Bug Fixes
