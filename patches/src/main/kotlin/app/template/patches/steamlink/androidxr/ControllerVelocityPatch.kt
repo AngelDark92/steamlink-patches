@@ -4,7 +4,6 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.intOption
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import java.io.File
 import java.nio.ByteBuffer
@@ -64,7 +63,7 @@ val controllerVelocityPatch = rawResourcePatch(
     description = "Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK, COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
+    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
     dependsOn(xrCoreRuntimePatch)
 
     val maxDeltaMs by intOption(

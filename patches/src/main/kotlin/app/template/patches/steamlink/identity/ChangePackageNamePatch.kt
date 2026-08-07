@@ -3,6 +3,7 @@ package app.template.patches.steamlink.identity
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.patcher.patch.PatchException
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.util.Locale
@@ -48,6 +49,8 @@ val changePackageNamePatch = resourcePatch(
     description = "Renames the app package so it can be installed alongside the original Steam Link. Default appends '.gxr'. Changing the package name may break features that rely on the original identity.",
     default = false,
 ) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
+
     val packageName by stringOption(
         key = "packageName",
         default = "Default",
