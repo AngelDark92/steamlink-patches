@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.6.1-dev.1",
+  "version": "1.7.0",
   "patches": [
     {
       "name": "Appear on top",
@@ -41,7 +41,7 @@
         {
           "key": "packageName",
           "title": "Package name",
-          "description": "New package name, e.g. com.valvesoftware.steamlink.gxr. Leave 'Default' to append '.gxr' automatically.",
+          "description": "AndroidManifest.xml manifest@package; also updates permission/uses-permission@android:name (custom perms only) and provider@android:authorities. Leave 'Default' to append '.gxr'.",
           "required": true,
           "type": "kotlin.String",
           "default": "Default",
@@ -98,7 +98,7 @@
         {
           "key": "maxDeltaMs",
           "title": "Maximum sample gap (ms)",
-          "description": "Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
+          "description": "libgxr_controller_velocity.so config+32 (int64 ns = value×1e6). Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
           "required": true,
           "type": "kotlin.Int",
           "default": 50,
@@ -107,7 +107,7 @@
         {
           "key": "smoothing",
           "title": "Derived velocity smoothing",
-          "description": "Previous-output weight. 0 gives minimum lag; higher values reduce jitter. Allowed range: 0.0 to 0.9.",
+          "description": "libgxr_controller_velocity.so config+48 (float32 EMA weight). 0 = no smoothing, minimum lag; higher values reduce jitter. Allowed range: 0.0 to 0.9.",
           "required": true,
           "type": "kotlin.Float",
           "default": 0.0,
@@ -116,7 +116,7 @@
         {
           "key": "maxLinearSpeed",
           "title": "Maximum linear speed (m/s)",
-          "description": "Falls back to runtime velocity above this derived speed. Allowed range: 1 to 50 m/s.",
+          "description": "libgxr_controller_velocity.so config+40 (float32 m/s). Falls back to runtime velocity above this derived linear speed. Allowed range: 1 to 50 m/s.",
           "required": true,
           "type": "kotlin.Float",
           "default": 20.0,
@@ -125,7 +125,7 @@
         {
           "key": "maxAngularSpeed",
           "title": "Maximum angular speed (rad/s)",
-          "description": "Falls back to runtime velocity above this derived speed. Allowed range: 1 to 100 rad/s.",
+          "description": "libgxr_controller_velocity.so config+44 (float32 rad/s). Falls back to runtime velocity above this derived angular speed. Allowed range: 1 to 100 rad/s.",
           "required": true,
           "type": "kotlin.Float",
           "default": 50.0,
@@ -163,7 +163,7 @@
         {
           "key": "profile",
           "title": "HMD identity",
-          "description": "Which HMD identity to report to SteamVR.",
+          "description": "assets/config/hmd_config.json: overwrites sSerialNumber, sManufacturerName, sModelNumber, sControllerType, sDeviceType, sInputProfilePath, requestedExtensions.",
           "required": true,
           "type": "kotlin.String",
           "default": "meta-quest-pro",
@@ -269,7 +269,7 @@
         {
           "key": "offsetMs",
           "title": "Pose offset (ms)",
-          "description": "Milliseconds added to HMD pose-query time. Tested default: 78 ms. Allowed range: 0 to 4000 ms.",
+          "description": "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 78 ms. Allowed range: 0 to 4000 ms.",
           "required": true,
           "type": "kotlin.Int",
           "default": 78,
@@ -305,7 +305,7 @@
         {
           "key": "profile",
           "title": "Calibration profile",
-          "description": "Tested profiles: Initial uses gamma 1.06 and saturation 1.12; Final balanced uses gamma 1.20 and saturation 1.45. Custom uses number inputs below.",
+          "description": "libvrlink_scene.so GLSL fragment shader (1087-byte block, GL_OES_EGL_image_external_essl3 anchor). Initial: pow vec3(1.06)/mix 1.12; Final balanced: 1.20/1.45; Custom: use fields below.",
           "required": true,
           "type": "kotlin.String",
           "default": "initial",
@@ -318,7 +318,7 @@
         {
           "key": "gamma",
           "title": "Gamma",
-          "description": "Used by Custom profile. Tested values: 1.06 (Initial) and 1.20 (Final balanced). Allowed range: 0.50 to 2.50.",
+          "description": "libvrlink_scene.so GLSL: pow(clamp(c,0,1), vec3(GAMMA)). Used by Custom profile. Tested: 1.06 (Initial), 1.20 (Final balanced). Allowed range: 0.50 to 2.50.",
           "required": true,
           "type": "kotlin.Float",
           "default": 1.06,
@@ -330,7 +330,7 @@
         {
           "key": "saturation",
           "title": "Saturation",
-          "description": "Used by Custom profile. Tested values: 1.12 (Initial) and 1.45 (Final balanced). Allowed range: 0.00 to 3.00.",
+          "description": "libvrlink_scene.so GLSL: mix(vec3(luma), c, SATURATION). Used by Custom profile. Tested: 1.12 (Initial), 1.45 (Final balanced). Allowed range: 0.00 to 3.00.",
           "required": true,
           "type": "kotlin.Float",
           "default": 1.12,
@@ -340,6 +340,64 @@
           }
         }
       ]
+    },
+    {
+      "name": "TEST EXPERIMENTAL - Baseline Overlay Flow",
+      "description": "A/B test baseline. Keeps launcher bootstrap plus overlay permission flow (Appear on top behavior). Enable this OR the No-Overlay test patch, not both.",
+      "default": false,
+      "dependencies": [
+        "ResourcePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "TEST EXPERIMENTAL - No Overlay / No Permission",
+      "description": "A/B test variant. Replaces GalaxyXRPermissionActivity and GxrOverlayBridge with no-overlay/no-permission-request smali for crash reproduction and comparison.",
+      "default": false,
+      "dependencies": [
+        "ResourcePatch",
+        "RawResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
     },
     {
       "name": "Video dither",
@@ -369,7 +427,7 @@
         {
           "key": "enable",
           "title": "Enable dither",
-          "description": "True to uncomment the dither line; false to recomment it.",
+          "description": "libvrlink_scene.so GLSL: stock shader toggles '//' on color.rgb+=fract(...)*.00292; calibrated (post-oledCalibration) shader toggles *.00292 vs *.00000.",
           "required": true,
           "type": "kotlin.Boolean",
           "default": true,
