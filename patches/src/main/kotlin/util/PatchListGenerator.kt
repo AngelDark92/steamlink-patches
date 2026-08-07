@@ -67,11 +67,13 @@ private fun generatePatchLists(
     val channelDocuments = mapOf(
         ReleaseChannel.STABLE to buildPatchListJson(version, patches, ReleaseChannel.STABLE),
         ReleaseChannel.EXPERIMENTAL to buildPatchListJson(version, patches, ReleaseChannel.EXPERIMENTAL),
+        ReleaseChannel.ALL to buildPatchListJson(version, patches, ReleaseChannel.ALL),
         selectedChannel to buildPatchListJson(version, patches, selectedChannel),
     )
 
     File("../patches-list-stable.json").writeText(channelDocuments.getValue(ReleaseChannel.STABLE))
     File("../patches-list-experimental.json").writeText(channelDocuments.getValue(ReleaseChannel.EXPERIMENTAL))
+    File("../patches-list-all.json").writeText(channelDocuments.getValue(ReleaseChannel.ALL))
     File("../patches-list.json").writeText(channelDocuments.getValue(selectedChannel))
 }
 
