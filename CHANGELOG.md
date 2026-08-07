@@ -1,3 +1,9 @@
+## [1.9.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.5...v1.9.0-dev.6) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Add experimental patches for Legacy Two-Layer Renderer and overlay behavior ([3ab1758](https://github.com/AngelDark92/steamlink-patches/commit/3ab1758692881e5288b62d51a84edbc1917a3109))
+
 ## [1.9.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.4...v1.9.0-dev.5) (2026-08-07)
 
 ### 🐛 Bug Fixes
