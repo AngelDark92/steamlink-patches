@@ -1,3 +1,9 @@
+## [1.9.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.4...v1.9.0-dev.5) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Implement Legacy Two-Layer Renderer Probe patch and update related experimental patches ([c5e6131](https://github.com/AngelDark92/steamlink-patches/commit/c5e6131477ebc62f3f149d95522134235b4c16a5))
+
 ## [1.9.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.3...v1.9.0-dev.4) (2026-08-07)
 
 ### 🐛 Bug Fixes
