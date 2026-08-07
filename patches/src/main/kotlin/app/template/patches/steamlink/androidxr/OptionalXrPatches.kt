@@ -1,16 +1,34 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
+import java.io.File
 
 private fun loadOptionalXrResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
         ?: error("Missing bundled resource: steamlink/androidxr/$name"))
         .use { it.readBytes() }
+
+private fun findAndroidXrSmaliFile(apkRoot: File, relativePath: String): File {
+    val smaliRoots = apkRoot.listFiles()
+        ?.filter { it.isDirectory && it.name.startsWith("smali") }
+        .orEmpty()
+
+    val match = smaliRoots
+        .asSequence()
+        .map { File(it, relativePath) }
+        .firstOrNull { it.isFile }
+
+    return match ?: throw PatchException(
+        "Unable to locate $relativePath under ${apkRoot.absolutePath}; searched: " +
+            smaliRoots.joinToString { it.name },
+    )
+}
 
 private val appearOnTopManifestPatch = resourcePatch {
     finalize {
@@ -44,11 +62,12 @@ val appearOnTopPatch = bytecodePatch(
 
 private val noOverlayTestSmaliPatch = rawResourcePatch {
     execute {
+        val apkRoot = get("AndroidManifest.xml").parentFile
         // Replaces production overlay bridge with a no-op (no TYPE_APPLICATION_OVERLAY window created)
-        get("smali/com/valvesoftware/steamlink/GxrOverlayBridge.smali")
+        findAndroidXrSmaliFile(apkRoot, "com/valvesoftware/steamlink/GxrOverlayBridge.smali")
             .writeBytes(loadOptionalXrResource("smali/test_variants/GxrOverlayBridge_NoOverlay.smali"))
         // Replaces permission activity with a stub that skips SYSTEM_ALERT_WINDOW request and goes directly to VRLink
-        get("smali/com/valvesoftware/steamlink/GalaxyXRPermissionActivity.smali")
+        findAndroidXrSmaliFile(apkRoot, "com/valvesoftware/steamlink/GalaxyXRPermissionActivity.smali")
             .writeBytes(loadOptionalXrResource("smali/test_variants/GalaxyXRPermissionActivity_NoOverlay_NoPermission.smali"))
     }
 }

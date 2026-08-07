@@ -3,6 +3,7 @@ package app.template.patches.steamlink.androidxr
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
+import java.io.File
 import java.security.MessageDigest
 
 private const val VRLINK_NATIVE_EXIT = """.method private native requestExit()V
@@ -18,10 +19,7 @@ private const val VRLINK_JAVA_EXIT = """.method private requestExit()V
 .end method
 """
 
-private const val LEGACY_TWO_LAYER_INPUT_SHA256 =
-    "64712089fd46c4f8f73a1ab65667d58edc789ae416e5f57a9d87e591c976703e"
-private const val LEGACY_TWO_LAYER_OUTPUT_SHA256 =
-    "65f7f4db26cf32c3e28ef65c6e3f76f335cd00eb51153e47fd204a4ddf167eca"
+private const val LIBVRLINK_SCENE_SIZE_5002244 = 2_251_920
 
 private data class LegacyTwoLayerPatch(
     val name: String,
@@ -64,6 +62,22 @@ private fun ByteArray.sha256Hex(): String =
 
 private fun ByteArray.hexBytes(): String = joinToString(" ") { "%02x".format(it) }
 
+private fun findVrLinkSmali(apkRoot: File): File {
+    val smaliRoots = apkRoot.listFiles()
+        ?.filter { it.isDirectory && it.name.startsWith("smali") }
+        .orEmpty()
+
+    val match = smaliRoots
+        .asSequence()
+        .map { File(it, "com/valvesoftware/steamlink/VRLink.smali") }
+        .firstOrNull { it.isFile }
+
+    return match ?: throw PatchException(
+        "Unable to locate VRLink.smali under ${apkRoot.absolutePath}; searched: " +
+            smaliRoots.joinToString { it.name },
+    )
+}
+
 @Suppress("unused")
 val legacyTwoLayerRendererProbePatch = rawResourcePatch(
     name = "TEST EXPERIMENTAL - Legacy Two-Layer Renderer Probe",
@@ -75,19 +89,22 @@ val legacyTwoLayerRendererProbePatch = rawResourcePatch(
     execute {
         val libFile = get("lib/arm64-v8a/libvrlink_scene.so")
         val original = libFile.readBytes()
-        val beforeHash = original.sha256Hex()
-
-        if (beforeHash == LEGACY_TWO_LAYER_OUTPUT_SHA256) {
-            return@execute
-        }
-
-        if (beforeHash != LEGACY_TWO_LAYER_INPUT_SHA256) {
+        if (original.size != LIBVRLINK_SCENE_SIZE_5002244) {
             throw PatchException(
-                "Legacy two-layer probe only supports known 5002244 input. sha256=$beforeHash",
+                "Legacy two-layer probe only supports the known 5002244 libvrlink_scene.so size. " +
+                    "size=${original.size} sha256=${original.sha256Hex()}",
             )
         }
 
         val patched = original.copyOf()
+
+        val alreadyPatched = LEGACY_TWO_LAYER_PATCHES.all { spec ->
+            patched.copyOfRange(spec.offset, spec.offset + spec.replacement.size)
+                .contentEquals(spec.replacement)
+        }
+        if (alreadyPatched) {
+            return@execute
+        }
 
         for (spec in LEGACY_TWO_LAYER_PATCHES) {
             val actual = patched.copyOfRange(spec.offset, spec.offset + spec.expected.size)
@@ -101,13 +118,6 @@ val legacyTwoLayerRendererProbePatch = rawResourcePatch(
 
         for (spec in LEGACY_TWO_LAYER_PATCHES) {
             spec.replacement.copyInto(patched, spec.offset)
-        }
-
-        val afterHash = patched.sha256Hex()
-        if (afterHash != LEGACY_TWO_LAYER_OUTPUT_SHA256) {
-            throw PatchException(
-                "Legacy two-layer post-patch hash mismatch. sha256=$afterHash",
-            )
         }
 
         for (spec in LEGACY_TWO_LAYER_PATCHES) {
@@ -130,7 +140,8 @@ val oldSceneRequestExitBridgePatch = rawResourcePatch(
     compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
 
     execute {
-        val vrlinkSmali = get("smali/com/valvesoftware/steamlink/VRLink.smali")
+        val apkRoot = get("AndroidManifest.xml").parentFile
+        val vrlinkSmali = findVrLinkSmali(apkRoot)
         val original = vrlinkSmali.readText()
         val lineEnding = if (original.contains("\r\n")) "\r\n" else "\n"
         val normalized = original.replace("\r\n", "\n")
