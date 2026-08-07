@@ -1,3 +1,9 @@
+## [1.9.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.6...v1.9.0-dev.7) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Add new experimental patches and update APK resource handling ([1072212](https://github.com/AngelDark92/steamlink-patches/commit/1072212985a6926125ee35ad13351d03f1a0d104))
+
 ## [1.9.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.5...v1.9.0-dev.6) (2026-08-07)
 
 ### 🐛 Bug Fixes
