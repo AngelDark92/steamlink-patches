@@ -1,3 +1,9 @@
+## [1.9.0-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.8...v1.9.0-dev.9) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Add Android XR compatibility patches for Steam Link ([5980143](https://github.com/AngelDark92/steamlink-patches/commit/5980143f748d7a50d9e106c956028d4144672c3a))
+
 ## [1.9.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.7...v1.9.0-dev.8) (2026-08-07)
 
 ### 🐛 Bug Fixes

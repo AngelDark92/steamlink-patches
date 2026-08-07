@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-07T15:28:41",
-  "description": "## [1.9.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.7...v1.9.0-dev.8) (2026-08-07)\n\n### 🐛 Bug Fixes\n\n* refactoring patches for Steam Link integration and remove experimental variants ([4b095ec](https://github.com/AngelDark92/steamlink-patches/commit/4b095ec1cc5217e1deec9e8f827561812e8a3749))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.9.0-dev.8/patches-1.9.0-dev.8.mpp",
+  "created_at": "2026-08-07T17:51:02",
+  "description": "## [1.9.0-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.8...v1.9.0-dev.9) (2026-08-07)\n\n### 🐛 Bug Fixes\n\n* Add Android XR compatibility patches for Steam Link ([5980143](https://github.com/AngelDark92/steamlink-patches/commit/5980143f748d7a50d9e106c956028d4144672c3a))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.9.0-dev.9/patches-1.9.0-dev.9.mpp",
   "signature_download_url": "",
-  "version": "1.9.0-dev.8"
+  "version": "1.9.0-dev.9"
 }
