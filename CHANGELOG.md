@@ -1,3 +1,14 @@
+## [1.8.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.7.0...v1.8.0) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Enhance package name patch to support custom suffixes and update app labels ([c2b9ec4](https://github.com/AngelDark92/steamlink-patches/commit/c2b9ec4603bad5fb45c06831eaac1a76481e9bb2))
+* Merge pull request [#31](https://github.com/AngelDark92/steamlink-patches/issues/31) from AngelDark92/dev ([df29b6f](https://github.com/AngelDark92/steamlink-patches/commit/df29b6f063053f87335cc3b679f256f425a4a63c))
+
+### ✨ New Features
+
+* Implement support for multiple release channels and update patch generation logic ([a4cba70](https://github.com/AngelDark92/steamlink-patches/commit/a4cba70bffab5f14debbe46d13f138a5cc60bb91))
+
 ## [1.8.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.7.1-dev.1...v1.8.0-dev.1) (2026-08-07)
 
 ### ✨ New Features
