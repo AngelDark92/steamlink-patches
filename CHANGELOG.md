@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.0...v1.8.1) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Add support for 'all' release channel and update patch generation logic ([788e96d](https://github.com/AngelDark92/steamlink-patches/commit/788e96d96fffd4228ee2bfd7b25f298e1863eddc))
+* Merge pull request [#32](https://github.com/AngelDark92/steamlink-patches/issues/32) from AngelDark92/dev ([0ff41e7](https://github.com/AngelDark92/steamlink-patches/commit/0ff41e7858dcfcc82d14cfc9051abf1597014111))
+
 ## [1.8.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.0...v1.8.1-dev.1) (2026-08-07)
 
 ### 🐛 Bug Fixes
