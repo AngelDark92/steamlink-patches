@@ -31,7 +31,7 @@
 
     iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
 
-    if-nez v0, :done
+    if-nez v0, :launch
 
     const/4 v0, 0x1
 
@@ -138,6 +138,14 @@
 
     if-nez v1, :request_permissions
 
+    const-string v0, "android.permission.FACE_TRACKING"
+
+    invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
+
+    move-result v1
+
+    if-nez v1, :request_permissions
+
     const-string v0, "android.permission.RECORD_AUDIO"
 
     invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
@@ -159,7 +167,7 @@
     return-void
 
     :request_permissions
-    const/4 v0, 0x4
+    const/4 v0, 0x5
 
     new-array v0, v0, [Ljava/lang/String;
 
@@ -177,11 +185,17 @@
 
     const/4 v1, 0x2
 
-    const-string v2, "android.permission.RECORD_AUDIO"
+    const-string v2, "android.permission.FACE_TRACKING"
 
     aput-object v2, v0, v1
 
     const/4 v1, 0x3
+
+    const-string v2, "android.permission.RECORD_AUDIO"
+
+    aput-object v2, v0, v1
+
+    const/4 v1, 0x4
 
     const-string v2, "android.permission.BLUETOOTH_CONNECT"
 
@@ -201,5 +215,24 @@
 
     invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->continueAfterPermissions()V
 
+    return-void
+.end method
+
+.method protected onResume()V
+    .locals 1
+
+    invoke-super {p0}, Landroid/app/Activity;->onResume()V
+
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSteamLinkLaunched:Z
+
+    if-nez v0, :done
+
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
+
+    if-eqz v0, :done
+
+    invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->continueAfterPermissions()V
+
+    :done
     return-void
 .end method

@@ -121,6 +121,14 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 
 ---
 
+### TEST — Old Scene requestExit Bridge (`oldSceneRequestExitBridgePatch`)
+**Default: disabled** (experimental adapter; standalone)
+| Artifact | Edit |
+|---|---|
+| `smali/com/valvesoftware/steamlink/VRLink.smali` | Replaces `.method private native requestExit()V` with Java `finishAndRemoveTask()` bridge implementation |
+
+---
+
 ## binary group
 
 ### HMD-Only Pose Fix (`hmdOnlyPatch`)
@@ -208,6 +216,8 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | `AndroidManifest.xml` `provider@android:authorities` | String-replaced for content provider authorities |
 
 **Option:** `packageName` — default appends `.gxr` to original; accepts any valid Java package name regex `^[a-z]\w*(\.[a-z]\w*)+$`
+
+---
 
 ---
 

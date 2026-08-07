@@ -35,6 +35,12 @@ private val androidXrLibPatch = rawResourcePatch {
         // OpenXR runtime bridge native library for Galaxy XR platform integration
         File(libDir, "libgxr_xr_bridge.so").writeBytes(loadResource("libgxr_xr_bridge.so"))
 
+        val xrBridgeManifest = get(
+            "assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_xr_bridge.json",
+        )
+        xrBridgeManifest.parentFile!!.mkdirs()
+        xrBridgeManifest.writeBytes(loadResource("XR_APILAYER_local_GalaxyXR_xr_bridge.json"))
+
         // res/drawable-anydpi/ic_launcher_background.xml — replaces stock Valve solid-blue background
         get("res/drawable-anydpi/ic_launcher_background.xml")
             .writeBytes(loadResource("ic_launcher_background.xml"))
@@ -61,7 +67,7 @@ val xrCoreRuntimePatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(androidXrLibPatch, androidXrUiExtensionPatch)
+    dependsOn(androidXrLibPatch, androidXrUiExtensionPatch, xrDirectInputFixPatch)
 }
 
 @Suppress("unused")
@@ -176,6 +182,8 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                 // Android XR platform permissions for XR_ANDROID_hand_tracking and XR_ANDROID_eye_gaze
                 "android.permission.HAND_TRACKING",
                 "android.permission.EYE_TRACKING_FINE",
+                "android.permission.FACE_TRACKING",
+                "android.permission.BLUETOOTH_CONNECT",
             )
             for (perm in newPerms) {
                 if (!exists("uses-permission", perm)) {
@@ -363,6 +371,8 @@ val xrLauncherBootstrapPatch = resourcePatch(
                 .filterIsInstance<Element>()
                 .firstOrNull { it.getAttribute("android:name") == steamLinkName }
                 ?.let { steamLink ->
+                    steamLink.setAttribute("android:resizeableActivity", "true")
+
                     steamLink.getElementsByTagName("intent-filter").asSequence()
                         .filterIsInstance<Element>()
                         .filter { filter ->
@@ -376,6 +386,20 @@ val xrLauncherBootstrapPatch = resourcePatch(
                         .toList()
                         .forEach { steamLink.removeChild(it) }
 
+                    val steamXrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
+                    val existingSteamStartMode = steamLink.getElementsByTagName("property").asSequence()
+                        .filterIsInstance<Element>()
+                        .firstOrNull { it.getAttribute("android:name") == steamXrStartMode }
+                    if (existingSteamStartMode != null) {
+                        existingSteamStartMode.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
+                    } else {
+                        val steamModeProp = doc.createElement("property")
+                        steamModeProp.setAttribute("android:name", steamXrStartMode)
+                        // Keep SteamLink picker in managed full-space panel mode.
+                        steamModeProp.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
+                        steamLink.insertBefore(steamModeProp, steamLink.firstChild)
+                    }
+
                     val layouts = steamLink.getElementsByTagName("layout")
                     val layout = if (layouts.length > 0) {
                         layouts.item(0) as Element
@@ -384,8 +408,9 @@ val xrLauncherBootstrapPatch = resourcePatch(
                             steamLink.insertBefore(it, steamLink.firstChild)
                         }
                     }
-                    layout.setAttribute("android:defaultWidth", "1280.0px")
-                    layout.setAttribute("android:defaultHeight", "800.0px")
+                    // exp6 panel sizing baseline from handoff bundle.
+                    layout.setAttribute("android:defaultWidth", "1536.0px")
+                    layout.setAttribute("android:defaultHeight", "960.0px")
                 }
         }
     }

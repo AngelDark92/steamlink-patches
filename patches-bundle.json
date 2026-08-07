@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-07T11:13:58",
-  "description": "## [1.8.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.1...v1.8.2) (2026-08-07)\n\n### 🐛 Bug Fixes\n\n* merge pull request [#33](https://github.com/AngelDark92/steamlink-patches/issues/33) from AngelDark92/dev ([aa1c950](https://github.com/AngelDark92/steamlink-patches/commit/aa1c95058aa7788af98bab3e11db2dc984b94ad4))\n* Update compatible packages and remove deprecated options in patch files ([cf443c5](https://github.com/AngelDark92/steamlink-patches/commit/cf443c5da27bf26ed6730eacdec28fe8294797f2))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.8.2/patches-1.8.2.mpp",
+  "created_at": "2026-08-07T18:10:30",
+  "description": "## [1.9.0-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.9...v1.9.0-dev.10) (2026-08-07)\n\n### ✨ New Features\n\n* finally restored all functionalities with the possibility of customizing values at heart's content ([2d997a4](https://github.com/AngelDark92/steamlink-patches/commit/2d997a45b57f6eac10bf542d624590b911cd7131))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.9.0-dev.10/patches-1.9.0-dev.10.mpp",
   "signature_download_url": "",
-  "version": "1.8.2"
+  "version": "1.9.0-dev.10"
 }

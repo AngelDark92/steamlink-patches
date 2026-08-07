@@ -1,3 +1,63 @@
+## [1.9.0-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.9...v1.9.0-dev.10) (2026-08-07)
+
+### ✨ New Features
+
+* finally restored all functionalities with the possibility of customizing values at heart's content ([2d997a4](https://github.com/AngelDark92/steamlink-patches/commit/2d997a45b57f6eac10bf542d624590b911cd7131))
+
+## [1.9.0-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.8...v1.9.0-dev.9) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Add Android XR compatibility patches for Steam Link ([5980143](https://github.com/AngelDark92/steamlink-patches/commit/5980143f748d7a50d9e106c956028d4144672c3a))
+
+## [1.9.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.7...v1.9.0-dev.8) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* refactoring patches for Steam Link integration and remove experimental variants ([4b095ec](https://github.com/AngelDark92/steamlink-patches/commit/4b095ec1cc5217e1deec9e8f827561812e8a3749))
+
+## [1.9.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.6...v1.9.0-dev.7) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Add new experimental patches and update APK resource handling ([1072212](https://github.com/AngelDark92/steamlink-patches/commit/1072212985a6926125ee35ad13351d03f1a0d104))
+
+## [1.9.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.5...v1.9.0-dev.6) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Add experimental patches for Legacy Two-Layer Renderer and overlay behavior ([3ab1758](https://github.com/AngelDark92/steamlink-patches/commit/3ab1758692881e5288b62d51a84edbc1917a3109))
+
+## [1.9.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.4...v1.9.0-dev.5) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Implement Legacy Two-Layer Renderer Probe patch and update related experimental patches ([c5e6131](https://github.com/AngelDark92/steamlink-patches/commit/c5e6131477ebc62f3f149d95522134235b4c16a5))
+
+## [1.9.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.3...v1.9.0-dev.4) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Remove old scene renderer probe patch and related code ([d0067c9](https://github.com/AngelDark92/steamlink-patches/commit/d0067c9c82d9da842a2145b0d5e2dccc376fa741))
+
+## [1.9.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.2...v1.9.0-dev.3) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* trigger release ([c15e65b](https://github.com/AngelDark92/steamlink-patches/commit/c15e65bc1286ed6d8bb0928c1362d41c19f05e1b))
+
+## [1.9.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.1...v1.9.0-dev.2) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Remove EXP6 version metadata patch and update patch catalog ([d2daa6b](https://github.com/AngelDark92/steamlink-patches/commit/d2daa6b0bd6f0da9c1859778a30b338002aac183))
+
+## [1.9.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.2...v1.9.0-dev.1) (2026-08-07)
+
+### ✨ New Features
+
+* Add EXP6 version metadata patch and update XR launcher bootstrap settings ([4211c55](https://github.com/AngelDark92/steamlink-patches/commit/4211c55dd82841c32f00e5e00476679754e09fe5))
+
 ## [1.8.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.1...v1.8.2) (2026-08-07)
 
 ### 🐛 Bug Fixes
