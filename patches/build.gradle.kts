@@ -104,6 +104,11 @@ tasks {
 
         classpath = sourceSets["main"].runtimeClasspath + patchListGeneratorClasspath
         mainClass.set("util.PatchListGeneratorKt")
+
+        val releaseChannel = project.findProperty("releaseChannel")?.toString()?.trim()
+        if (!releaseChannel.isNullOrEmpty()) {
+            args(releaseChannel)
+        }
     }
 
     // Used by gradle-semantic-release-plugin.

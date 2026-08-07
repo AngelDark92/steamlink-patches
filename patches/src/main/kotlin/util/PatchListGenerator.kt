@@ -13,7 +13,25 @@ import java.io.File
 import java.net.URLClassLoader
 import java.util.jar.Manifest
 
-fun main() {
+private enum class ReleaseChannel {
+    STABLE,
+    EXPERIMENTAL,
+    ALL;
+
+    companion object {
+        fun from(raw: String?): ReleaseChannel = when (raw?.trim()?.lowercase()) {
+            "stable" -> STABLE
+            "experimental" -> EXPERIMENTAL
+            "all", null, "" -> ALL
+            else -> error("Unsupported release channel '$raw'. Use stable, experimental, or all.")
+        }
+    }
+}
+
+fun main(args: Array<String>) {
+    val releaseChannel =
+        ReleaseChannel.from(args.firstOrNull() ?: System.getenv("MORPHE_RELEASE_CHANNEL"))
+
     val patchFiles = setOf(
         File("build/libs/")
             .listFiles { file ->
@@ -35,24 +53,47 @@ fun main() {
             .mainAttributes
             .getValue("Version")
             ?.let {
-                generatePatchList(it, loadedPatches)
+                generatePatchLists(it, loadedPatches, releaseChannel)
             }
     }
 }
 
 @Suppress("DEPRECATION")
-private fun generatePatchList(version: String, patches: Set<Patch<*>>) {
-    val listJson = File("../patches-list.json")
+private fun generatePatchLists(
+    version: String,
+    patches: Set<Patch<*>>,
+    selectedChannel: ReleaseChannel,
+) {
+    val channelDocuments = mapOf(
+        ReleaseChannel.STABLE to buildPatchListJson(version, patches, ReleaseChannel.STABLE),
+        ReleaseChannel.EXPERIMENTAL to buildPatchListJson(version, patches, ReleaseChannel.EXPERIMENTAL),
+        selectedChannel to buildPatchListJson(version, patches, selectedChannel),
+    )
 
-    val patchesMap = patches.sortedBy { it.name }.map { patch ->
-        JsonPatch(
-            name = patch.name!!,
-            description = patch.description,
-            default = patch.default,
-            dependencies = patch.dependencies.map { it.javaClass.simpleName },
-            // Map each Compatibility to a JsonCompatibility object with full metadata.
-            // Patches with null compatiblePackages are universal (apply to any app).
-            compatiblePackages = patch.compatibility?.map { compat ->
+    File("../patches-list-stable.json").writeText(channelDocuments.getValue(ReleaseChannel.STABLE))
+    File("../patches-list-experimental.json").writeText(channelDocuments.getValue(ReleaseChannel.EXPERIMENTAL))
+    File("../patches-list.json").writeText(channelDocuments.getValue(selectedChannel))
+}
+
+@Suppress("DEPRECATION")
+private fun buildPatchListJson(
+    version: String,
+    patches: Set<Patch<*>>,
+    releaseChannel: ReleaseChannel,
+): String {
+    val patchesMap = patches.sortedBy { it.name }.mapNotNull { patch ->
+        val compatiblePackages = patch.compatibility?.mapNotNull { compat ->
+            val filteredTargets = compat.targets.filter { target ->
+                when (releaseChannel) {
+                    ReleaseChannel.STABLE -> !target.isExperimental
+                    ReleaseChannel.EXPERIMENTAL -> target.isExperimental
+                    ReleaseChannel.ALL -> true
+                }
+            }
+
+            if (filteredTargets.isEmpty()) {
+                null
+            } else {
                 JsonCompatibility(
                     packageName = compat.packageName!!,
                     name = compat.name,
@@ -61,7 +102,7 @@ private fun generatePatchList(version: String, patches: Set<Patch<*>>) {
                     // Format as #RRGGBB string for readability; null if not set
                     appIconColor = compat.appIconColor?.let { "#%06X".format(it) },
                     signatures = compat.signatures,
-                    targets = compat.targets.map { target ->
+                    targets = filteredTargets.map { target ->
                         JsonCompatibility.Target(
                             version = target.version,
                             versionCodes = target.versionCodes?.mapKeys { it.key.name },
@@ -71,7 +112,19 @@ private fun generatePatchList(version: String, patches: Set<Patch<*>>) {
                         )
                     },
                 )
-            },
+            }
+        }
+
+        if (patch.compatibility != null && compatiblePackages.isNullOrEmpty()) {
+            null
+        } else {
+        JsonPatch(
+            name = patch.name!!,
+            description = patch.description,
+            default = patch.default,
+            dependencies = patch.dependencies.map { it.javaClass.simpleName },
+            // Null means universal patch. Non-null means scoped to app targets.
+            compatiblePackages = compatiblePackages,
             options = patch.options.values.map { option ->
                 JsonPatch.Option(
                     key = option.key,
@@ -84,6 +137,7 @@ private fun generatePatchList(version: String, patches: Set<Patch<*>>) {
                 )
             }
         )
+        }
     }
 
     val gson = GsonBuilder()
@@ -95,14 +149,15 @@ private fun generatePatchList(version: String, patches: Set<Patch<*>>) {
     val jsonObject = JsonObject()
     jsonObject.addProperty(
         "NOTE",
-        "Do NOT manually edit this file. This file is automatically updated when " +
+        "Do NOT manually edit this file. This file is automatically generated per channel when " +
                 "semantic release (release.yml) runs. Manually editing this file can break " +
                 "your releases and break third party tools that use this file."
     )
+    jsonObject.addProperty("channel", releaseChannel.name.lowercase())
     jsonObject.addProperty("version", version)
     jsonObject.add("patches", gson.toJsonTree(patchesMap))
 
-    listJson.writeText(gson.toJson(jsonObject))
+    return gson.toJson(jsonObject)
 }
 
 /** JSON representation of a patch entry in patches-list.json. */

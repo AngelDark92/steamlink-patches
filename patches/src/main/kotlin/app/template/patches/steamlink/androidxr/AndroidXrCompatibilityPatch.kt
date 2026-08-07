@@ -295,7 +295,6 @@ val xrLauncherBootstrapPatch = resourcePatch(
                 val activity = doc.createElement("activity")
                 activity.setAttribute("android:name", gxrActivityName)
                 activity.setAttribute("android:exported", "true")
-                activity.setAttribute("android:label", "Steam Link")
                 activity.setAttribute("android:screenOrientation", "landscape")
                 activity.setAttribute("android:theme", "@android:style/Theme.Black.NoTitleBar.Fullscreen")
 
