@@ -1,3 +1,9 @@
+## [1.9.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0-dev.1...v1.9.0-dev.2) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Remove EXP6 version metadata patch and update patch catalog ([d2daa6b](https://github.com/AngelDark92/steamlink-patches/commit/d2daa6b0bd6f0da9c1859778a30b338002aac183))
+
 ## [1.9.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.2...v1.9.0-dev.1) (2026-08-07)
 
 ### ✨ New Features
