@@ -211,15 +211,6 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 
 ---
 
-### EXP6 Version Metadata (`exp6VersionMetadataPatch`)
-**Default: disabled**
-| Artifact | Edit |
-|---|---|
-| `AndroidManifest.xml` `manifest@android:versionCode` | Set to `5002207` |
-| `AndroidManifest.xml` `manifest@android:versionName` | Set to `2.0.22-gxr-exp6` |
-
-Scope note: experimental-only compatibility target. This patch intentionally edits only manifest version fields and throws if those fields were pre-mutated to unexpected non-exp6 values by another patch flow.
-
 ---
 
 ## Shared-file conflict matrix
@@ -228,7 +219,7 @@ Scope note: experimental-only compatibility target. This patch intentionally edi
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (8 B @ 0x1422c4), `hmdOnlyPatch` (hook + cave + velocity), `oledCalibrationPatch` (1087-byte GLSL block), `videoDitherPatch` (2 B inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `changePackageNamePatch`, `exp6VersionMetadataPatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `changePackageNamePatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` is designed to recognise both the stock and calibrated dither patterns so it can be applied in any order after.
