@@ -1,3 +1,16 @@
+## [1.8.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.1...v1.8.2) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* merge pull request [#33](https://github.com/AngelDark92/steamlink-patches/issues/33) from AngelDark92/dev ([aa1c950](https://github.com/AngelDark92/steamlink-patches/commit/aa1c95058aa7788af98bab3e11db2dc984b94ad4))
+* Update compatible packages and remove deprecated options in patch files ([cf443c5](https://github.com/AngelDark92/steamlink-patches/commit/cf443c5da27bf26ed6730eacdec28fe8294797f2))
+
+## [1.8.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.1...v1.8.2-dev.1) (2026-08-07)
+
+### 🐛 Bug Fixes
+
+* Update compatible packages and remove deprecated options in patch files ([cf443c5](https://github.com/AngelDark92/steamlink-patches/commit/cf443c5da27bf26ed6730eacdec28fe8294797f2))
+
 ## [1.8.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.0...v1.8.1) (2026-08-07)
 
 ### 🐛 Bug Fixes
