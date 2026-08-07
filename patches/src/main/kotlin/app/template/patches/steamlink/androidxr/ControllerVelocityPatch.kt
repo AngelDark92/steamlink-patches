@@ -4,7 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.intOption
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
+import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -60,10 +60,10 @@ private fun configuredVelocityLibrary(
 @Suppress("unused")
 val controllerVelocityPatch = rawResourcePatch(
     name = "Controller velocity fix",
-    description = "Experimental: derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
+    description = "Derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
     dependsOn(xrCoreRuntimePatch)
 
     val maxDeltaMs by intOption(
@@ -122,7 +122,7 @@ val controllerVelocityPatch = rawResourcePatch(
         val idsFile = get("res/values/ids.xml")
         if (!idsFile.exists()) {
             idsFile.parentFile!!.mkdirs()
-            idsFile.writeText("""<?xml version="1.0" encoding="utf-8"?><resources/>""")
+            idsFile.writeText("""<?xml version=\"1.0\" encoding=\"utf-8\"?><resources/>""")
         }
     }
 }

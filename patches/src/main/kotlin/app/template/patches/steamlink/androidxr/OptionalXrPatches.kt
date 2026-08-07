@@ -1,38 +1,9 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
-import java.io.File
-
-private fun loadOptionalXrResource(name: String): ByteArray =
-    (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
-        ?: error("Missing bundled resource: steamlink/androidxr/$name"))
-        .use { it.readBytes() }
-
-private fun decodedRawRootFromLibAnchor(libFile: File): File =
-    libFile.parentFile?.parentFile?.parentFile
-        ?: throw PatchException("Unable to derive decoded APK raw-resource root from ${libFile.absolutePath}")
-
-private fun findAndroidXrSmaliFile(apkRoot: File, relativePath: String): File {
-    val smaliRoots = apkRoot.listFiles()
-        ?.filter { it.isDirectory && it.name.startsWith("smali") }
-        .orEmpty()
-
-    val match = smaliRoots
-        .asSequence()
-        .map { File(it, relativePath) }
-        .firstOrNull { it.isFile }
-
-    return match ?: throw PatchException(
-        "Unable to locate $relativePath under ${apkRoot.absolutePath}; searched: " +
-            smaliRoots.joinToString { it.name },
-    )
-}
 
 private val appearOnTopManifestPatch = resourcePatch {
     finalize {
@@ -62,36 +33,4 @@ val appearOnTopPatch = bytecodePatch(
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
     dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
-}
-
-private val noOverlayTestSmaliPatch = rawResourcePatch {
-    execute {
-        val apkRoot = decodedRawRootFromLibAnchor(get("lib/arm64-v8a/libvrlink_scene.so"))
-        // Replaces production overlay bridge with a no-op (no TYPE_APPLICATION_OVERLAY window created)
-        findAndroidXrSmaliFile(apkRoot, "com/valvesoftware/steamlink/GxrOverlayBridge.smali")
-            .writeBytes(loadOptionalXrResource("smali/test_variants/GxrOverlayBridge_NoOverlay.smali"))
-        // Replaces permission activity with a stub that skips SYSTEM_ALERT_WINDOW request and goes directly to VRLink
-        findAndroidXrSmaliFile(apkRoot, "com/valvesoftware/steamlink/GalaxyXRPermissionActivity.smali")
-            .writeBytes(loadOptionalXrResource("smali/test_variants/GalaxyXRPermissionActivity_NoOverlay_NoPermission.smali"))
-    }
-}
-
-@Suppress("unused")
-val overlayBaselineTestPatch = bytecodePatch(
-    name = "TEST EXPERIMENTAL - Baseline Overlay Flow",
-    description = "A/B test baseline. Keeps launcher bootstrap plus overlay permission flow (Appear on top behavior). Enable this OR the No-Overlay test patch, not both.",
-    default = false,
-) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
-}
-
-@Suppress("unused")
-val noOverlayNoPermissionTestPatch = rawResourcePatch(
-    name = "TEST EXPERIMENTAL - No Overlay / No Permission",
-    description = "A/B test variant. Replaces GalaxyXRPermissionActivity and GxrOverlayBridge with no-overlay/no-permission-request smali for crash reproduction and comparison.",
-    default = false,
-) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(xrLauncherBootstrapPatch, noOverlayTestSmaliPatch)
 }
