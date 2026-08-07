@@ -121,6 +121,22 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 
 ---
 
+### TEST — Old Scene Renderer Probe (2.0.20) (`oldSceneRendererProbePatch`)
+**Default: disabled** (experimental A/B variant)
+| Artifact | Edit |
+|---|---|
+| `lib/arm64-v8a/libvrlink_scene.so` | Full replacement with bundled 2.0.20 probe binary (SHA-256 must equal `826006ea99befe2e6ae894c27cde3fd6d65509950b7d26fcd4862c46364a4f53`) |
+
+---
+
+### TEST — Old Scene requestExit Bridge (`oldSceneRequestExitBridgePatch`)
+**Default: disabled** (experimental adapter; depends on oldSceneRendererProbePatch)
+| Artifact | Edit |
+|---|---|
+| `smali/com/valvesoftware/steamlink/VRLink.smali` | Replaces `.method private native requestExit()V` with Java `finishAndRemoveTask()` bridge implementation |
+
+---
+
 ## binary group
 
 ### HMD-Only Pose Fix (`hmdOnlyPatch`)
