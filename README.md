@@ -22,6 +22,7 @@ To download it:
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;17 patches</summary>
 <br>
 
+
 **🎯 Supported versions:**
 
 | 2.0.22 |
