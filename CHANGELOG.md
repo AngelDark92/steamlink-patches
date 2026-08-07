@@ -1,3 +1,9 @@
+## [1.9.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.2...v1.9.0-dev.1) (2026-08-07)
+
+### ✨ New Features
+
+* Add EXP6 version metadata patch and update XR launcher bootstrap settings ([4211c55](https://github.com/AngelDark92/steamlink-patches/commit/4211c55dd82841c32f00e5e00476679754e09fe5))
+
 ## [1.8.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.1...v1.8.2) (2026-08-07)
 
 ### 🐛 Bug Fixes
