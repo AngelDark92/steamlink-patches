@@ -363,6 +363,8 @@ val xrLauncherBootstrapPatch = resourcePatch(
                 .filterIsInstance<Element>()
                 .firstOrNull { it.getAttribute("android:name") == steamLinkName }
                 ?.let { steamLink ->
+                    steamLink.setAttribute("android:resizeableActivity", "true")
+
                     steamLink.getElementsByTagName("intent-filter").asSequence()
                         .filterIsInstance<Element>()
                         .filter { filter ->
@@ -376,6 +378,20 @@ val xrLauncherBootstrapPatch = resourcePatch(
                         .toList()
                         .forEach { steamLink.removeChild(it) }
 
+                    val steamXrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
+                    val existingSteamStartMode = steamLink.getElementsByTagName("property").asSequence()
+                        .filterIsInstance<Element>()
+                        .firstOrNull { it.getAttribute("android:name") == steamXrStartMode }
+                    if (existingSteamStartMode != null) {
+                        existingSteamStartMode.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
+                    } else {
+                        val steamModeProp = doc.createElement("property")
+                        steamModeProp.setAttribute("android:name", steamXrStartMode)
+                        // Keep SteamLink picker in managed full-space panel mode.
+                        steamModeProp.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
+                        steamLink.insertBefore(steamModeProp, steamLink.firstChild)
+                    }
+
                     val layouts = steamLink.getElementsByTagName("layout")
                     val layout = if (layouts.length > 0) {
                         layouts.item(0) as Element
@@ -384,8 +400,9 @@ val xrLauncherBootstrapPatch = resourcePatch(
                             steamLink.insertBefore(it, steamLink.firstChild)
                         }
                     }
-                    layout.setAttribute("android:defaultWidth", "1280.0px")
-                    layout.setAttribute("android:defaultHeight", "800.0px")
+                    // exp6 panel sizing baseline from handoff bundle.
+                    layout.setAttribute("android:defaultWidth", "1536.0px")
+                    layout.setAttribute("android:defaultHeight", "960.0px")
                 }
         }
     }
