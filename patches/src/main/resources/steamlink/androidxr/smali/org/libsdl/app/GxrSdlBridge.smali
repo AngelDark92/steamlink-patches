@@ -21,7 +21,7 @@
 # routeXrPointerAsMouse(MotionEvent event)
 #
 # Called from the beginning of SDLSurface.onTouch().
-# Translates Galaxy XR ray-cast pointer events (tool type 0 or STYLUS/1) into
+# Translates Galaxy XR ray-cast pointer events (tool type unknown/finger/stylus/mouse)
 # SDL mouse events so the SteamVR UI can track and click them.
 # ─────────────────────────────────────────────────────────────────────────────
 .method public static routeXrPointerAsMouse(Landroid/view/MotionEvent;)V
@@ -36,9 +36,13 @@
     invoke-virtual {p0, v0}, Landroid/view/MotionEvent;->getToolType(I)I
     move-result v1
 
-    # Tool type 0 = unknown (XR ray), 1 = TOOL_TYPE_FINGER → both accepted.
+    # Accept UNKNOWN/FINGER/STYLUS/MOUSE so Android XR vendor tool typing stays routable.
     if-eqz v1, :gxr_tool_ok
     const/4 v2, 0x1
+    if-eq v1, v2, :gxr_tool_ok
+    const/4 v2, 0x2
+    if-eq v1, v2, :gxr_tool_ok
+    const/4 v2, 0x3
     if-ne v1, v2, :gxr_done
 
     :gxr_tool_ok
@@ -115,6 +119,10 @@
 
     if-eqz v1, :gxr_generic_ok
     const/4 v2, 0x1
+    if-eq v1, v2, :gxr_generic_ok
+    const/4 v2, 0x2
+    if-eq v1, v2, :gxr_generic_ok
+    const/4 v2, 0x3
     if-ne v1, v2, :gxr_generic_done
 
     :gxr_generic_ok

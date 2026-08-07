@@ -98,6 +98,32 @@
       "options": []
     },
     {
+      "name": "TEST EXPERIMENTAL - Legacy Two-Layer Renderer Probe",
+      "description": "A/B probe: applies the known 5002244 four-offset patch set to skip underside swapchain creation/submission and restore the legacy two-layer stream topology.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "TEST EXPERIMENTAL - No Overlay / No Permission",
       "description": "A/B test variant. Replaces GalaxyXRPermissionActivity and GxrOverlayBridge with no-overlay/no-permission-request smali for crash reproduction and comparison.",
       "default": false,
@@ -127,38 +153,10 @@
       "options": []
     },
     {
-      "name": "TEST EXPERIMENTAL - Old Scene Renderer Probe (2.0.20)",
-      "description": "A/B probe: replaces libvrlink_scene.so with the supplied 2.0.20 scene renderer binary for first-screen controller-input regression testing.",
+      "name": "TEST EXPERIMENTAL - Old Scene requestExit Bridge",
+      "description": "A/B probe adapter: rewrites VRLink requestExit() from JNI-native to Java finishAndRemoveTask() without requiring old-scene binary replacement.",
       "default": false,
       "dependencies": [],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link Experimental",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": null,
-              "isExperimental": true,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "TEST EXPERIMENTAL - Old Scene requestExit Bridge",
-      "description": "A/B probe adapter: rewrites VRLink requestExit() from JNI-native to Java finishAndRemoveTask() for 2.0.20 scene-library compatibility.",
-      "default": false,
-      "dependencies": [
-        "RawResourcePatch"
-      ],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",

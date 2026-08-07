@@ -37,6 +37,14 @@
 
     const/4 v2, 0x1
 
+    if-eq v1, v2, :gxr_generic_tool_ok
+
+    const/4 v2, 0x2
+
+    if-eq v1, v2, :gxr_generic_tool_ok
+
+    const/4 v2, 0x3
+
     if-ne v1, v2, :gxr_generic_not_pointer
 
     :gxr_generic_tool_ok
