@@ -128,7 +128,7 @@
           "title": "Maximum sample gap (ms)",
           "description": "libgxr_controller_velocity.so config+32 (int64 ns = value×1e6). Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
           "required": true,
-          "type": "kotlin.Int",
+          "type": "kotlin.Long",
           "default": 50,
           "values": null
         },
@@ -375,10 +375,10 @@
         {
           "key": "offsetMs",
           "title": "Pose offset (ms)",
-          "description": "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 78 ms. Allowed range: 0 to 4000 ms.",
+          "description": "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 60 ms. Allowed range: 0 to 4000 ms.",
           "required": true,
-          "type": "kotlin.Int",
-          "default": 78,
+          "type": "kotlin.Long",
+          "default": 60,
           "values": null
         }
       ]

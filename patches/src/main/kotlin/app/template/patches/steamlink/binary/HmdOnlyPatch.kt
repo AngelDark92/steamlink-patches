@@ -1,7 +1,7 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.intOption
+import app.morphe.patcher.patch.longOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172
@@ -89,10 +89,10 @@ private val HMD_LAYOUTS = listOf(
 private val NOP = byteArrayOf(0x1f, 0x20, 0x03, 0xd5.toByte())
 private val BR_X17 = byteArrayOf(0x20, 0x02, 0x1f, 0xd6.toByte())
 
-private fun buildTrampolineBody(offsetMs: Int): ByteArray {
+private fun buildTrampolineBody(offsetMs: Long): ByteArray {
     // Encode offsetMs as nanoseconds (ms * 1e6), split across MOVZ (bits 0-15) + MOVK lsl#16 (bits 16-31)
     // into X16, then ADD X2, X2, X16 adds the nanosecond delta to the pose query timestamp in X2
-    val offsetNs = offsetMs.toLong() * 1_000_000L
+    val offsetNs = offsetMs * 1_000_000L
     val low = (offsetNs and 0xFFFF).toInt()
     val high = ((offsetNs ushr 16) and 0xFFFF).toInt()
     val movzX16 = 0xD2800000.toInt() or (low shl 5) or 16
@@ -179,14 +179,14 @@ val hmdOnlyPatch = rawResourcePatch(
         COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244,
     )
 
-    val offsetMs by intOption(
+    val offsetMs by longOption(
         key = "offsetMs",
-        default = 78,
+        default = 60L,
         title = "Pose offset (ms)",
-        // 78 ms tested default for Galaxy XR; max 4000 ms (4 s) practical upper bound
-        description = "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 78 ms. Allowed range: 0 to 4000 ms.",
+        // 60 ms tested default for Galaxy XR; max 4000 ms (4 s) practical upper bound
+        description = "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 60 ms. Allowed range: 0 to 4000 ms.",
         required = true,
-        validator = { value -> value != null && value in 0..4000 },
+        validator = { value -> value != null && value in 0L..4000L },
     )
 
     execute {

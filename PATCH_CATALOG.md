@@ -139,7 +139,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | `lib/arm64-v8a/libvrlink_scene.so` @ PLT cave (last 32 B of first PT_LOAD) | 32 bytes: trampoline — original hook insn + MOVZ x16,low16(offsetNs) + MOVK x16,hi16(offsetNs),lsl#16 + ADD x2,x2,x16 + B hook+4 + NOP×3 |
 | Velocity fields `[x19+28]` … `[x19+48]` (6× float/double) | Replaced with `STUR XZR` or `STR WZR` (zeroes PackedPose_t linear/angular velocity) |
 
-**Option:** `offsetMs` — encodes as nanoseconds split across MOVZ/MOVK immediates; default 78, range 0–4000
+**Option:** `offsetMs` — encodes as nanoseconds split across MOVZ/MOVK immediates; default 60, range 0–4000
 
 **Version layouts (matched by `libvrlink_scene.so` file size):**
 | versionCode | File size | Hook vaddr | PLT cave vaddr |

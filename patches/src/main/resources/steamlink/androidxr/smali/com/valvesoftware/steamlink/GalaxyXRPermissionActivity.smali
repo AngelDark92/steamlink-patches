@@ -17,6 +17,12 @@
 .method private continueAfterPermissions()V
     .locals 1
 
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->shouldRequestOverlay(Landroid/content/Context;)Z
+
+    move-result v0
+
+    if-eqz v0, :launch
+
     invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->isEnabled(Landroid/content/Context;)Z
 
     move-result v0

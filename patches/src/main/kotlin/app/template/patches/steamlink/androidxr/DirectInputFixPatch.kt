@@ -120,13 +120,13 @@ internal val xrDirectInputFixPatch = bytecodePatch {
             }
 
         val steamLinkClass = mutableClassDefBy("Lcom/valvesoftware/steamlink/SteamLink;")
-        val ensureOverlay = { method: MutableMethod, index: Int ->
+        val runResolutionProbe = { method: MutableMethod, index: Int, probeMethod: String ->
             method.addInstruction(
                 index,
                 invokeStaticRange(
-                    "Lcom/valvesoftware/steamlink/GxrOverlayBridge;",
-                    "ensureOverlay",
-                    listOf("Landroid/content/Context;"),
+                    "Lcom/valvesoftware/steamlink/GxrResolutionProbe;",
+                    probeMethod,
+                    listOf("Landroid/app/Activity;"),
                     "Z",
                     method.pRegister(0),
                     1,
@@ -137,19 +137,31 @@ internal val xrDirectInputFixPatch = bytecodePatch {
         steamLinkClass.methods
             .first { it.name == "onCreate" && it.parameterTypes.singleOrNull() == "Landroid/os/Bundle;" }
             .apply {
-                ensureOverlay(this, invocationIndex("Lorg/libsdl/app/SDLActivity;", "onCreate") + 1)
+                runResolutionProbe(
+                    this,
+                    invocationIndex("Lorg/libsdl/app/SDLActivity;", "onCreate") + 1,
+                    "onSteamLinkCreate",
+                )
             }
 
         steamLinkClass.methods
             .first { it.name == "onResume" && it.parameterTypes.isEmpty() }
             .apply {
-                ensureOverlay(this, invocationIndex("Lorg/libsdl/app/SDLActivity;", "onResume") + 1)
+                runResolutionProbe(
+                    this,
+                    invocationIndex("Lorg/libsdl/app/SDLActivity;", "onResume") + 1,
+                    "onSteamLinkResume",
+                )
             }
 
         steamLinkClass.methods
             .first { it.name == "startVRLink" && it.parameterTypes.singleOrNull() == "Ljava/lang/String;" }
             .apply {
-                ensureOverlay(this, invocationIndex("Lcom/valvesoftware/steamlink/SteamLink;", "startActivity"))
+                runResolutionProbe(
+                    this,
+                    invocationIndex("Lcom/valvesoftware/steamlink/SteamLink;", "startActivity"),
+                    "beforeVrLaunch",
+                )
             }
     }
 }
