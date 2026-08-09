@@ -295,7 +295,13 @@ XrResult XRAPI_PTR layerGetInstanceProcAddr(
     else if (std::strcmp(name, "xrCreateActionSpace") == 0) *function = reinterpret_cast<PFN_xrVoidFunction>(layerCreateActionSpace);
     else if (std::strcmp(name, "xrDestroySpace") == 0) *function = reinterpret_cast<PFN_xrVoidFunction>(layerDestroySpace);
     else if (std::strcmp(name, "xrLocateSpace") == 0) *function = reinterpret_cast<PFN_xrVoidFunction>(layerLocateSpace);
-    else return STATE.getInstanceProcAddr(instance, name, function);
+    else {
+        if (!STATE.getInstanceProcAddr) {
+            *function = nullptr;
+            return XR_ERROR_FUNCTION_UNSUPPORTED;
+        }
+        return STATE.getInstanceProcAddr(instance, name, function);
+    }
     return XR_SUCCESS;
 }
 
