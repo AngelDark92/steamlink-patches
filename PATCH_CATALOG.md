@@ -106,6 +106,15 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 
 ---
 
+### Unrestricted Battery Usage (`unrestrictedBatteryUsagePatch`)
+**Default: enabled** — depends on `xrLauncherBootstrapPatch`
+| Artifact | Edit |
+|---|---|
+| `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
+| `GalaxyXRPermissionActivity` | Requests the app-specific battery optimization exemption at startup when it is not already granted |
+
+---
+
 ### TEST — Baseline Overlay Flow (`overlayBaselineTestPatch`)
 **Default: disabled** (experimental A/B baseline)
 Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermissionTestPatch`.

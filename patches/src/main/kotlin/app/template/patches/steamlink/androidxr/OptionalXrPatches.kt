@@ -7,6 +7,35 @@ import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
 
+private val unrestrictedBatteryManifestPatch = resourcePatch {
+    finalize {
+        document("AndroidManifest.xml").use { document ->
+            val manifest = document.documentElement
+            val app = manifest.getElementsByTagName("application").item(0) as Element
+            val permission = "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+            val permissions = document.getElementsByTagName("uses-permission")
+            val exists = (0 until permissions.length)
+                .mapNotNull { permissions.item(it) as? Element }
+                .any { it.getAttribute("android:name") == permission }
+            if (!exists) {
+                val element = document.createElement("uses-permission")
+                element.setAttribute("android:name", permission)
+                manifest.insertBefore(element, app)
+            }
+        }
+    }
+}
+
+@Suppress("unused")
+val unrestrictedBatteryUsagePatch = bytecodePatch(
+    name = "Unrestricted battery usage",
+    description = "Recommended. Asks Android to allow unrestricted battery usage so XR streaming can continue without battery optimization limits.",
+    default = true,
+) {
+    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(xrLauncherBootstrapPatch, unrestrictedBatteryManifestPatch)
+}
+
 private val appearOnTopManifestPatch = resourcePatch {
     finalize {
         document("AndroidManifest.xml").use { document ->
