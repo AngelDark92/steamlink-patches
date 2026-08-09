@@ -1,3 +1,9 @@
+## [1.9.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0...v1.9.1-dev.1) (2026-08-09)
+
+### 🐛 Bug Fixes
+
+* Implement experimental XR resolution permission patch and related functionality ([81c036d](https://github.com/AngelDark92/steamlink-patches/commit/81c036d0a188e3e27e803606c4febb77399d0335))
+
 ## [1.9.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.8.2...v1.9.0) (2026-08-07)
 
 ### 🐛 Bug Fixes
