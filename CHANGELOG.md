@@ -1,3 +1,9 @@
+## [1.9.1-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.1...v1.9.1-dev.2) (2026-08-09)
+
+### 🐛 Bug Fixes
+
+* Add unrestricted battery usage patch to enhance XR streaming performance ([4fc112d](https://github.com/AngelDark92/steamlink-patches/commit/4fc112df9be8347d54ed2caf304bc3f7f91a2f0d))
+
 ## [1.9.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0...v1.9.1-dev.1) (2026-08-09)
 
 ### 🐛 Bug Fixes
