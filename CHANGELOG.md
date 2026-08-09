@@ -1,3 +1,9 @@
+## [1.9.1-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.2...v1.9.1-dev.3) (2026-08-09)
+
+### 🐛 Bug Fixes
+
+* Enhance error handling in layerGetInstanceProcAddr function ([d5a9464](https://github.com/AngelDark92/steamlink-patches/commit/d5a9464f730ab698b92f04c1dd2277dbb30ec9cd))
+
 ## [1.9.1-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.1...v1.9.1-dev.2) (2026-08-09)
 
 ### 🐛 Bug Fixes
