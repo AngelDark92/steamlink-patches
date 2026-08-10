@@ -1,3 +1,14 @@
+## [1.9.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0...v1.9.1) (2026-08-10)
+
+### 🐛 Bug Fixes
+
+* Add unrestricted battery usage patch to enhance XR streaming performance ([4fc112d](https://github.com/AngelDark92/steamlink-patches/commit/4fc112df9be8347d54ed2caf304bc3f7f91a2f0d))
+* Enhance error handling in layerGetInstanceProcAddr function ([d5a9464](https://github.com/AngelDark92/steamlink-patches/commit/d5a9464f730ab698b92f04c1dd2277dbb30ec9cd))
+* fix battery usage patch ([66954f6](https://github.com/AngelDark92/steamlink-patches/commit/66954f66cd16835e7650db6d6d6079bc81ec8bf4))
+* Implement experimental XR resolution permission patch and related functionality ([81c036d](https://github.com/AngelDark92/steamlink-patches/commit/81c036d0a188e3e27e803606c4febb77399d0335))
+* Merge pull request [#35](https://github.com/AngelDark92/steamlink-patches/issues/35) from AngelDark92/dev ([d197b08](https://github.com/AngelDark92/steamlink-patches/commit/d197b08f8a8cb627f9270adcf5f4ef964d7f5ed8))
+* Update unrestricted battery usage functionality to open per-app Battery usage page at startup ([f1ae193](https://github.com/AngelDark92/steamlink-patches/commit/f1ae193b7122f2b6f4c3304eab2028db4dcb0e90))
+
 ## [1.9.1-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.4...v1.9.1-dev.5) (2026-08-10)
 
 ### 🐛 Bug Fixes
