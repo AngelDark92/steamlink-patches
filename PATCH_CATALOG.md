@@ -111,7 +111,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
-| `GalaxyXRPermissionActivity` | Requests the app-specific battery optimization exemption at startup when it is not already granted |
+| `GalaxyXRPermissionActivity` | Opens the app-specific Battery usage page at startup when not unrestricted; falls back to the direct exemption prompt, then app details |
 
 ---
 

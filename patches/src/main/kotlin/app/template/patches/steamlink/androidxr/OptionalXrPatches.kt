@@ -29,7 +29,7 @@ private val unrestrictedBatteryManifestPatch = resourcePatch {
 @Suppress("unused")
 val unrestrictedBatteryUsagePatch = bytecodePatch(
     name = "Unrestricted battery usage",
-    description = "Recommended. Asks Android to allow unrestricted battery usage so XR streaming can continue without battery optimization limits.",
+    description = "Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)

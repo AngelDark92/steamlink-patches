@@ -55,7 +55,7 @@
 
     new-instance v0, Landroid/content/Intent;
 
-    const-string v2, "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+    const-string v2, "android.settings.VIEW_ADVANCED_POWER_USAGE_DETAIL"
 
     invoke-direct {v0, v2}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
 
@@ -69,6 +69,43 @@
 
     invoke-virtual {v0, v1}, Landroid/content/Intent;->setData(Landroid/net/Uri;)Landroid/content/Intent;
 
+    invoke-virtual {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->getPackageManager()Landroid/content/pm/PackageManager;
+
+    move-result-object v2
+
+    const/4 v3, 0x0
+
+    invoke-virtual {v0, v2, v3}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;I)Landroid/content/ComponentName;
+
+    move-result-object v3
+
+    if-nez v3, :request_battery
+
+    const-string v3, "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+
+    invoke-virtual {v0, v3}, Landroid/content/Intent;->setAction(Ljava/lang/String;)Landroid/content/Intent;
+
+    const/4 v3, 0x0
+
+    invoke-virtual {v0, v2, v3}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;I)Landroid/content/ComponentName;
+
+    move-result-object v3
+
+    if-nez v3, :request_battery
+
+    const-string v3, "android.settings.APPLICATION_DETAILS_SETTINGS"
+
+    invoke-virtual {v0, v3}, Landroid/content/Intent;->setAction(Ljava/lang/String;)Landroid/content/Intent;
+
+    const/4 v3, 0x0
+
+    invoke-virtual {v0, v2, v3}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;I)Landroid/content/ComponentName;
+
+    move-result-object v2
+
+    if-eqz v2, :overlay
+
+    :request_battery
     const/16 v1, 0x475a
 
     invoke-virtual {p0, v0, v1}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->startActivityForResult(Landroid/content/Intent;I)V
