@@ -73,9 +73,7 @@
 
     move-result-object v2
 
-    const/4 v3, 0x0
-
-    invoke-virtual {v0, v2, v3}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;I)Landroid/content/ComponentName;
+    invoke-virtual {v0, v2}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;)Landroid/content/ComponentName;
 
     move-result-object v3
 
@@ -85,9 +83,7 @@
 
     invoke-virtual {v0, v3}, Landroid/content/Intent;->setAction(Ljava/lang/String;)Landroid/content/Intent;
 
-    const/4 v3, 0x0
-
-    invoke-virtual {v0, v2, v3}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;I)Landroid/content/ComponentName;
+    invoke-virtual {v0, v2}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;)Landroid/content/ComponentName;
 
     move-result-object v3
 
@@ -97,9 +93,7 @@
 
     invoke-virtual {v0, v3}, Landroid/content/Intent;->setAction(Ljava/lang/String;)Landroid/content/Intent;
 
-    const/4 v3, 0x0
-
-    invoke-virtual {v0, v2, v3}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;I)Landroid/content/ComponentName;
+    invoke-virtual {v0, v2}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;)Landroid/content/ComponentName;
 
     move-result-object v2
 
