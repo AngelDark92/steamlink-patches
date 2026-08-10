@@ -1,3 +1,9 @@
+## [1.9.1-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.4...v1.9.1-dev.5) (2026-08-10)
+
+### 🐛 Bug Fixes
+
+* fix battery usage patch ([66954f6](https://github.com/AngelDark92/steamlink-patches/commit/66954f66cd16835e7650db6d6d6079bc81ec8bf4))
+
 ## [1.9.1-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.3...v1.9.1-dev.4) (2026-08-10)
 
 ### 🐛 Bug Fixes
