@@ -2,6 +2,8 @@
 .super Landroid/app/Activity;
 .source "GalaxyXRPermissionActivity.java"
 
+.field private mBatteryRequestLaunched:Z
+
 .field private mOverlayRequestLaunched:Z
 
 .field private mSteamLinkLaunched:Z
@@ -15,7 +17,102 @@
 .end method
 
 .method private continueAfterPermissions()V
-    .locals 1
+    .locals 4
+
+    const-string v0, "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+
+    invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
+
+    move-result v0
+
+    if-nez v0, :overlay
+
+    const-string v0, "power"
+
+    invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->getSystemService(Ljava/lang/String;)Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, Landroid/os/PowerManager;
+
+    invoke-virtual {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->getPackageName()Ljava/lang/String;
+
+    move-result-object v1
+
+    invoke-virtual {v0, v1}, Landroid/os/PowerManager;->isIgnoringBatteryOptimizations(Ljava/lang/String;)Z
+
+    move-result v0
+
+    if-nez v0, :overlay
+
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mBatteryRequestLaunched:Z
+
+    if-nez v0, :overlay
+
+    const/4 v0, 0x1
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mBatteryRequestLaunched:Z
+
+    new-instance v0, Landroid/content/Intent;
+
+    const-string v2, "android.settings.VIEW_ADVANCED_POWER_USAGE_DETAIL"
+
+    invoke-direct {v0, v2}, Landroid/content/Intent;-><init>(Ljava/lang/String;)V
+
+    const-string v2, "package"
+
+    const/4 v3, 0x0
+
+    invoke-static {v2, v1, v3}, Landroid/net/Uri;->fromParts(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Landroid/net/Uri;
+
+    move-result-object v1
+
+    invoke-virtual {v0, v1}, Landroid/content/Intent;->setData(Landroid/net/Uri;)Landroid/content/Intent;
+
+    invoke-virtual {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->getPackageManager()Landroid/content/pm/PackageManager;
+
+    move-result-object v2
+
+    invoke-virtual {v0, v2}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;)Landroid/content/ComponentName;
+
+    move-result-object v3
+
+    if-nez v3, :request_battery
+
+    const-string v3, "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+
+    invoke-virtual {v0, v3}, Landroid/content/Intent;->setAction(Ljava/lang/String;)Landroid/content/Intent;
+
+    invoke-virtual {v0, v2}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;)Landroid/content/ComponentName;
+
+    move-result-object v3
+
+    if-nez v3, :request_battery
+
+    const-string v3, "android.settings.APPLICATION_DETAILS_SETTINGS"
+
+    invoke-virtual {v0, v3}, Landroid/content/Intent;->setAction(Ljava/lang/String;)Landroid/content/Intent;
+
+    invoke-virtual {v0, v2}, Landroid/content/Intent;->resolveActivity(Landroid/content/pm/PackageManager;)Landroid/content/ComponentName;
+
+    move-result-object v2
+
+    if-eqz v2, :overlay
+
+    :request_battery
+    const/16 v1, 0x475a
+
+    invoke-virtual {p0, v0, v1}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->startActivityForResult(Landroid/content/Intent;I)V
+
+    return-void
+
+    :overlay
+
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->shouldRequestOverlay(Landroid/content/Context;)Z
+
+    move-result v0
+
+    if-eqz v0, :launch
 
     invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->isEnabled(Landroid/content/Context;)Z
 
@@ -91,13 +188,22 @@
 
     const/16 v0, 0x4759
 
-    if-ne p1, v0, :done
+    if-ne p1, v0, :battery
 
     invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
 
     move-result v0
 
     invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->launchSteamLink()V
+
+    return-void
+
+    :battery
+    const/16 v0, 0x475a
+
+    if-ne p1, v0, :done
+
+    invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->continueAfterPermissions()V
 
     :done
     return-void
@@ -229,8 +335,13 @@
 
     iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
 
+    if-nez v0, :continue
+
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mBatteryRequestLaunched:Z
+
     if-eqz v0, :done
 
+    :continue
     invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->continueAfterPermissions()V
 
     :done

@@ -295,7 +295,13 @@ XrResult XRAPI_PTR layerGetInstanceProcAddr(
     else if (std::strcmp(name, "xrCreateActionSpace") == 0) *function = reinterpret_cast<PFN_xrVoidFunction>(layerCreateActionSpace);
     else if (std::strcmp(name, "xrDestroySpace") == 0) *function = reinterpret_cast<PFN_xrVoidFunction>(layerDestroySpace);
     else if (std::strcmp(name, "xrLocateSpace") == 0) *function = reinterpret_cast<PFN_xrVoidFunction>(layerLocateSpace);
-    else return STATE.getInstanceProcAddr(instance, name, function);
+    else {
+        if (!STATE.getInstanceProcAddr) {
+            *function = nullptr;
+            return XR_ERROR_FUNCTION_UNSUPPORTED;
+        }
+        return STATE.getInstanceProcAddr(instance, name, function);
+    }
     return XR_SUCCESS;
 }
 
@@ -326,26 +332,6 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
     loadFunction("xrLocateSpace", STATE.locateSpace);
     loadFunction("xrPathToString", STATE.pathToString);
     GXR_LOG("controller velocity layer initialized");
-    
-    // Instrumentation: Log OpenXR system properties and recommended swapchain dimensions
-    PFN_xrGetSystem getSystem = nullptr;
-    PFN_xrGetSystemProperties getSystemProperties = nullptr;
-    STATE.getInstanceProcAddr(*instance, "xrGetSystem", reinterpret_cast<PFN_xrVoidFunction*>(&getSystem));
-    STATE.getInstanceProcAddr(*instance, "xrGetSystemProperties", reinterpret_cast<PFN_xrVoidFunction*>(&getSystemProperties));
-    
-    if (getSystem && getSystemProperties) {
-        XrSystemId systemId = XR_NULL_SYSTEM_ID;
-        if (XR_SUCCEEDED(getSystem(*instance, XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY, &systemId))) {
-            XrSystemProperties sysProps{};
-            sysProps.type = XR_TYPE_SYSTEM_PROPERTIES;
-            if (XR_SUCCEEDED(getSystemProperties(*instance, systemId, &sysProps))) {
-                GXR_LOG("OpenXR system max rec swapchain: %ux%u", 
-                    sysProps.graphicsProperties.maxSwapchainImageWidth,
-                    sysProps.graphicsProperties.maxSwapchainImageHeight);
-            }
-        }
-    }
-    
     return XR_SUCCESS;
 }
 

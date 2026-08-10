@@ -2,7 +2,7 @@ package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatOption
-import app.morphe.patcher.patch.intOption
+import app.morphe.patcher.patch.longOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import java.io.File
@@ -37,7 +37,7 @@ private fun ByteArray.findUniqueConfig(): Int {
 }
 
 private fun configuredVelocityLibrary(
-    maxDeltaMs: Int,
+    maxDeltaMs: Long,
     smoothing: Float,
     maxLinearSpeed: Float,
     maxAngularSpeed: Float,
@@ -46,7 +46,7 @@ private fun configuredVelocityLibrary(
     val offset = bytes.findUniqueConfig()
     ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).apply {
         // +32: maxDeltaNs int64 (ms×1_000_000; fallback threshold for pose sample gap)
-        putLong(offset + 32, maxDeltaMs.toLong() * 1_000_000L)
+        putLong(offset + 32, maxDeltaMs * 1_000_000L)
         // +40: maxLinearSpeed float32 (m/s; clamp to runtime velocity above this derived speed)
         putFloat(offset + 40, maxLinearSpeed)
         // +44: maxAngularSpeed float32 (rad/s; clamp to runtime velocity above this derived speed)
@@ -66,13 +66,13 @@ val controllerVelocityPatch = rawResourcePatch(
     compatibleWith(COMPATIBILITY_STEAM_LINK)
     dependsOn(xrCoreRuntimePatch)
 
-    val maxDeltaMs by intOption(
+    val maxDeltaMs by longOption(
         key = "maxDeltaMs",
-        default = 50,
+        default = 50L,
         title = "Maximum sample gap (ms)",
         description = "libgxr_controller_velocity.so config+32 (int64 ns = value×1e6). Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
         required = true,
-        validator = { value -> value != null && value in 5..100 },
+        validator = { value -> value != null && value in 5L..100L },
     )
     val smoothing by floatOption(
         key = "smoothing",
