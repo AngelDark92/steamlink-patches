@@ -1,3 +1,9 @@
+## [1.9.1-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.3...v1.9.1-dev.4) (2026-08-10)
+
+### 🐛 Bug Fixes
+
+* Update unrestricted battery usage functionality to open per-app Battery usage page at startup ([f1ae193](https://github.com/AngelDark92/steamlink-patches/commit/f1ae193b7122f2b6f4c3304eab2028db4dcb0e90))
+
 ## [1.9.1-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1-dev.2...v1.9.1-dev.3) (2026-08-09)
 
 ### 🐛 Bug Fixes
