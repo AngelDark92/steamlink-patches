@@ -1,3 +1,9 @@
+## [1.9.2-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.1...v1.9.2-dev.2) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* added resources and installation helpers ([3649c86](https://github.com/AngelDark92/steamlink-patches/commit/3649c86e6c2ccaa1fe833641861c3cbe728b53ef))
+
 ## [1.9.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1...v1.9.2-dev.1) (2026-08-11)
 
 ### 🐛 Bug Fixes
