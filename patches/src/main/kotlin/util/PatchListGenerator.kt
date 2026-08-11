@@ -71,10 +71,10 @@ private fun generatePatchLists(
         selectedChannel to buildPatchListJson(version, patches, selectedChannel),
     )
 
-    File("../patches-list-stable.json").writeText(channelDocuments.getValue(ReleaseChannel.STABLE))
-    File("../patches-list-experimental.json").writeText(channelDocuments.getValue(ReleaseChannel.EXPERIMENTAL))
-    File("../patches-list-all.json").writeText(channelDocuments.getValue(ReleaseChannel.ALL))
-    File("../patches-list.json").writeText(channelDocuments.getValue(selectedChannel))
+    File("../patches-list-stable.json").writeText(channelDocuments.getValue(ReleaseChannel.STABLE) + "\n")
+    File("../patches-list-experimental.json").writeText(channelDocuments.getValue(ReleaseChannel.EXPERIMENTAL) + "\n")
+    File("../patches-list-all.json").writeText(channelDocuments.getValue(ReleaseChannel.ALL) + "\n")
+    File("../patches-list.json").writeText(channelDocuments.getValue(selectedChannel) + "\n")
 }
 
 @Suppress("DEPRECATION")

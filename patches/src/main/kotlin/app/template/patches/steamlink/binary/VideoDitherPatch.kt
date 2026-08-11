@@ -24,6 +24,12 @@ private val ENABLED = byteArrayOf(' '.code.toByte(), ' '.code.toByte()) + SHADER
 private val CALIBRATED_ENABLED = ") - .5) * .00292;".toByteArray(Charsets.US_ASCII)
 private val CALIBRATED_DISABLED = ") - .5) * .00000;".toByteArray(Charsets.US_ASCII)
 
+// Highp shaders retain their output-specific DITHER_SCALE and toggle a separate multiplier.
+// This makes disabled RGB10_A2 shaders reversible without losing whether .00392 or .00073 belongs
+// to the selected output format.
+private val HIGHP_ENABLED = "const float DITHER_ENABLE=1.;".toByteArray(Charsets.US_ASCII)
+private val HIGHP_DISABLED = "const float DITHER_ENABLE=0.;".toByteArray(Charsets.US_ASCII)
+
 private fun ByteArray.countOccurrences(pattern: ByteArray): Int {
     var count = 0
     outer@ for (i in 0..size - pattern.size) {
@@ -35,18 +41,22 @@ private fun ByteArray.countOccurrences(pattern: ByteArray): Int {
     return count
 }
 
-private fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
+internal fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
     val stockDisabled = bytes.countOccurrences(DISABLED)
     val stockEnabled = bytes.countOccurrences(ENABLED)
     val calibratedDisabled = bytes.countOccurrences(CALIBRATED_DISABLED)
     val calibratedEnabled = bytes.countOccurrences(CALIBRATED_ENABLED)
-    val stateCount = stockDisabled + stockEnabled + calibratedDisabled + calibratedEnabled
+    val highpDisabled = bytes.countOccurrences(HIGHP_DISABLED)
+    val highpEnabled = bytes.countOccurrences(HIGHP_ENABLED)
+    val stateCount = stockDisabled + stockEnabled + calibratedDisabled + calibratedEnabled +
+        highpDisabled + highpEnabled
 
     if (stateCount != 1) {
         throw PatchException(
             "Unsupported or ambiguous video dither state: " +
                 "stock disabled=$stockDisabled enabled=$stockEnabled, " +
-                "calibrated disabled=$calibratedDisabled enabled=$calibratedEnabled"
+                "calibrated disabled=$calibratedDisabled enabled=$calibratedEnabled, " +
+                "highp disabled=$highpDisabled enabled=$highpEnabled"
         )
     }
 
@@ -59,8 +69,12 @@ private fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
             findUniqueAndReplace(bytes, CALIBRATED_DISABLED, CALIBRATED_ENABLED)
         !enabled && calibratedDisabled == 0 && calibratedEnabled == 1 ->
             findUniqueAndReplace(bytes, CALIBRATED_ENABLED, CALIBRATED_DISABLED)
-        enabled && (stockEnabled == 1 || calibratedEnabled == 1) -> bytes
-        !enabled && (stockDisabled == 1 || calibratedDisabled == 1) -> bytes
+        enabled && highpDisabled == 1 && highpEnabled == 0 ->
+            findUniqueAndReplace(bytes, HIGHP_DISABLED, HIGHP_ENABLED)
+        !enabled && highpDisabled == 0 && highpEnabled == 1 ->
+            findUniqueAndReplace(bytes, HIGHP_ENABLED, HIGHP_DISABLED)
+        enabled && (stockEnabled == 1 || calibratedEnabled == 1 || highpEnabled == 1) -> bytes
+        !enabled && (stockDisabled == 1 || calibratedDisabled == 1 || highpDisabled == 1) -> bytes
         else -> error("Unreachable dither state")
     }
 }
@@ -68,16 +82,17 @@ private fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
 @Suppress("unused")
 val videoDitherPatch = rawResourcePatch(
     name = "Video dither",
-    description = "Enables (or disables) the dormant GLSL dither term in VRLink's video fragment shader. Reduces 8-bit contouring on OLED displays.",
+    description = "Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
+    dependsOn(oledCalibrationPatch)
 
     val enable by booleanOption(
         key = "enable",
         default = true,
         title = "Enable dither",
-        description = "libvrlink_scene.so GLSL: stock shader toggles '//' on color.rgb+=fract(...)*.00292; calibrated (post-oledCalibration) shader toggles *.00292 vs *.00000.",
+        description = "Stock shader toggles its dormant line; legacy calibrated shader toggles its scale; highp output shaders toggle DITHER_ENABLE while retaining the correct .00392 or .00073 scale.",
         required = true,
     )
 

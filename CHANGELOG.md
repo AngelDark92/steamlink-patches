@@ -1,3 +1,21 @@
+## [1.9.2-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.3...v1.9.2-dev.4) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* possibly better dithering ([ac5cda0](https://github.com/AngelDark92/steamlink-patches/commit/ac5cda0d2a6169d2847714390d92b73e74e70816))
+
+## [1.9.2-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.2...v1.9.2-dev.3) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* no banding patch through glsl dither and experimental rgb10 ([cbf47e9](https://github.com/AngelDark92/steamlink-patches/commit/cbf47e9a74cba646938af0e38843e00040415e22))
+
+## [1.9.2-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.1...v1.9.2-dev.2) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* added resources and installation helpers ([3649c86](https://github.com/AngelDark92/steamlink-patches/commit/3649c86e6c2ccaa1fe833641861c3cbe728b53ef))
+
 ## [1.9.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1...v1.9.2-dev.1) (2026-08-11)
 
 ### 🐛 Bug Fixes

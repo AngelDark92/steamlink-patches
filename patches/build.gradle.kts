@@ -40,6 +40,7 @@ dependencies {
     // Separate configuration so gson is available at runtime for the
     // generatePatchesList task but never bundled into the APK.
     compileOnly(libs.gson)
+    testImplementation(kotlin("test-junit"))
 }
 
 val patchListGeneratorClasspath: Configuration =
@@ -97,6 +98,19 @@ tasks.named("sourcesJar") {
 }
 
 tasks {
+    register<JavaExec>("generateVideoOutputAb") {
+        group = "verification"
+        description = "Generate guarded srgb8-highp and rgb10-a2 decoded 5002244 A/B derivatives"
+
+        dependsOn(classes)
+        classpath = sourceSets["main"].runtimeClasspath
+        mainClass.set("util.VideoOutputAbGeneratorKt")
+        args(
+            project.layout.projectDirectory.dir("../android-steamlinkvr-release-base-2.0.22-5002244").asFile.absolutePath,
+            rootProject.layout.buildDirectory.dir("video-output-ab-5002244").get().asFile.absolutePath,
+        )
+    }
+
     register<JavaExec>("generatePatchesList") {
         description = "Build patch with patch list"
 
