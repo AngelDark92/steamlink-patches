@@ -1,3 +1,9 @@
+## [1.9.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1...v1.9.2-dev.1) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* added controller cadence with options ([6cac547](https://github.com/AngelDark92/steamlink-patches/commit/6cac5476098af88af5470ba62b2f3ee6a3be1298))
+
 ## [1.9.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0...v1.9.1) (2026-08-10)
 
 ### 🐛 Bug Fixes
