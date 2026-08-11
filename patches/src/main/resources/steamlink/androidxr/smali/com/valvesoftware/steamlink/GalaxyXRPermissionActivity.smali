@@ -139,7 +139,7 @@
     return-void
 
     :ensure
-    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->onOverlayPermissionReady(Landroid/content/Context;)Z
 
     move-result v0
 
@@ -190,7 +190,7 @@
 
     if-ne p1, v0, :battery
 
-    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->onOverlayPermissionReady(Landroid/content/Context;)Z
 
     move-result v0
 
