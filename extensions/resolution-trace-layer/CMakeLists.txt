@@ -25,3 +25,17 @@ set_target_properties(gxr_resolution_trace PROPERTIES
     VISIBILITY_INLINES_HIDDEN YES
     OUTPUT_NAME gxr_resolution_trace
 )
+
+add_library(gxr_compositor_probe SHARED src/resolution_trace_layer.cpp)
+target_include_directories(gxr_compositor_probe PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
+target_compile_definitions(gxr_compositor_probe PRIVATE
+    XR_USE_PLATFORM_ANDROID
+    XR_USE_GRAPHICS_API_OPENGL_ES
+    GXR_COMPOSITOR_QUAD_PROBE=1
+)
+target_link_libraries(gxr_compositor_probe PRIVATE log GLESv3)
+set_target_properties(gxr_compositor_probe PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+    OUTPUT_NAME gxr_compositor_probe
+)

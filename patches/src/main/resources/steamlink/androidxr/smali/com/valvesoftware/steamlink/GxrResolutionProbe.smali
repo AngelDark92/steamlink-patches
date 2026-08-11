@@ -12,6 +12,25 @@
     return-void
 .end method
 
+.method private static native hasOpenXrFrameNative()Z
+.end method
+
+.method public static isOpenXrFrameReady()Z
+    .locals 1
+    :try_start_frame_ready
+    const-string v0, "gxr_resolution_trace"
+    invoke-static {v0}, Ljava/lang/System;->loadLibrary(Ljava/lang/String;)V
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->hasOpenXrFrameNative()Z
+    move-result v0
+    return v0
+    :try_end_frame_ready
+    .catch Ljava/lang/UnsatisfiedLinkError; {:try_start_frame_ready .. :try_end_frame_ready} :frame_not_ready
+    :frame_not_ready
+    move-exception v0
+    const/4 v0, 0x0
+    return v0
+.end method
+
 .method public static getMode(Landroid/content/Context;)Ljava/lang/String;
     .locals 4
     :try_start
@@ -136,6 +155,24 @@
     .locals 6
     invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->getMode(Landroid/content/Context;)Ljava/lang/String;
     move-result-object v0
+
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->isApplicationWindowAttached()Z
+    move-result v4
+    const-string v1, "vrlink_resume"
+    const-string v2, "lifecycle"
+    const/4 v3, 0x0
+    invoke-static {p0, v1, v2, v3, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
+
+    const-string v1, "application_window_vrlink_live"
+    invoke-virtual {v1, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v1
+    if-eqz v1, :not_live_application_window
+    const/4 v1, 0x2
+    invoke-static {p0, v1}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->addWindowOnUiThread(Landroid/app/Activity;I)Z
+    move-result v0
+    return v0
+
+    :not_live_application_window
     const-string v1, "overlay_after_vr"
     invoke-virtual {v1, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
     move-result v0
@@ -150,11 +187,11 @@
     invoke-direct {v1, v2}, Landroid/os/Handler;-><init>(Landroid/os/Looper;)V
     new-instance v2, Lcom/valvesoftware/steamlink/GxrResolutionProbe$OverlayRunnable;
     invoke-direct {v2, p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe$OverlayRunnable;-><init>(Landroid/content/Context;)V
-    const-wide/16 v3, 0x2710
+    const-wide/16 v3, 0x64
     invoke-virtual {v1, v2, v3, v4}, Landroid/os/Handler;->postDelayed(Ljava/lang/Runnable;J)Z
     move-result v0
     const-string v1, "vrlink_resume"
-    const-string v2, "overlay_scheduled_10s"
+    const-string v2, "overlay_scheduled_after_first_frame"
     const/16 v3, 0x7f6
     const/4 v4, 0x0
     invoke-static {p0, v1, v2, v3, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
@@ -164,6 +201,48 @@
     return v0
     :disabled
     const/4 v0, 0x0
+    return v0
+.end method
+
+.method public static onVrLinkFocusChanged(Landroid/app/Activity;Z)V
+    .locals 5
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->isApplicationWindowAttached()Z
+    move-result v4
+    const-string v1, "vrlink_focus"
+    if-eqz p1, :focus_lost
+    const-string v2, "focus_gained"
+    goto :focus_ready
+    :focus_lost
+    const-string v2, "focus_lost"
+    :focus_ready
+    const/4 v3, 0x2
+    invoke-static {p0, v1, v2, v3, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
+    return-void
+.end method
+
+.method public static onVrLinkDestroy(Landroid/app/Activity;)Z
+    .locals 5
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->getMode(Landroid/content/Context;)Ljava/lang/String;
+    move-result-object v0
+    const-string v1, "application_window_vrlink_live"
+    invoke-virtual {v1, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v1
+    if-nez v1, :remove_application_window
+    const-string v1, "application_window_direct_vr"
+    invoke-virtual {v1, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v1
+    if-nez v1, :remove_application_window
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->isApplicationWindowAttached()Z
+    move-result v4
+    const-string v1, "vrlink_destroy"
+    const-string v2, "lifecycle"
+    const/4 v3, 0x0
+    invoke-static {p0, v1, v2, v3, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
+    const/4 v0, 0x1
+    return v0
+    :remove_application_window
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->removeApplicationWindow(Landroid/content/Context;)Z
+    move-result v0
     return v0
 .end method
 
@@ -346,7 +425,17 @@
     sput-object v1, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindow:Landroid/view/View;
     invoke-virtual {v1}, Landroid/view/View;->isAttachedToWindow()Z
     move-result v4
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->getMode(Landroid/content/Context;)Ljava/lang/String;
+    move-result-object v2
+    const-string v3, "application_window_vrlink_live"
+    invoke-virtual {v3, v2}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+    move-result v2
+    if-eqz v2, :window_phase_before_vr
+    const-string v2, "vrlink_resume"
+    goto :window_phase_ready
+    :window_phase_before_vr
     const-string v2, "before_vr"
+    :window_phase_ready
     const-string v3, "application_window_add"
     move v5, p1
     invoke-static {p0, v2, v3, v5, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
@@ -360,5 +449,66 @@
     const-string v2, "probe addView failed"
     invoke-static {v1, v2, v0}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
     const/4 v0, 0x0
+    return v0
+.end method
+
+.method public static isApplicationWindowAttached()Z
+    .locals 1
+    sget-object v0, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindow:Landroid/view/View;
+    if-eqz v0, :window_not_attached
+    invoke-virtual {v0}, Landroid/view/View;->isAttachedToWindow()Z
+    move-result v0
+    return v0
+    :window_not_attached
+    const/4 v0, 0x0
+    return v0
+.end method
+
+.method public static removeApplicationWindow(Landroid/content/Context;)Z
+    .locals 6
+    sget-object v0, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindow:Landroid/view/View;
+    if-eqz v0, :application_window_absent
+    :try_start_application_window_remove
+    invoke-virtual {v0}, Landroid/view/View;->isAttachedToWindow()Z
+    move-result v1
+    if-eqz v1, :clear_application_window
+    sget-object v1, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindowManager:Landroid/view/WindowManager;
+    if-eqz v1, :clear_application_window
+    invoke-interface {v1, v0}, Landroid/view/WindowManager;->removeViewImmediate(Landroid/view/View;)V
+    :clear_application_window
+    const/4 v0, 0x0
+    sput-object v0, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindow:Landroid/view/View;
+    sput-object v0, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindowManager:Landroid/view/WindowManager;
+    const-string v1, "vrlink_destroy"
+    const-string v2, "application_window_remove"
+    const/4 v3, 0x2
+    const/4 v4, 0x0
+    invoke-static {p0, v1, v2, v3, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
+    :try_end_application_window_remove
+    .catch Ljava/lang/RuntimeException; {:try_start_application_window_remove .. :try_end_application_window_remove} :application_window_remove_failed
+    const/4 v0, 0x1
+    return v0
+    :application_window_remove_failed
+    move-exception v0
+    const/4 v1, 0x0
+    sput-object v1, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindow:Landroid/view/View;
+    sput-object v1, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->sWindowManager:Landroid/view/WindowManager;
+    const-string v1, "SteamLinkGXR"
+    const-string v2, "probe application window remove failed"
+    invoke-static {v1, v2, v0}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+    const-string v1, "vrlink_destroy"
+    const-string v2, "application_window_remove_failed"
+    const/4 v3, 0x2
+    const/4 v4, 0x0
+    invoke-static {p0, v1, v2, v3, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
+    const/4 v0, 0x0
+    return v0
+    :application_window_absent
+    const-string v1, "vrlink_destroy"
+    const-string v2, "application_window_remove_absent"
+    const/4 v3, 0x2
+    const/4 v4, 0x0
+    invoke-static {p0, v1, v2, v3, v4}, Lcom/valvesoftware/steamlink/GxrResolutionTrace;->emit(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;IZ)V
+    const/4 v0, 0x1
     return v0
 .end method
