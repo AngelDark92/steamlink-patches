@@ -503,7 +503,7 @@
     },
     {
       "name": "Video dither",
-      "description": "Enables or disables VRLink video dithering, including the bit-depth-scaled highp sRGB8 and RGB10_A2 shader variants.",
+      "description": "Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants.",
       "default": true,
       "dependencies": [
         "RawResourcePatch"
@@ -531,7 +531,7 @@
         {
           "key": "enable",
           "title": "Enable dither",
-          "description": "Stock shader toggles its dormant line; legacy calibrated shader toggles its scale; highp output shaders toggle DITHER_ENABLE while retaining the correct .00292 or .00073 scale.",
+          "description": "Stock shader toggles its dormant line; legacy calibrated shader toggles its scale; highp output shaders toggle DITHER_ENABLE while retaining the correct .00392 or .00073 scale.",
           "required": true,
           "type": "kotlin.Boolean",
           "default": true,

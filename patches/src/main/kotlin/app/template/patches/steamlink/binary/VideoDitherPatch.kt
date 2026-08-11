@@ -24,8 +24,8 @@ private val ENABLED = byteArrayOf(' '.code.toByte(), ' '.code.toByte()) + SHADER
 private val CALIBRATED_ENABLED = ") - .5) * .00292;".toByteArray(Charsets.US_ASCII)
 private val CALIBRATED_DISABLED = ") - .5) * .00000;".toByteArray(Charsets.US_ASCII)
 
-// Highp shaders retain their bit-depth-specific DITHER_SCALE and toggle a separate multiplier.
-// This makes disabled RGB10_A2 shaders reversible without losing whether .00292 or .00073 belongs
+// Highp shaders retain their output-specific DITHER_SCALE and toggle a separate multiplier.
+// This makes disabled RGB10_A2 shaders reversible without losing whether .00392 or .00073 belongs
 // to the selected output format.
 private val HIGHP_ENABLED = "const float DITHER_ENABLE=1.;".toByteArray(Charsets.US_ASCII)
 private val HIGHP_DISABLED = "const float DITHER_ENABLE=0.;".toByteArray(Charsets.US_ASCII)
@@ -82,7 +82,7 @@ internal fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
 @Suppress("unused")
 val videoDitherPatch = rawResourcePatch(
     name = "Video dither",
-    description = "Enables or disables VRLink video dithering, including the bit-depth-scaled highp sRGB8 and RGB10_A2 shader variants.",
+    description = "Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
@@ -92,7 +92,7 @@ val videoDitherPatch = rawResourcePatch(
         key = "enable",
         default = true,
         title = "Enable dither",
-        description = "Stock shader toggles its dormant line; legacy calibrated shader toggles its scale; highp output shaders toggle DITHER_ENABLE while retaining the correct .00292 or .00073 scale.",
+        description = "Stock shader toggles its dormant line; legacy calibrated shader toggles its scale; highp output shaders toggle DITHER_ENABLE while retaining the correct .00392 or .00073 scale.",
         required = true,
     )
 

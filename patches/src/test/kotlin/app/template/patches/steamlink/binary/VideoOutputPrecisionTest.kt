@@ -15,8 +15,13 @@ class VideoOutputPrecisionTest {
 
         assertTrue(shader.startsWith("#version 300 es\n"))
         assertTrue(shader.contains("precision highp float;"))
-        assertTrue(shader.contains("const float DITHER_SCALE=.00292;"))
+        assertTrue(shader.contains("const float DITHER_SCALE=.00392;"))
         assertTrue(shader.contains("UniDitherOffsets.rgb"))
+        assertTrue(
+            shader.contains(
+                "n*=smoothstep(0.,.0157,q)*smoothstep(0.,.0157,1.-q);",
+            ),
+        )
         assertTrue(shader.contains("vec3 q=c;"))
         assertFalse(shader.contains("step(vec3(.04045),c)"))
         assertShaderInterface(shader)
@@ -31,6 +36,11 @@ class VideoOutputPrecisionTest {
         ).ascii()
 
         assertTrue(shader.contains("const float DITHER_SCALE=.00073;"))
+        assertTrue(
+            shader.contains(
+                "n*=smoothstep(0.,.00391,q)*smoothstep(0.,.00391,1.-q);",
+            ),
+        )
         assertTrue(
             shader.contains(
                 "vec3 q=mix(c/12.92,pow((c+.055)/1.055,vec3(2.4)),step(vec3(.04045),c));",
@@ -138,7 +148,8 @@ class VideoOutputPrecisionTest {
     private fun ByteArray.ascii() = toString(Charsets.US_ASCII)
 
     private fun assertShaderInterface(shader: String) {
-        assertTrue(shader.contains("layout(location=2) uniform samplerExternalOES tex0;"))
+        assertTrue(shader.contains("layout(location=2) uniform highp samplerExternalOES tex0;"))
+        assertFalse(shader.contains("layout(location=2) uniform samplerExternalOES tex0;"))
         assertTrue(shader.contains("layout(location=3) uniform float fFadeAmount;"))
         assertTrue(shader.contains("layout(location=4) uniform vec3 UniReserved1;"))
         assertTrue(shader.contains("layout(location=5) uniform vec4 UniReserved2;"))

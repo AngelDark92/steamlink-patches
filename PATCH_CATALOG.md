@@ -169,11 +169,12 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 
 | Artifact | Edit |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` GLSL block (1087 bytes at `#version 300 es` before `GL_OES_EGL_image_external_essl3`) | Full replace with calibrated `highp` shader |
+| `lib/arm64-v8a/libvrlink_scene.so` GLSL block (1087 bytes at `#version 300 es` before `GL_OES_EGL_image_external_essl3`) | Full replace with calibrated `highp` shader and explicit `highp samplerExternalOES` |
 | GLSL `pow(clamp(c,0,1), vec3(GAMMA))` | `gamma` option value (float) |
 | GLSL `mix(vec3(luma), c, SATURATION)` | `saturation` option value (float) |
 | GLSL D2020-approximating 3×3 color matrix | Fixed: `_valve1_d2020d709` (not user-configurable) |
-| GLSL dither | Zero-centred per-channel noise using `UniDitherOffsets.rgb`; scale `0.00292` for sRGB8 or `0.00073` for RGB10_A2 |
+| GLSL dither | Zero-centred per-channel noise using `UniDitherOffsets.rgb`; sRGB8 scale `0.00392` gives +/-0.5 output-code-step noise, while experimental RGB10_A2 retains `0.00073` |
+| GLSL endpoint protection | Per-channel output-domain ramp preserves exact black/white and reaches full dither strength four codes from either output endpoint (`4/255` sRGB8, approximately `4/1023` linear RGB10_A2) |
 | GLSL `DITHER_ENABLE` | `1.` when enabled; toggled to `0.` by `videoDitherPatch` without losing the selected scale |
 | Three 5002244 instructions at `0x10826c`, `0x1082dc`, `0x10834c` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | RGB10_A2 shader output | Explicit sRGB EOTF converts calibrated code values to the linear OpenXR swapchain |
@@ -186,7 +187,9 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | `saturation` | `1.12` | 0.00–3.00 | Second argument in `mix()` |
 | `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and all three projection swapchain formats |
 
-`rgb10-a2-experimental` is fail-closed: the patch requires the 2,251,920-byte 5002244 library, the unique shader/NUL boundary, all three known instruction contexts, and a uniform current swapchain state. Galaxy XR runtime support remains unverified; an unsupported format can prevent stream swapchain setup.
+`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the 2,251,920-byte 5002244 library, the unique shader/NUL boundary, all three known instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
+
+Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation remains a runtime acceptance gate for both modes.
 
 ---
 
@@ -198,7 +201,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` GLSL (stock shader) | 2 bytes at `color.rgb += fract(...)*.00292`: `//` (disabled) ↔ `  ` (enabled) |
 | `lib/arm64-v8a/libvrlink_scene.so` GLSL (legacy calibrated) | `*.00292` ↔ `*.00000` in expression `) - .5) * .00292;` |
-| `lib/arm64-v8a/libvrlink_scene.so` GLSL (highp output variants) | `DITHER_ENABLE=1.` ↔ `DITHER_ENABLE=0.` while preserving scale `0.00292` or `0.00073` |
+| `lib/arm64-v8a/libvrlink_scene.so` GLSL (highp output variants) | `DITHER_ENABLE=1.` ↔ `DITHER_ENABLE=0.` while preserving scale `0.00392` or `0.00073` |
 
 **Option:** `enable` (bool, default true)
 

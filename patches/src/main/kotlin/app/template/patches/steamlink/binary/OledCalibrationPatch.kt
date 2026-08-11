@@ -48,7 +48,7 @@ precision highp float;
 in vec2 uvmask;
 in vec2 uv;
 out vec4 color;
-layout(location=2) uniform samplerExternalOES tex0;
+layout(location=2) uniform highp samplerExternalOES tex0;
 layout(location=3) uniform float fFadeAmount;
 layout(location=4) uniform vec3 UniReserved1;
 layout(location=5) uniform vec4 UniReserved2;
@@ -69,7 +69,7 @@ c=clamp(mix(vec3(y),c,SATURATION_VALUE),0.,1.);
 vec3 q=OUTPUT_CONVERSION;
 vec3 n=(fract(UniDitherOffsets.a*.43+UniDitherOffsets.rgb+
 vec3(gl_FragCoord.x*1.67+gl_FragCoord.y*1.127))-.5)*DITHER_SCALE*DITHER_ENABLE;
-n*=smoothstep(.01,.04,max(c.r,max(c.g,c.b)));
+n*=smoothstep(0.,DITHER_GUARD_VALUE,q)*smoothstep(0.,DITHER_GUARD_VALUE,1.-q);
 color.rgb=clamp(q+n,0.,1.)*fFadeAmount;
 """.trimStart('\n')
 
@@ -80,15 +80,20 @@ internal fun paddedVideoShader(
 ): ByteArray {
     val gammaValue = String.format(Locale.US, "%.2f", gamma)
     val saturationValue = String.format(Locale.US, "%.2f", saturation)
-    val (ditherScale, outputConversion) = when (outputPrecision) {
-        VideoOutputPrecision.SRGB8_HIGHP -> ".00292" to "c"
+    val (ditherScale, ditherGuard, outputConversion) = when (outputPrecision) {
+        VideoOutputPrecision.SRGB8_HIGHP -> Triple(".00392", ".0157", "c")
         VideoOutputPrecision.RGB10_A2_EXPERIMENTAL ->
-            ".00073" to "mix(c/12.92,pow((c+.055)/1.055,vec3(2.4)),step(vec3(.04045),c))"
+            Triple(
+                ".00073",
+                ".00391",
+                "mix(c/12.92,pow((c+.055)/1.055,vec3(2.4)),step(vec3(.04045),c))",
+            )
     }
     val src = HIGHP_SHADER_TEMPLATE
         .replace("GAMMA_VALUE", gammaValue)
         .replace("SATURATION_VALUE", saturationValue)
         .replace("DITHER_SCALE_VALUE", ditherScale)
+        .replace("DITHER_GUARD_VALUE", ditherGuard)
         .replace("OUTPUT_CONVERSION", outputConversion)
         .toByteArray(Charsets.US_ASCII)
     if (src.size > VIDEO_SHADER_SIZE) {
