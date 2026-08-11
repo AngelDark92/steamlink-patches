@@ -163,17 +163,20 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 
 ---
 
-### OLED Color Calibration (`oledCalibrationPatch`)
+### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
 **Default: enabled**
-> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Run oled calibration first; dither patch detects the calibrated output.
+> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCode 5002244.
 
 | Artifact | Edit |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` GLSL block (1087 bytes at `#version 300 es` before `GL_OES_EGL_image_external_essl3`) | Full replace with calibrated shader |
+| `lib/arm64-v8a/libvrlink_scene.so` GLSL block (1087 bytes at `#version 300 es` before `GL_OES_EGL_image_external_essl3`) | Full replace with calibrated `highp` shader |
 | GLSL `pow(clamp(c,0,1), vec3(GAMMA))` | `gamma` option value (float) |
 | GLSL `mix(vec3(luma), c, SATURATION)` | `saturation` option value (float) |
 | GLSL D2020-approximating 3×3 color matrix | Fixed: `_valve1_d2020d709` (not user-configurable) |
-| GLSL dither `(fract(...) - .5) * SCALE` | Scale = `0.00292` when dither enabled; set to `0.00000` by `videoDitherPatch` to disable |
+| GLSL dither | Zero-centred per-channel noise using `UniDitherOffsets.rgb`; scale `0.00292` for sRGB8 or `0.00073` for RGB10_A2 |
+| GLSL `DITHER_ENABLE` | `1.` when enabled; toggled to `0.` by `videoDitherPatch` without losing the selected scale |
+| Three 5002244 instructions at `0x10826c`, `0x1082dc`, `0x10834c` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
+| RGB10_A2 shader output | Explicit sRGB EOTF converts calibrated code values to the linear OpenXR swapchain |
 
 **Options:**
 | Key | Default | Range | Target in binary |
@@ -181,6 +184,9 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | `profile` | `initial` | initial / final-balanced / custom | Selects gamma+saturation pair |
 | `gamma` | `1.06` | 0.50–2.50 | `vec3(GAMMA)` argument in `pow()` |
 | `saturation` | `1.12` | 0.00–3.00 | Second argument in `mix()` |
+| `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and all three projection swapchain formats |
+
+`rgb10-a2-experimental` is fail-closed: the patch requires the 2,251,920-byte 5002244 library, the unique shader/NUL boundary, all three known instruction contexts, and a uniform current swapchain state. Galaxy XR runtime support remains unverified; an unsupported format can prevent stream swapchain setup.
 
 ---
 
@@ -191,7 +197,8 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` GLSL (stock shader) | 2 bytes at `color.rgb += fract(...)*.00292`: `//` (disabled) ↔ `  ` (enabled) |
-| `lib/arm64-v8a/libvrlink_scene.so` GLSL (calibrated, post-oledCalibration) | `*.00292` ↔ `*.00000` in expression `) - .5) * .00292;` |
+| `lib/arm64-v8a/libvrlink_scene.so` GLSL (legacy calibrated) | `*.00292` ↔ `*.00000` in expression `) - .5) * .00292;` |
+| `lib/arm64-v8a/libvrlink_scene.so` GLSL (highp output variants) | `DITHER_ENABLE=1.` ↔ `DITHER_ENABLE=0.` while preserving scale `0.00292` or `0.00073` |
 
 **Option:** `enable` (bool, default true)
 
@@ -237,9 +244,9 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 
 | APK artifact | Patches that write to it |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (8 B @ 0x1422c4), `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block), `videoDitherPatch` (2 B inside GLSL block) |
+| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (8 B @ 0x1422c4), `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
 | `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `changePackageNamePatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
-**Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` is designed to recognise both the stock and calibrated dither patterns so it can be applied in any order after.
+**Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

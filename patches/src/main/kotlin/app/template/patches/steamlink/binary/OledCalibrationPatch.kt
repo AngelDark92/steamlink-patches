@@ -5,103 +5,182 @@ import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import java.security.MessageDigest
 import java.util.Locale
 
-// Unique line present in VRLink's embedded video fragment shader. Stock builds indent this line;
-// calibrated builds do not, so locate the line first and then walk back to the version directive.
-// COUPLING: VideoDitherPatch detects the calibrated shader output via CALIBRATED_ENABLED/DISABLED patterns.
 private val SHADER_EXTENSION =
     "#extension GL_OES_EGL_image_external_essl3 : enable".toByteArray(Charsets.US_ASCII)
 private val SHADER_VERSION = "#version 300 es\n".toByteArray(Charsets.US_ASCII)
-// Fixed padded size of the in-binary GLSL block; NUL byte at shaderPos+SHADER_SIZE is the boundary marker
-private const val SHADER_SIZE = 1087
+internal const val VIDEO_SHADER_SIZE = 1087
+internal const val VIDEO_LIBRARY_SIZE_5002244 = 2_251_920
+private const val VIDEO_LIBRARY_SHA256_5002244 =
+    "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12"
 
-// Initial calibration: gamma 1.06, saturation 1.12, zero-centred dither.
-// Key GLSL values: D2020-approximating 3×3 color matrix (_valve1_d2020d709),
-// gamma via pow(clamp(c,0,1), vec3(GAMMA)), saturation via mix(vec3(luma), c, SATURATION),
-// zero-centred dither term (fract(...)-.5)*SCALE fed by uniform UniDitherOffsets (vec4).
-private val INITIAL_SHADER = """#version 300 es
+private val SRGB8_INSTRUCTION = byteArrayOf(0x69, 0x88.toByte(), 0x91.toByte(), 0x52)
+private val RGB10_A2_INSTRUCTION = byteArrayOf(0x29, 0x0b, 0x90.toByte(), 0x52)
+private val SWAPCHAIN_CONTEXT_BEFORE = byteArrayOf(
+    0xe1.toByte(), 0xa3.toByte(), 0x00, 0x91.toByte(),
+    0xe0.toByte(), 0x03, 0x14, 0xaa.toByte(),
+    0xe2.toByte(), 0x03, 0x1c, 0xaa.toByte(),
+    0xe8.toByte(), 0x22, 0x09, 0x9b.toByte(),
+)
+private val SWAPCHAIN_CONTEXT_AFTER = byteArrayOf(
+    0xe9.toByte(), 0x1b, 0x00, 0xf9.toByte(),
+    0x08, 0x21, 0x40, 0xb9.toByte(),
+    0xe8.toByte(), 0x3b, 0x00, 0xb9.toByte(),
+)
+internal val SWAPCHAIN_FORMAT_OFFSETS_5002244 = intArrayOf(0x10826c, 0x1082dc, 0x10834c)
+
+internal enum class VideoOutputPrecision(val optionValue: String) {
+    SRGB8_HIGHP("srgb8-highp"),
+    RGB10_A2_EXPERIMENTAL("rgb10-a2-experimental");
+
+    companion object {
+        fun fromOption(value: String?): VideoOutputPrecision =
+            entries.singleOrNull { it.optionValue == value }
+                ?: throw PatchException("Unknown video output precision: $value")
+    }
+}
+
+private val HIGHP_SHADER_TEMPLATE = """#version 300 es
 #extension GL_OES_EGL_image_external_essl3 : enable
-precision mediump float;
-
+precision highp float;
 in vec2 uvmask;
 in vec2 uv;
 out vec4 color;
-
 layout(location=2) uniform samplerExternalOES tex0;
 layout(location=3) uniform float fFadeAmount;
 layout(location=4) uniform vec3 UniReserved1;
 layout(location=5) uniform vec4 UniReserved2;
 layout(location=6) uniform vec4 UniDitherOffsets;
-
+const float DITHER_SCALE=DITHER_SCALE_VALUE;
+const float DITHER_ENABLE=1.;
 void main()
 {
-    color = texture(tex0, uv);
-    mat3 _valve1_d2020d709 = mat3(
-        1.04988847,  0.05442289,  0.00393458,
-       -0.04433306,  0.96052738,  0.01122383,
-       -0.005557,   -0.01509698,  0.98628952);
-    vec3 c = _valve1_d2020d709 * color.rgb;
-    c = pow(clamp(c, 0.0, 1.0), vec3(1.06));
-    float y = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    c = mix(vec3(y), c, 1.12);
-    float n = (fract(UniDitherOffsets.a * .43 + UniDitherOffsets.r +
-        gl_FragCoord.x * 1.67 + gl_FragCoord.y * 1.127) - .5) * .00292;
-    n *= smoothstep(.01, .04, max(c.r, max(c.g, c.b)));
-    color.rgb = clamp(c + n, 0.0, 1.0) * fFadeAmount;
+color=texture(tex0,uv);
+mat3 _valve1_d2020d709=mat3(
+1.04988847,.05442289,.00393458,
+-.04433306,.96052738,.01122383,
+-.005557,-.01509698,.98628952);
+vec3 c=_valve1_d2020d709*color.rgb;
+c=pow(clamp(c,0.,1.),vec3(GAMMA_VALUE));
+float y=dot(c,vec3(.2126,.7152,.0722));
+c=clamp(mix(vec3(y),c,SATURATION_VALUE),0.,1.);
+vec3 q=OUTPUT_CONVERSION;
+vec3 n=(fract(UniDitherOffsets.a*.43+UniDitherOffsets.rgb+
+vec3(gl_FragCoord.x*1.67+gl_FragCoord.y*1.127))-.5)*DITHER_SCALE*DITHER_ENABLE;
+n*=smoothstep(.01,.04,max(c.r,max(c.g,c.b)));
+color.rgb=clamp(q+n,0.,1.)*fFadeAmount;
 """.trimStart('\n')
 
-private fun paddedShader(gamma: Float, saturation: Float): ByteArray {
+internal fun paddedVideoShader(
+    gamma: Float,
+    saturation: Float,
+    outputPrecision: VideoOutputPrecision,
+): ByteArray {
     val gammaValue = String.format(Locale.US, "%.2f", gamma)
     val saturationValue = String.format(Locale.US, "%.2f", saturation)
-    val src = INITIAL_SHADER
-        .replace("vec3(1.06)", "vec3($gammaValue)")
-        .replace("c, 1.12", "c, $saturationValue")
+    val (ditherScale, outputConversion) = when (outputPrecision) {
+        VideoOutputPrecision.SRGB8_HIGHP -> ".00292" to "c"
+        VideoOutputPrecision.RGB10_A2_EXPERIMENTAL ->
+            ".00073" to "mix(c/12.92,pow((c+.055)/1.055,vec3(2.4)),step(vec3(.04045),c))"
+    }
+    val src = HIGHP_SHADER_TEMPLATE
+        .replace("GAMMA_VALUE", gammaValue)
+        .replace("SATURATION_VALUE", saturationValue)
+        .replace("DITHER_SCALE_VALUE", ditherScale)
+        .replace("OUTPUT_CONVERSION", outputConversion)
         .toByteArray(Charsets.US_ASCII)
-    if (src.size > SHADER_SIZE) throw PatchException("Calibration shader exceeds $SHADER_SIZE bytes (${src.size})")
-    return src.copyOf(SHADER_SIZE).apply {
-        for (i in src.size until SHADER_SIZE) this[i] = ' '.code.toByte()
+    if (src.size > VIDEO_SHADER_SIZE) {
+        throw PatchException("Calibration shader exceeds $VIDEO_SHADER_SIZE bytes (${src.size})")
+    }
+    return src.copyOf(VIDEO_SHADER_SIZE).apply {
+        for (i in src.size until VIDEO_SHADER_SIZE) this[i] = ' '.code.toByte()
     }
 }
 
 private fun ByteArray.indicesOfSubarray(pattern: ByteArray): List<Int> {
+    if (pattern.isEmpty() || size < pattern.size) return emptyList()
     val matches = mutableListOf<Int>()
     outer@ for (i in 0..size - pattern.size) {
-        for (j in pattern.indices) { if (this[i + j] != pattern[j]) continue@outer }
+        for (j in pattern.indices) if (this[i + j] != pattern[j]) continue@outer
         matches += i
     }
     return matches
 }
 
-private fun findVideoShader(bytes: ByteArray): Int {
+internal fun findVideoShader(bytes: ByteArray): Int {
     val extensionMatches = bytes.indicesOfSubarray(SHADER_EXTENSION)
     if (extensionMatches.size != 1) {
-        throw PatchException(
-            "Expected one video GLSL extension marker, found ${extensionMatches.size}"
-        )
+        throw PatchException("Expected one video GLSL extension marker, found ${extensionMatches.size}")
     }
-
     val extensionPos = extensionMatches.single()
     val searchStart = (extensionPos - 32).coerceAtLeast(0)
-    val shaderPos = (searchStart..extensionPos)
-        .firstOrNull { pos ->
-            pos + SHADER_VERSION.size <= bytes.size &&
-                bytes.sliceArray(pos until pos + SHADER_VERSION.size).contentEquals(SHADER_VERSION)
-        }
-        ?: throw PatchException("Video GLSL version directive not found before extension marker")
-
-    if (shaderPos + SHADER_SIZE >= bytes.size || bytes[shaderPos + SHADER_SIZE] != 0.toByte()) {
+    val shaderPos = (searchStart..extensionPos).firstOrNull { pos ->
+        pos + SHADER_VERSION.size <= bytes.size &&
+            bytes.copyOfRange(pos, pos + SHADER_VERSION.size).contentEquals(SHADER_VERSION)
+    } ?: throw PatchException("Video GLSL version directive not found before extension marker")
+    if (shaderPos + VIDEO_SHADER_SIZE >= bytes.size || bytes[shaderPos + VIDEO_SHADER_SIZE] != 0.toByte()) {
         throw PatchException(
-            "Video GLSL block at 0x${shaderPos.toString(16)} lacks expected $SHADER_SIZE-byte NUL boundary"
+            "Video GLSL block at 0x${shaderPos.toString(16)} lacks expected " +
+                "$VIDEO_SHADER_SIZE-byte NUL boundary",
         )
     }
     return shaderPos
 }
 
+private fun ByteArray.matchesAt(offset: Int, expected: ByteArray): Boolean =
+    offset >= 0 && offset + expected.size <= size &&
+        expected.indices.all { this[offset + it] == expected[it] }
+
+private fun ByteArray.sha256(): String =
+    MessageDigest.getInstance("SHA-256").digest(this).joinToString("") { "%02x".format(it) }
+
+internal fun setProjectionSwapchainFormat(
+    bytes: ByteArray,
+    outputPrecision: VideoOutputPrecision,
+): ByteArray {
+    if (bytes.size != VIDEO_LIBRARY_SIZE_5002244) {
+        throw PatchException(
+            "Unsupported libvrlink_scene.so size=${bytes.size}, sha256=${bytes.sha256()}; " +
+                "RGB output precision is guarded to 5002244 size=$VIDEO_LIBRARY_SIZE_5002244 " +
+                "stockSha256=$VIDEO_LIBRARY_SHA256_5002244",
+        )
+    }
+
+    val states = SWAPCHAIN_FORMAT_OFFSETS_5002244.map { offset ->
+        if (!bytes.matchesAt(offset - SWAPCHAIN_CONTEXT_BEFORE.size, SWAPCHAIN_CONTEXT_BEFORE) ||
+            !bytes.matchesAt(offset + SRGB8_INSTRUCTION.size, SWAPCHAIN_CONTEXT_AFTER)
+        ) {
+            throw PatchException(
+                "Swapchain format context precondition failed at 0x${offset.toString(16)}",
+            )
+        }
+        when {
+            bytes.matchesAt(offset, SRGB8_INSTRUCTION) -> VideoOutputPrecision.SRGB8_HIGHP
+            bytes.matchesAt(offset, RGB10_A2_INSTRUCTION) -> VideoOutputPrecision.RGB10_A2_EXPERIMENTAL
+            else -> throw PatchException(
+                "Unsupported swapchain format instruction at 0x${offset.toString(16)}",
+            )
+        }
+    }
+    if (states.distinct().size != 1) {
+        throw PatchException("Mixed projection swapchain format state: ${states.joinToString()}")
+    }
+
+    val replacement = when (outputPrecision) {
+        VideoOutputPrecision.SRGB8_HIGHP -> SRGB8_INSTRUCTION
+        VideoOutputPrecision.RGB10_A2_EXPERIMENTAL -> RGB10_A2_INSTRUCTION
+    }
+    return bytes.copyOf().apply {
+        SWAPCHAIN_FORMAT_OFFSETS_5002244.forEach { replacement.copyInto(this, it) }
+    }
+}
+
 @Suppress("unused")
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
-    description = "Replaces VRLink's embedded GLSL fragment shader with configurable Galaxy XR OLED gamma and saturation correction.",
+    description = "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link 5002244.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
@@ -115,19 +194,16 @@ val oledCalibrationPatch = rawResourcePatch(
             "Custom gamma and saturation" to "custom",
         ),
         title = "Calibration profile",
-        description = "libvrlink_scene.so GLSL fragment shader (1087-byte block, GL_OES_EGL_image_external_essl3 anchor). Initial: pow vec3(1.06)/mix 1.12; Final balanced: 1.20/1.45; Custom: use fields below.",
+        description = "Selects the gamma and saturation pair used in the 1087-byte video shader.",
         required = true,
     )
 
     val gamma by floatOption(
         key = "gamma",
         default = 1.06f,
-        values = mapOf(
-            "Initial APK (1.06)" to 1.06f,
-            "Final balanced (1.20)" to 1.20f,
-        ),
+        values = mapOf("Initial APK (1.06)" to 1.06f, "Final balanced (1.20)" to 1.20f),
         title = "Gamma",
-        description = "libvrlink_scene.so GLSL: pow(clamp(c,0,1), vec3(GAMMA)). Used by Custom profile. Tested: 1.06 (Initial), 1.20 (Final balanced). Allowed range: 0.50 to 2.50.",
+        description = "Used by Custom profile. Allowed range: 0.50 to 2.50.",
         required = true,
         validator = { value -> value != null && value in 0.50f..2.50f },
     )
@@ -135,14 +211,23 @@ val oledCalibrationPatch = rawResourcePatch(
     val saturation by floatOption(
         key = "saturation",
         default = 1.12f,
-        values = mapOf(
-            "Initial APK (1.12)" to 1.12f,
-            "Final balanced (1.45)" to 1.45f,
-        ),
+        values = mapOf("Initial APK (1.12)" to 1.12f, "Final balanced (1.45)" to 1.45f),
         title = "Saturation",
-        description = "libvrlink_scene.so GLSL: mix(vec3(luma), c, SATURATION). Used by Custom profile. Tested: 1.12 (Initial), 1.45 (Final balanced). Allowed range: 0.00 to 3.00.",
+        description = "Used by Custom profile. Allowed range: 0.00 to 3.00.",
         required = true,
         validator = { value -> value != null && value in 0.00f..3.00f },
+    )
+
+    val outputPrecision by stringOption(
+        key = "outputPrecision",
+        default = "srgb8-highp",
+        values = mapOf(
+            "8-bit sRGB highp control (safe)" to "srgb8-highp",
+            "RGB10_A2 linear output (experimental)" to "rgb10-a2-experimental",
+        ),
+        title = "Video output precision",
+        description = "Safe control retains GL_SRGB8_ALPHA8. Experimental mode requests linear GL_RGB10_A2 and applies an explicit sRGB EOTF. Galaxy XR runtime support is unverified.",
+        required = true,
     )
 
     execute {
@@ -155,8 +240,10 @@ val oledCalibrationPatch = rawResourcePatch(
             "custom" -> gamma!! to saturation!!
             else -> throw PatchException("Unknown OLED calibration profile: $profile")
         }
-        val result = bytes.copyOf()
-        paddedShader(selectedGamma, selectedSaturation).copyInto(result, shaderPos)
-        file.writeBytes(result)
+        val precision = VideoOutputPrecision.fromOption(outputPrecision)
+        val shaderPatched = bytes.copyOf().apply {
+            paddedVideoShader(selectedGamma, selectedSaturation, precision).copyInto(this, shaderPos)
+        }
+        file.writeBytes(setProjectionSwapchainFormat(shaderPatched, precision))
     }
 }
