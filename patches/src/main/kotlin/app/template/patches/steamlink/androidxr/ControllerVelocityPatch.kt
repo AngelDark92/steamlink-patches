@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.longOption
 import app.morphe.patcher.patch.rawResourcePatch
+import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import java.io.File
 import java.nio.ByteBuffer
@@ -60,7 +61,7 @@ private fun configuredVelocityLibrary(
 @Suppress("unused")
 val controllerVelocityPatch = rawResourcePatch(
     name = "Controller velocity fix",
-    description = "Derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
+    description = "Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
@@ -73,6 +74,18 @@ val controllerVelocityPatch = rawResourcePatch(
         description = "libgxr_controller_velocity.so config+32 (int64 ns = value×1e6). Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
         required = true,
         validator = { value -> value != null && value in 5L..100L },
+    )
+    val poseSendCadence by stringOption(
+        key = "poseSendCadence",
+        default = "stock-4x",
+        values = mapOf(
+            "Stock (4x display rate)" to "stock-4x",
+            "Half (2x display rate)" to "half-2x",
+            "Display rate (1x)" to "display-1x",
+        ),
+        title = "Controller pose-send cadence",
+        description = "libvrlink_scene.so QSVLClient::OnTopOfFrame: selects four, two, or one evenly phased controller pose sends per display frame. Actual send Hz equals display Hz multiplied by 4, 2, or 1. Stock preserves Valve behavior.",
+        required = true,
     )
     val smoothing by floatOption(
         key = "smoothing",
@@ -100,7 +113,12 @@ val controllerVelocityPatch = rawResourcePatch(
     )
 
     execute {
-        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
+        val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
+        val sceneBytes = sceneFile.readBytes()
+        val cadenceBytes = patchControllerPoseCadence(sceneBytes, poseSendCadence!!)
+        if (!sceneBytes.contentEquals(cadenceBytes)) sceneFile.writeBytes(cadenceBytes)
+
+        val libDir = sceneFile.parentFile!!
         File(libDir, "libgxr_controller_velocity.so").writeBytes(
             configuredVelocityLibrary(
                 maxDeltaMs!!,

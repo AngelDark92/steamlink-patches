@@ -98,7 +98,7 @@
     },
     {
       "name": "Controller velocity fix",
-      "description": "Derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
+      "description": "Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame.",
       "default": false,
       "dependencies": [
         "BytecodePatch"
@@ -131,6 +131,19 @@
           "type": "kotlin.Long",
           "default": 50,
           "values": null
+        },
+        {
+          "key": "poseSendCadence",
+          "title": "Controller pose-send cadence",
+          "description": "libvrlink_scene.so QSVLClient::OnTopOfFrame: selects four, two, or one evenly phased controller pose sends per display frame. Actual send Hz equals display Hz multiplied by 4, 2, or 1. Stock preserves Valve behavior.",
+          "required": true,
+          "type": "kotlin.String",
+          "default": "stock-4x",
+          "values": {
+            "Stock (4x display rate)": "stock-4x",
+            "Half (2x display rate)": "half-2x",
+            "Display rate (1x)": "display-1x"
+          }
         },
         {
           "key": "smoothing",
