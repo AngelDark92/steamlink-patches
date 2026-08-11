@@ -1,11 +1,14 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
+import java.io.File
 
 private val unrestrictedBatteryManifestPatch = resourcePatch {
     finalize {
@@ -66,6 +69,29 @@ val appearOnTopPatch = bytecodePatch(
     dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
 }
 
+private fun resolutionTraceResource(name: String): ByteArray =
+    (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
+        ?: throw PatchException("Missing bundled resolution trace resource: $name"))
+        .use { it.readBytes() }
+
+private val resolutionTraceLayerPatch = rawResourcePatch {
+    execute {
+        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
+        File(libDir, "libgxr_resolution_trace.so").writeBytes(
+            resolutionTraceResource("libgxr_resolution_trace.so"),
+        )
+
+        val layerManifest = get(
+            "assets/openxr/1/api_layers/implicit.d/" +
+                "XR_APILAYER_local_GalaxyXR_resolution_trace.json",
+        )
+        layerManifest.parentFile!!.mkdirs()
+        layerManifest.writeBytes(
+            resolutionTraceResource("XR_APILAYER_local_GalaxyXR_resolution_trace.json"),
+        )
+    }
+}
+
 @Suppress("unused")
 val xrResolutionPermissionExperimentPatch = resourcePatch(
     name = "XR resolution permission experiment",
@@ -73,21 +99,21 @@ val xrResolutionPermissionExperimentPatch = resourcePatch(
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch)
+    dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch, resolutionTraceLayerPatch)
 
     val mode by stringOption(
         key = "mode",
-        default = "no_window_control",
+        default = "denied_no_window",
         values = mapOf(
-            "No window control" to "no_window_control",
-            "Granted overlay control" to "overlay_granted_control",
-            "Denied overlay enforcement probe" to "overlay_denied_probe",
-            "Activity-owned application window" to "application_window",
-            "SteamLink decor view" to "decor_view",
+            "Denied permission, no window" to "denied_no_window",
+            "Granted permission, no window" to "granted_no_window",
+            "Overlay live before VR" to "overlay_live_before_vr",
+            "Overlay removed before VR" to "overlay_remove_before_vr",
+            "Overlay added after VR" to "overlay_after_vr",
             "Application window immediately before VR" to "application_window_direct_vr",
         ),
         title = "Experiment mode",
-        description = "Select exactly one complete test state. Only Granted overlay control requests Appear on top.",
+        description = "Select exactly one isolated state. The four granted/overlay modes request Appear on top; the denied and application-window modes do not.",
         required = true,
     )
 
@@ -101,7 +127,13 @@ val xrResolutionPermissionExperimentPatch = resourcePatch(
                 .mapNotNull { permissionNodes.item(it) as? Element }
                 .filter { it.getAttribute("android:name") == permissionName }
 
-            if (mode == "overlay_granted_control" || mode == "overlay_denied_probe") {
+            val needsOverlayPermission = mode in setOf(
+                "granted_no_window",
+                "overlay_live_before_vr",
+                "overlay_remove_before_vr",
+                "overlay_after_vr",
+            )
+            if (needsOverlayPermission) {
                 if (matchingPermissions.isEmpty()) {
                     val permission = document.createElement("uses-permission")
                     permission.setAttribute("android:name", permissionName)
