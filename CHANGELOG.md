@@ -1,3 +1,9 @@
+## [1.9.2-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.3...v1.9.2-dev.4) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* possibly better dithering ([ac5cda0](https://github.com/AngelDark92/steamlink-patches/commit/ac5cda0d2a6169d2847714390d92b73e74e70816))
+
 ## [1.9.2-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.2...v1.9.2-dev.3) (2026-08-11)
 
 ### 🐛 Bug Fixes

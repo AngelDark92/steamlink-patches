@@ -17,7 +17,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.9.2-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.9.2-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;19 patches total
+> **[v1.9.2-dev.4](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.9.2-dev.4)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;19 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;18 patches</summary>
 <br>
@@ -41,7 +41,7 @@ To download it:
 | [HMD-only pose fix](#hmd-only-pose-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. | • Pose offset (ms) |
 | [OLED color calibration](#oled-color-calibration) | Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link 5002244. | • Calibration profile<br>• Gamma<br>• Saturation<br>• Video output precision |
 | [Unrestricted battery usage](#unrestricted-battery-usage) | Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming. |  |
-| [Video dither](#video-dither) | Enables or disables VRLink video dithering, including the bit-depth-scaled highp sRGB8 and RGB10_A2 shader variants. | • Enable dither |
+| [Video dither](#video-dither) | Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants. | • Enable dither |
 | [XR Core Runtime](#xr-core-runtime) | Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches. |  |
 | [XR Device Config Baseline](#xr-device-config-baseline) | Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets. |  |
 | [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. |  |
