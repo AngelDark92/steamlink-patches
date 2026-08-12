@@ -51,7 +51,7 @@ val microphoneInputPresetPatch = rawResourcePatch(
         key = "preset",
         default = "voice-recognition",
         values = mapOf(
-            "Voice Recognition (tested Galaxy XR default)" to "voice-recognition",
+            "Voice Recognition (Best from my tests)" to "voice-recognition",
             "Voice Communication (Valve stock)" to "voice-communication",
             "Voice Performance (quiet)" to "voice-performance",
             "Unprocessed (quiet)" to "unprocessed",
