@@ -17,7 +17,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.0-dev.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
+> **[v1.10.0-dev.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;20 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;18 patches</summary>
 <br>
@@ -51,7 +51,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -61,9 +61,8 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Suppress unfocused host pause](#suppress-unfocused-host-pause) | Experimental diagnostic: keeps the SteamVR stream running when Android XR removes OpenXR focus. It does not force focus, alter render dimensions, or add an overlay. |  |
-| [XR compositor quad probe](#xr-compositor-quad-probe) | Experimental permission-free OpenXR quad that tests whether an extra composition layer fixes the low-resolution direct path. Do not combine with XR resolution permission experiment. |  |
-| [XR resolution permission experiment](#xr-resolution-permission-experiment) | Experimental window/permission A/B probe. Turn off Appear on top and do not combine with older resolution test APK modifications. | • Experiment mode |
+| [XR compositor path experiment](#xr-compositor-path-experiment) | Permission-free baseline or live VRLink activity-window probe. Turn off Appear on top and do not combine with the quad probe. | • Experiment mode |
+| [XR compositor quad probe](#xr-compositor-quad-probe) | Experimental permission-free OpenXR quad that tests whether an extra composition layer fixes the low-resolution direct path. Do not combine with XR compositor path experiment. |  |
 
 </details>
 

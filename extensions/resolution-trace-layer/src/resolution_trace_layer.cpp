@@ -1,11 +1,11 @@
 #include <android/log.h>
-#include <jni.h>
 #include <openxr/openxr.h>
 #include <openxr/openxr_loader_negotiation.h>
 
 #ifdef GXR_COMPOSITOR_QUAD_PROBE
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
+#include <jni.h>
 #include <openxr/openxr_platform.h>
 #endif
 
@@ -586,12 +586,6 @@ XrResult XRAPI_PTR traceCreateApiLayerInstance(
 }
 
 }  // namespace
-
-GXR_EXPORT jboolean JNICALL
-Java_com_valvesoftware_steamlink_GxrResolutionProbe_hasOpenXrFrameNative(
-    JNIEnv*, jclass) {
-    return g_frameCount.load() > 0 ? JNI_TRUE : JNI_FALSE;
-}
 
 GXR_EXPORT XrResult XRAPI_CALL xrNegotiateLoaderApiLayerInterface(
     const XrNegotiateLoaderInfo* loaderInfo,
