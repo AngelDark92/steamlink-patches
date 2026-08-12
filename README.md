@@ -6,7 +6,6 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
-
 Target APK: `com.valvesoftware.steamlinkvr` v2.0.22 (versionCode 5002244).
 To download it:
 1. Open steam console `steam://open/console`
@@ -37,7 +36,7 @@ To download it:
 | [Force HMD initialization gates](#force-hmd-initialization-gates) | Bypasses the two legacy-tested capability gates in QSVLDeviceHmd::Init for Steam Link build 5002244. |  |
 | [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the legacy-tested permission-state gate in XrSceneLobby for Steam Link build 5002244. |  |
 | [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three legacy-tested XR feature/permission gates in XrSceneStream::Init for Steam Link build 5002244. |  |
-| [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. |  |
+| [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT). |  |
 | [HMD-only pose fix](#hmd-only-pose-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. | • Pose offset (ms) |
 | [OLED color calibration](#oled-color-calibration) | Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link 5002244. | • Calibration profile<br>• Gamma<br>• Saturation<br>• Video output precision |
 | [Unrestricted battery usage](#unrestricted-battery-usage) | Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming. |  |
