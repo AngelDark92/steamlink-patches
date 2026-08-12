@@ -6,6 +6,11 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
+Related face-tracking projects:
+
+- [GXR Face Bridge](https://github.com/compdoge/gxr-face-bridge) — source for the OpenXR face-tracking bridge bundled by the face-bridge patch.
+- [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT) — matching PC-side module for the Galaxy XR face and tongue mappings.
+
 
 Target APK: `com.valvesoftware.steamlinkvr` v2.0.22 (versionCode 5002244).
 To download it:
