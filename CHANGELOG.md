@@ -1,3 +1,10 @@
+## [1.10.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.3...v1.10.0-dev.4) (2026-08-12)
+
+### ✨ New Features
+
+* add configurable microphone input preset ([1216773](https://github.com/AngelDark92/steamlink-patches/commit/1216773ddda44803c625cbc9501675ecd9ec566f))
+* Merge pull request [#37](https://github.com/AngelDark92/steamlink-patches/issues/37) from compdoge/agent/microphone-input-preset ([32ccdd0](https://github.com/AngelDark92/steamlink-patches/commit/32ccdd0371076dccaf691256479dc749d1f3cfcc))
+
 ## [1.10.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.2...v1.10.0-dev.3) (2026-08-12)
 
 ### 🐛 Bug Fixes
