@@ -1,3 +1,9 @@
+## [1.10.0-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.8...v1.10.0-dev.9) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* bundle direct Galaxy XR tongue bridge ([#39](https://github.com/AngelDark92/steamlink-patches/issues/39)) ([cfae7c9](https://github.com/AngelDark92/steamlink-patches/commit/cfae7c9c05fbc64d04c1764eb63b6ee406d3a35e))
+
 ## [1.10.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.7...v1.10.0-dev.8) (2026-08-13)
 
 ### 🐛 Bug Fixes
