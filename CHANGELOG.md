@@ -1,3 +1,9 @@
+## [1.10.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.5...v1.10.0-dev.6) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* unrestricted battery onResume() bug and wrong target versions ([73df9cf](https://github.com/AngelDark92/steamlink-patches/commit/73df9cf25f4f152f4a36075878215f5f70e8f3f3))
+
 ## [1.10.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.4...v1.10.0-dev.5) (2026-08-13)
 
 ### 🐛 Bug Fixes

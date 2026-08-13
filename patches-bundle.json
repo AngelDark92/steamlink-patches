@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-13T11:02:03",
-  "description": "## [1.10.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.4...v1.10.0-dev.5) (2026-08-13)\n\n### 🐛 Bug Fixes\n\n* new resolution tests, delete old probes ([9b512f6](https://github.com/AngelDark92/steamlink-patches/commit/9b512f674183913ea25f41a751af785a906637b5))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.10.0-dev.5/patches-1.10.0-dev.5.mpp",
+  "created_at": "2026-08-13T11:51:00",
+  "description": "## [1.10.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.5...v1.10.0-dev.6) (2026-08-13)\n\n### 🐛 Bug Fixes\n\n* unrestricted battery onResume() bug and wrong target versions ([73df9cf](https://github.com/AngelDark92/steamlink-patches/commit/73df9cf25f4f152f4a36075878215f5f70e8f3f3))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.10.0-dev.6/patches-1.10.0-dev.6.mpp",
   "signature_download_url": "",
-  "version": "1.10.0-dev.5"
+  "version": "1.10.0-dev.6"
 }
