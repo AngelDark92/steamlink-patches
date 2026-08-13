@@ -723,8 +723,8 @@
       "options": []
     },
     {
-      "name": "XR compositor path experiment",
-      "description": "Permission-free baseline or live VRLink activity-window probe. Turn off Appear on top and do not combine with the quad probe.",
+      "name": "XR projection quality settings",
+      "description": "Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it.",
       "default": false,
       "dependencies": [
         "ResourcePatch",
@@ -750,24 +750,41 @@
           ]
         }
       ],
-      "options": [
-        {
-          "key": "mode",
-          "title": "Experiment mode",
-          "description": "Select the no-window baseline or the permission-free token-backed window kept live for the immersive session.",
-          "required": true,
-          "type": "kotlin.String",
-          "default": "denied_no_window",
-          "values": {
-            "Permission-free baseline": "denied_no_window",
-            "Application window live in VRLink": "application_window_vrlink_live"
-          }
-        }
-      ]
+      "options": []
     },
     {
-      "name": "XR compositor quad probe",
-      "description": "Experimental permission-free OpenXR quad that tests whether an extra composition layer fixes the low-resolution direct path. Do not combine with XR compositor path experiment.",
+      "name": "XR projection settings stripped",
+      "description": "Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe.",
+      "default": false,
+      "dependencies": [
+        "ResourcePatch",
+        "BytecodePatch",
+        "RawResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": null,
+              "isExperimental": true,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "XR projection trace control",
+      "description": "Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition.",
       "default": false,
       "dependencies": [
         "ResourcePatch",

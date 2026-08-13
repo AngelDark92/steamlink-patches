@@ -51,7 +51,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -61,8 +61,9 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [XR compositor path experiment](#xr-compositor-path-experiment) | Permission-free baseline or live VRLink activity-window probe. Turn off Appear on top and do not combine with the quad probe. | • Experiment mode |
-| [XR compositor quad probe](#xr-compositor-quad-probe) | Experimental permission-free OpenXR quad that tests whether an extra composition layer fixes the low-resolution direct path. Do not combine with XR compositor path experiment. |  |
+| [XR projection quality settings](#xr-projection-quality-settings) | Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it. |  |
+| [XR projection settings stripped](#xr-projection-settings-stripped) | Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe. |  |
+| [XR projection trace control](#xr-projection-trace-control) | Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition. |  |
 
 </details>
 

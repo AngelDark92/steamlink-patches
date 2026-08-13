@@ -4,7 +4,6 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
@@ -74,62 +73,56 @@ private fun resolutionTraceResource(name: String): ByteArray =
         ?: throw PatchException("Missing bundled resolution trace resource: $name"))
         .use { it.readBytes() }
 
-private val resolutionTraceLayerPatch = rawResourcePatch {
+private fun projectionDiagnosticLayerPatch(mode: String) = rawResourcePatch {
     execute {
+        val libraryName = "libgxr_$mode.so"
+        val manifestName = "XR_APILAYER_local_GalaxyXR_$mode.json"
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
-        File(libDir, "libgxr_resolution_trace.so").writeBytes(
-            resolutionTraceResource("libgxr_resolution_trace.so"),
-        )
+        val layerDir = get("assets/openxr/1/api_layers/implicit.d/$manifestName").parentFile!!
+        val otherProjectionLayers = layerDir.listFiles()
+            ?.filter {
+                it.name.startsWith("XR_APILAYER_local_GalaxyXR_projection_") &&
+                    it.name != manifestName
+            }
+            .orEmpty()
+        if (otherProjectionLayers.isNotEmpty()) {
+            throw PatchException(
+                "Select exactly one XR projection diagnostic patch; already present: " +
+                    otherProjectionLayers.joinToString { it.name },
+            )
+        }
+        File(libDir, libraryName).writeBytes(resolutionTraceResource(libraryName))
 
-        val layerManifest = get(
-            "assets/openxr/1/api_layers/implicit.d/" +
-                "XR_APILAYER_local_GalaxyXR_resolution_trace.json",
-        )
+        val layerManifest = File(layerDir, manifestName)
         layerManifest.parentFile!!.mkdirs()
-        layerManifest.writeBytes(
-            resolutionTraceResource("XR_APILAYER_local_GalaxyXR_resolution_trace.json"),
-        )
+        layerManifest.writeBytes(resolutionTraceResource(manifestName))
     }
 }
 
-private val compositorQuadLayerPatch = rawResourcePatch {
-    execute {
-        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
-        File(libDir, "libgxr_compositor_probe.so").writeBytes(
-            resolutionTraceResource("libgxr_compositor_probe.so"),
-        )
+private val projectionTraceControlLayerPatch =
+    projectionDiagnosticLayerPatch("projection_trace_control")
+private val projectionSettingsQualityLayerPatch =
+    projectionDiagnosticLayerPatch("projection_settings_quality")
+private val projectionSettingsStrippedLayerPatch =
+    projectionDiagnosticLayerPatch("projection_settings_stripped")
 
-        val layerManifest = get(
-            "assets/openxr/1/api_layers/implicit.d/" +
-                "XR_APILAYER_local_GalaxyXR_compositor_probe.json",
-        )
-        layerManifest.parentFile!!.mkdirs()
-        layerManifest.writeBytes(
-            resolutionTraceResource("XR_APILAYER_local_GalaxyXR_compositor_probe.json"),
-        )
-    }
-}
-
-@Suppress("unused")
-val xrCompositorPathExperimentPatch = resourcePatch(
-    name = "XR compositor path experiment",
-    description = "Permission-free baseline or live VRLink activity-window probe. Turn off Appear on top and do not combine with the quad probe.",
+private fun projectionExperimentPatch(
+    name: String,
+    description: String,
+    mode: String,
+) = resourcePatch(
+    name = name,
+    description = description,
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch, resolutionTraceLayerPatch)
-
-    val mode by stringOption(
-        key = "mode",
-        default = "denied_no_window",
-        values = mapOf(
-            "Permission-free baseline" to "denied_no_window",
-            "Application window live in VRLink" to "application_window_vrlink_live",
-        ),
-        title = "Experiment mode",
-        description = "Select the no-window baseline or the permission-free token-backed window kept live for the immersive session.",
-        required = true,
-    )
+    dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch)
+    when (mode) {
+        "projection_trace_control" -> dependsOn(projectionTraceControlLayerPatch)
+        "projection_settings_quality" -> dependsOn(projectionSettingsQualityLayerPatch)
+        "projection_settings_stripped" -> dependsOn(projectionSettingsStrippedLayerPatch)
+        else -> throw PatchException("Unknown XR projection experiment mode: $mode")
+    }
 
     finalize {
         document("AndroidManifest.xml").use { document ->
@@ -151,40 +144,28 @@ val xrCompositorPathExperimentPatch = resourcePatch(
             }
             val metadata = existingMetadata ?: document.createElement("meta-data").also(app::appendChild)
             metadata.setAttribute("android:name", metadataName)
-            metadata.setAttribute("android:value", mode!!)
+            metadata.setAttribute("android:value", mode)
         }
     }
 }
 
 @Suppress("unused")
-val xrCompositorQuadProbePatch = resourcePatch(
-    name = "XR compositor quad probe",
-    description = "Experimental permission-free OpenXR quad that tests whether an extra composition layer fixes the low-resolution direct path. Do not combine with XR compositor path experiment.",
-    default = false,
-) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch, compositorQuadLayerPatch)
+val xrProjectionTraceControlPatch = projectionExperimentPatch(
+    name = "XR projection trace control",
+    description = "Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition.",
+    mode = "projection_trace_control",
+)
 
-    finalize {
-        document("AndroidManifest.xml").use { document ->
-            val manifest = document.documentElement
-            val app = manifest.getElementsByTagName("application").item(0) as Element
-            val permissionName = "android.permission.SYSTEM_ALERT_WINDOW"
-            val permissionNodes = document.getElementsByTagName("uses-permission")
-            (0 until permissionNodes.length)
-                .mapNotNull { permissionNodes.item(it) as? Element }
-                .filter { it.getAttribute("android:name") == permissionName }
-                .forEach { manifest.removeChild(it) }
+@Suppress("unused")
+val xrProjectionSettingsQualityPatch = projectionExperimentPatch(
+    name = "XR projection quality settings",
+    description = "Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it.",
+    mode = "projection_settings_quality",
+)
 
-            val metadataName = "com.valvesoftware.steamlink.GXR_RESOLUTION_MODE"
-            val existingMetadata = app.getElementsByTagName("meta-data").let { nodes ->
-                (0 until nodes.length)
-                    .mapNotNull { nodes.item(it) as? Element }
-                    .firstOrNull { it.getAttribute("android:name") == metadataName }
-            }
-            val metadata = existingMetadata ?: document.createElement("meta-data").also(app::appendChild)
-            metadata.setAttribute("android:name", metadataName)
-            metadata.setAttribute("android:value", "openxr_quad_compositor_probe")
-        }
-    }
-}
+@Suppress("unused")
+val xrProjectionSettingsStrippedPatch = projectionExperimentPatch(
+    name = "XR projection settings stripped",
+    description = "Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe.",
+    mode = "projection_settings_stripped",
+)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(gxr_resolution_trace LANGUAGES CXX)
+project(gxr_projection_diagnostics LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,26 +16,38 @@ if(NOT EXISTS "${OPENXR_SDK_SOURCE_DIR}/include/openxr/openxr.h")
     message(FATAL_ERROR "Set OPENXR_SDK_SOURCE_DIR to the bundled OpenXR-SDK 1.1.61 checkout")
 endif()
 
-add_library(gxr_resolution_trace SHARED src/resolution_trace_layer.cpp)
-target_include_directories(gxr_resolution_trace PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
-target_compile_definitions(gxr_resolution_trace PRIVATE XR_USE_PLATFORM_ANDROID)
-target_link_libraries(gxr_resolution_trace PRIVATE log)
-set_target_properties(gxr_resolution_trace PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    OUTPUT_NAME gxr_resolution_trace
-)
+function(add_gxr_projection_mode target output mode layer_name)
+    add_library(${target} SHARED src/resolution_trace_layer.cpp)
+    target_include_directories(${target} PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
+    target_compile_definitions(${target} PRIVATE
+        XR_USE_PLATFORM_ANDROID
+        XR_USE_GRAPHICS_API_OPENGL_ES
+        GXR_PROJECTION_MODE=${mode}
+        GXR_LAYER_NAME="${layer_name}"
+    )
+    target_link_libraries(${target} PRIVATE log EGL)
+    set_target_properties(${target} PROPERTIES
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN YES
+        OUTPUT_NAME ${output}
+    )
+endfunction()
 
-add_library(gxr_compositor_probe SHARED src/resolution_trace_layer.cpp)
-target_include_directories(gxr_compositor_probe PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
-target_compile_definitions(gxr_compositor_probe PRIVATE
-    XR_USE_PLATFORM_ANDROID
-    XR_USE_GRAPHICS_API_OPENGL_ES
-    GXR_COMPOSITOR_QUAD_PROBE=1
+add_gxr_projection_mode(
+    gxr_projection_trace_control
+    gxr_projection_trace_control
+    0
+    XR_APILAYER_local_GalaxyXR_projection_trace_control
 )
-target_link_libraries(gxr_compositor_probe PRIVATE log GLESv3)
-set_target_properties(gxr_compositor_probe PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    OUTPUT_NAME gxr_compositor_probe
+add_gxr_projection_mode(
+    gxr_projection_settings_quality
+    gxr_projection_settings_quality
+    1
+    XR_APILAYER_local_GalaxyXR_projection_settings_quality
+)
+add_gxr_projection_mode(
+    gxr_projection_settings_stripped
+    gxr_projection_settings_stripped
+    2
+    XR_APILAYER_local_GalaxyXR_projection_settings_stripped
 )
