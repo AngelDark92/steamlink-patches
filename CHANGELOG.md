@@ -1,3 +1,9 @@
+## [1.10.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.7...v1.10.0-dev.8) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* permission on 5002313 ([4954510](https://github.com/AngelDark92/steamlink-patches/commit/4954510248391236465a9b6dd92ebd271f89390f))
+
 ## [1.10.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.6...v1.10.0-dev.7) (2026-08-13)
 
 ### 🐛 Bug Fixes
