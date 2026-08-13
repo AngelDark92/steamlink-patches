@@ -16,7 +16,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.0-dev.6](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.6)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;22 patches total
+> **[v1.10.0-dev.7](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.7)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;22 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -25,6 +25,7 @@ To download it:
 
 | 2.0.22 |
 | :---: |
+|  | Unlisted Steam Link versions are experimental and may not patch safely. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|

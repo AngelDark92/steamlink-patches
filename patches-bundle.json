@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-13T11:51:00",
-  "description": "## [1.10.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.5...v1.10.0-dev.6) (2026-08-13)\n\n### 🐛 Bug Fixes\n\n* unrestricted battery onResume() bug and wrong target versions ([73df9cf](https://github.com/AngelDark92/steamlink-patches/commit/73df9cf25f4f152f4a36075878215f5f70e8f3f3))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.10.0-dev.6/patches-1.10.0-dev.6.mpp",
+  "created_at": "2026-08-13T12:45:10",
+  "description": "## [1.10.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.6...v1.10.0-dev.7) (2026-08-13)\n\n### 🐛 Bug Fixes\n\n* added compatibility with 2.0.22 5002313 ([f78fa02](https://github.com/AngelDark92/steamlink-patches/commit/f78fa02af800f5da0946ab15389e777c548f940c))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.10.0-dev.7/patches-1.10.0-dev.7.mpp",
   "signature_download_url": "",
-  "version": "1.10.0-dev.6"
+  "version": "1.10.0-dev.7"
 }
