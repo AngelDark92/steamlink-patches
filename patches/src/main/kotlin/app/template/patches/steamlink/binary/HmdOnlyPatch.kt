@@ -4,12 +4,9 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.longOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244
 import app.template.patches.steamlink.util.BinaryPatchHelper.vaddrToFileOffset
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.security.MessageDigest
 
 // Injects an AArch64 trampoline that adds a configurable offset to the HMD pose query time
 // and zeroes the six HMD velocity fields exported to SteamVR.
@@ -164,20 +161,13 @@ private fun replacementFor(patch: VelocityPatch): ByteArray =
 private fun isPatchedVelocity(word: Int, patch: VelocityPatch): Boolean =
     word == ByteBuffer.wrap(replacementFor(patch)).order(ByteOrder.LITTLE_ENDIAN).int
 
-private fun ByteArray.sha256(): String =
-    MessageDigest.getInstance("SHA-256").digest(this).toHex()
-
 @Suppress("unused")
 val hmdOnlyPatch = rawResourcePatch(
     name = "HMD-only pose fix",
     description = "Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths.",
     default = true,
 ) {
-    compatibleWith(
-        COMPATIBILITY_STEAM_LINK_HMD_ONLY,
-        COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172,
-        COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244,
-    )
+    compatibleWith(COMPATIBILITY_STEAM_LINK_HMD_ONLY)
 
     val offsetMs by longOption(
         key = "offsetMs",
@@ -192,11 +182,9 @@ val hmdOnlyPatch = rawResourcePatch(
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
         val mutable = file.readBytes().copyOf()
-        val layout = HMD_LAYOUTS.singleOrNull { it.fileSize == mutable.size }
-            ?: throw PatchException(
-                "Unsupported libvrlink_scene.so size=${mutable.size}, sha256=${mutable.sha256()}. " +
-                    "Supported versionCodes: ${HMD_LAYOUTS.joinToString { it.versionCode.toString() }}"
-            )
+        // An unrecognized native layout must not block the rest of an experimental APK patch.
+        // Fixed instruction addresses are unsafe to guess, so leave this one mutation untouched.
+        val layout = HMD_LAYOUTS.singleOrNull { it.fileSize == mutable.size } ?: return@execute
 
         // Locate PLT cave at end of first executable segment (version-agnostic).
         val (caveOff, caveVa) = findPltCave(mutable)

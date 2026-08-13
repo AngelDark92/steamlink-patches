@@ -13,6 +13,7 @@ private data class NativeEdit(
     val offset: Int,
     val original: ByteArray,
     val replacement: ByteArray,
+    val locateByPattern: Boolean = false,
 )
 
 private fun ascii(value: String): ByteArray = value.toByteArray(Charsets.US_ASCII)
@@ -20,17 +21,34 @@ private fun ascii(value: String): ByteArray = value.toByteArray(Charsets.US_ASCI
 private fun paddedAscii(value: String, size: Int): ByteArray =
     ByteArray(size).also { ascii(value).copyInto(it) }
 
-private fun applyNativeEdits(file: File, patchName: String, edits: List<NativeEdit>) {
-    val bytes = file.readBytes()
-    if (bytes.size != LEGACY_NATIVE_LAYOUT_SIZE) {
-        throw PatchException(
-            "$patchName supports only the Steam Link 2.0.22 build 5002244 native layout; " +
-                "libvrlink_scene.so size=${bytes.size}, expected=$LEGACY_NATIVE_LAYOUT_SIZE",
-        )
-    }
-
-    val alreadyPatched = edits.map { edit ->
+private fun applyNativeEdits(bytes: ByteArray, patchName: String, edits: List<NativeEdit>): ByteArray {
+    val replacements = edits.mapNotNull { edit ->
         require(edit.original.size == edit.replacement.size)
+
+        if (edit.locateByPattern) {
+            val originalOffsets = bytes.findPatternOffsets(edit.original)
+            val replacementOffsets = bytes.findPatternOffsets(edit.replacement)
+            return@mapNotNull when {
+                originalOffsets.size == 1 && replacementOffsets.isEmpty() ->
+                    originalOffsets.single() to edit.replacement
+                originalOffsets.isEmpty() && replacementOffsets.size == 1 -> null
+                bytes.size != LEGACY_NATIVE_LAYOUT_SIZE -> return bytes.copyOf()
+                originalOffsets.isEmpty() && replacementOffsets.isEmpty() ->
+                    throw PatchException(
+                        "$patchName pattern is absent on the supported layout: " +
+                            "original=${edit.original.toHex()}, patched=${edit.replacement.toHex()}",
+                    )
+                else ->
+                    throw PatchException(
+                        "$patchName pattern is ambiguous on the supported layout: " +
+                            "original matches=${originalOffsets.size}, " +
+                            "patched matches=${replacementOffsets.size}",
+                    )
+            }
+        }
+
+        if (bytes.size != LEGACY_NATIVE_LAYOUT_SIZE) return@mapNotNull null
+
         val end = edit.offset + edit.original.size
         if (edit.offset < 0 || end > bytes.size) {
             throw PatchException("$patchName offset 0x${edit.offset.toString(16)} is outside the library")
@@ -38,8 +56,8 @@ private fun applyNativeEdits(file: File, patchName: String, edits: List<NativeEd
 
         val actual = bytes.copyOfRange(edit.offset, end)
         when {
-            actual.contentEquals(edit.replacement) -> true
-            actual.contentEquals(edit.original) -> false
+            actual.contentEquals(edit.replacement) -> null
+            actual.contentEquals(edit.original) -> edit.offset to edit.replacement
             else -> throw PatchException(
                 "$patchName precondition failed at 0x${edit.offset.toString(16)}: " +
                     "actual=${actual.toHex()}, expected=${edit.original.toHex()} " +
@@ -48,13 +66,26 @@ private fun applyNativeEdits(file: File, patchName: String, edits: List<NativeEd
         }
     }
 
-    if (alreadyPatched.all { it }) return
+    if (replacements.isEmpty()) return bytes.copyOf()
 
     val mutable = bytes.copyOf()
-    edits.forEachIndexed { index, edit ->
-        if (!alreadyPatched[index]) edit.replacement.copyInto(mutable, edit.offset)
+    replacements.forEach { (offset, replacement) ->
+        replacement.copyInto(mutable, offset)
     }
-    file.writeBytes(mutable)
+    return mutable
+}
+
+private fun applyNativeEdits(file: File, patchName: String, edits: List<NativeEdit>) {
+    val bytes = file.readBytes()
+    val patched = applyNativeEdits(bytes, patchName, edits)
+    if (!patched.contentEquals(bytes)) file.writeBytes(patched)
+}
+
+private fun ByteArray.findPatternOffsets(pattern: ByteArray): List<Int> {
+    if (pattern.isEmpty() || pattern.size > size) return emptyList()
+    return (0..size - pattern.size).filter { offset ->
+        pattern.indices.all { index -> this[offset + index] == pattern[index] }
+    }
 }
 
 private val permissionNameEdits = listOf(
@@ -62,13 +93,18 @@ private val permissionNameEdits = listOf(
         offset = 0x93952,
         original = ascii("com.oculus.permission.FACE_TRACKING") + byteArrayOf(0),
         replacement = paddedAscii("android.permission.HAND_TRACKING", 36),
+        locateByPattern = true,
     ),
     NativeEdit(
         offset = 0x9C10E,
         original = ascii("com.oculus.permission.EYE_TRACKING") + byteArrayOf(0, 0x7d, 0),
         replacement = ascii("android.permission.EYE_TRACKING_FINE") + byteArrayOf(0),
+        locateByPattern = true,
     ),
 )
+
+internal fun patchNativePermissionNames(bytes: ByteArray): ByteArray =
+    applyNativeEdits(bytes, "Android XR native permission names", permissionNameEdits)
 
 private val hmdInitializationEdits = listOf(
     NativeEdit(0xFD040, byteArrayOf(0xe0.toByte(), 0x00, 0x00, 0x36), NOP),
@@ -94,11 +130,10 @@ val androidXrNativePermissionNamesPatch = rawResourcePatch(
     compatibleWith(COMPATIBILITY_STEAM_LINK)
 
     execute {
-        applyNativeEdits(
-            get("lib/arm64-v8a/libvrlink_scene.so"),
-            "Android XR native permission names",
-            permissionNameEdits,
-        )
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        val bytes = file.readBytes()
+        val patched = patchNativePermissionNames(bytes)
+        if (!patched.contentEquals(bytes)) file.writeBytes(patched)
     }
 }
 

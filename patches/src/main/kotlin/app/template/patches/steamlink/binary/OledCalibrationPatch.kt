@@ -238,6 +238,9 @@ val oledCalibrationPatch = rawResourcePatch(
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
         val bytes = file.readBytes()
+        // Shader and swapchain edits are coupled. On an unrecognized native layout, skip both
+        // rather than aborting the complete APK experiment or writing fixed offsets blindly.
+        if (bytes.size != VIDEO_LIBRARY_SIZE_5002244) return@execute
         val shaderPos = findVideoShader(bytes)
         val (selectedGamma, selectedSaturation) = when (profile) {
             "initial" -> 1.06f to 1.12f

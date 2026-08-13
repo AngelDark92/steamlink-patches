@@ -7,13 +7,14 @@ package util
 
 import app.morphe.patcher.patch.Patch
 import app.morphe.patcher.patch.loadPatchesFromJar
+import app.template.patches.shared.Constants.EXPERIMENTAL_COMPATIBILITY_NAME
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import java.io.File
 import java.net.URLClassLoader
 import java.util.jar.Manifest
 
-private enum class ReleaseChannel {
+internal enum class ReleaseChannel {
     STABLE,
     EXPERIMENTAL,
     ALL;
@@ -25,6 +26,20 @@ private enum class ReleaseChannel {
             "all", null, "" -> ALL
             else -> error("Unsupported release channel '$raw'. Use stable, experimental, or all.")
         }
+    }
+}
+
+internal fun targetsForReleaseChannel(
+    compatibility: app.morphe.patcher.patch.Compatibility,
+    releaseChannel: ReleaseChannel,
+) = compatibility.targets.filter { target ->
+    // Patch release channel and APK-version support are independent. Projection experiments
+    // stay in the experimental bundle even though Steam Link 2.0.22 itself is a stable target.
+    val experimentalPatch = compatibility.name == EXPERIMENTAL_COMPATIBILITY_NAME
+    when (releaseChannel) {
+        ReleaseChannel.STABLE -> !experimentalPatch && !target.isExperimental
+        ReleaseChannel.EXPERIMENTAL -> experimentalPatch || target.isExperimental
+        ReleaseChannel.ALL -> true
     }
 }
 
@@ -85,13 +100,7 @@ private fun buildPatchListJson(
 ): String {
     val patchesMap = patches.sortedBy { it.name }.mapNotNull { patch ->
         val compatiblePackages = patch.compatibility?.mapNotNull { compat ->
-            val filteredTargets = compat.targets.filter { target ->
-                when (releaseChannel) {
-                    ReleaseChannel.STABLE -> !target.isExperimental
-                    ReleaseChannel.EXPERIMENTAL -> target.isExperimental
-                    ReleaseChannel.ALL -> true
-                }
-            }
+            val filteredTargets = targetsForReleaseChannel(compat, releaseChannel)
 
             if (filteredTargets.isEmpty()) {
                 null

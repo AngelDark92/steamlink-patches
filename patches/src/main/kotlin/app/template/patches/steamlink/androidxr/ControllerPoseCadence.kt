@@ -4,7 +4,6 @@ import app.morphe.patcher.patch.PatchException
 import app.template.patches.steamlink.util.BinaryPatchHelper.vaddrToFileOffset
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.security.MessageDigest
 
 private enum class PoseCadenceMode(val key: String) {
     STOCK("stock-4x"),
@@ -157,12 +156,9 @@ internal fun patchControllerPoseCadence(bytes: ByteArray, rawMode: String): Byte
     val mode = PoseCadenceMode.from(rawMode)
     val layout = CADENCE_LAYOUTS.singleOrNull { it.fileSize == bytes.size }
     if (layout == null) {
-        if (mode == PoseCadenceMode.STOCK) return bytes.copyOf()
-        throw PatchException(
-            "Unsupported libvrlink_scene.so size=${bytes.size}, sha256=${bytes.sha256()} for " +
-                "controller pose-send cadence. Supported versionCodes: " +
-                CADENCE_LAYOUTS.joinToString { it.versionCode.toString() }
-        )
+        // Any cadence requires fixed instruction locations. Unknown layouts are experimental:
+        // leave this optional native mutation untouched instead of aborting the APK patch.
+        return bytes.copyOf()
     }
 
     val prepared = buildList {
@@ -231,6 +227,3 @@ private fun ByteArray.readU32LE(offset: Int): Int =
 private fun ByteArray.writeU32LE(offset: Int, word: Int) {
     ByteBuffer.wrap(this, offset, 4).order(ByteOrder.LITTLE_ENDIAN).putInt(word)
 }
-
-private fun ByteArray.sha256(): String =
-    MessageDigest.getInstance("SHA-256").digest(this).joinToString("") { "%02x".format(it) }
