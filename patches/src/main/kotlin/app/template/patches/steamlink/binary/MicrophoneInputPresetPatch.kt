@@ -77,7 +77,7 @@ val microphoneInputPresetPatch = rawResourcePatch(
         }
 
         if (matches.size != 1) {
-            if (bytes.size != VIDEO_LIBRARY_SIZE_5002244) return@execute
+            if (!isSupportedVideoLibrarySize(bytes.size)) return@execute
             throw PatchException(
                 "Expected one supported AAudio input-preset instruction, found ${matches.size}",
             )

@@ -19,7 +19,9 @@ Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 | Extension DEX (base APK) | Merges `extension.mpe`: adds `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, `GxrSdlBridge`, `GxrSurfaceCallback`; extends `SDLSurface`, `SDLControllerManager`, `SDLGenericMotionListener_API14` |
 
 Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
-| `lib/arm64-v8a/libvrlink_scene.so` @ file offset `0x1422c4` | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret` (versionCode 5002244 only; skipped for all other builds) |
+| Artifact | Edit |
+|---|---|
+| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244) or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; unknown layouts are skipped |
 
 ---
 
@@ -46,8 +48,8 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | `AndroidManifest.xml` `meta-data` | Removes all `com.oculus.*`, `com.htc.vr.*`, `pvr.*`, `pxr.*`, `picovr.*` entries |
 | `AndroidManifest.xml` `uses-native-library` | Removes `libopenxr_forwardloader.oculus.so` |
 | `AndroidManifest.xml` `category` | Removes `com.oculus.intent.category.VR` and `com.oculus.intent.category.2D` |
-| `AndroidManifest.xml` `uses-permission` | Adds: `org.khronos.openxr.permission.OPENXR`, `OPENXR_SYSTEM`, `android.permission.ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `HAND_TRACKING`, `EYE_TRACKING_FINE` |
-| `AndroidManifest.xml` `uses-feature` | Adds: `android.hardware.vr.headtracking` (v1, required), `android.software.xr.api.openxr` (v0x10001, required), `android.hardware.xr.input.controller/hand_tracking/eye_tracking` (optional) |
+| `AndroidManifest.xml` `uses-permission` | Adds: `org.khronos.openxr.permission.OPENXR`, `OPENXR_SYSTEM`, `android.permission.ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`, `HAND_TRACKING`, `EYE_TRACKING_FINE`, `FACE_TRACKING`, `BLUETOOTH_CONNECT` |
+| `AndroidManifest.xml` `uses-feature` | Adds or normalizes: `android.hardware.vr.headtracking` (v1, required), `android.software.xr.api.openxr` (v0x10001, required), `android.hardware.xr.input.controller/hand_tracking/eye_tracking` (optional) |
 | `AndroidManifest.xml` `queries/provider@android:authorities` | Adds `org.khronos.openxr.runtime_broker;org.khronos.openxr.system_runtime_broker` |
 | `AndroidManifest.xml` `queries/intent` | Adds `org.khronos.openxr.OpenXRRuntimeService` and `org.khronos.openxr.OpenXRApiLayerService` intents |
 | `AndroidManifest.xml` `application/uses-native-library@android:name` | Adds `libopenxr.google.so` (optional) |
@@ -60,10 +62,11 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `application/activity@android:name` | Adds `com.valvesoftware.steamlink.GalaxyXRPermissionActivity` (exported=true, MAIN/LAUNCHER, 1280×800px layout) |
+| `AndroidManifest.xml` direct `application/property` | Removes application-wide `android.window.PROPERTY_XR_ACTIVITY_START_MODE` (present in 5002313) before applying activity-specific modes |
 | `AndroidManifest.xml` `VRLink activity/property` | Adds `android.window.PROPERTY_XR_ACTIVITY_START_MODE = XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED` |
 | `AndroidManifest.xml` `VRLink activity/intent-filter/category` | Adds `org.khronos.openxr.intent.category.IMMERSIVE_HMD` |
 | `AndroidManifest.xml` `SteamLink activity/intent-filter` | Removes LAUNCHER intent-filter |
-| `AndroidManifest.xml` `SteamLink activity/layout` | Sets `android:defaultWidth=1280.0px`, `android:defaultHeight=800.0px` |
+| `AndroidManifest.xml` `SteamLink activity/layout` | Sets `android:defaultWidth=1536.0px`, `android:defaultHeight=960.0px` |
 
 ---
 
@@ -80,7 +83,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_controller_velocity.so` | New file with embedded config patched at magic `GXRVELCFG0000001` |
-| `lib/arm64-v8a/libvrlink_scene.so` `QSVLClient::OnTopOfFrame` | Optional exact-layout AArch64 edits select stock 4×, evenly phased 2×, or display-rate 1× controller pose events while retaining the final type-2 frame-update event; verified layouts: versionCodes 5001712, 5002206, 5002244 |
+| `lib/arm64-v8a/libvrlink_scene.so` `QSVLClient::OnTopOfFrame` | Optional exact-layout AArch64 edits select stock 4×, evenly phased 2×, or display-rate 1× controller pose events while retaining the final type-2 frame-update event; verified layouts: versionCodes 5001712, 5002206, 5002244, 5002313 |
 | config block `+32` (int64 LE) | `maxDeltaMs × 1,000,000` nanoseconds — default 50 ms |
 | config block `+40` (float32 LE) | `maxLinearSpeed` m/s — default 20.0 |
 | config block `+44` (float32 LE) | `maxAngularSpeed` rad/s — default 50.0 |
@@ -160,12 +163,26 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | 5002172 | 2,238,792 | `0xFD860` | `0x213370` |
 | 5002206 | 2,239,920 | `0xFDD68` | `0x213820` |
 | 5002244 | 2,251,920 | `0xFEAD8` | `0x2166B0` |
+| 5002313 | 2,276,872 | `0x100B8C` | `0x21C770` |
+
+---
+
+### Native XR Compatibility Gates
+**Default: enabled**
+| Patch | 5002244 target(s) | 5002313 target(s) |
+|---|---|---|
+| Android XR native permission names | Pattern-locates Oculus face/eye strings | Pattern-locates the relocated face/eye strings |
+| Force HMD initialization gates | `0xFD040`, `0xFD048` | `0xFF010`, `0xFF018` |
+| Force lobby permission-state gate | `0x10B658` | `0x10E6C0` |
+| Force stream XR gates | `0x1140AC`, `0x1140B4`, `0x114168` | No fixed edit: 5002313 rewrote `XrSceneStream::Init`, so the old three gates have no safe one-to-one target |
+
+All fixed edits validate their exact stock or already-patched instruction bytes before writing. Unknown native layouts are left unchanged.
 
 ---
 
 ### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
 **Default: enabled**
-> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCode 5002244.
+> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5002244 and 5002313.
 
 | Artifact | Edit |
 |---|---|
@@ -177,6 +194,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | GLSL endpoint protection | Per-channel output-domain ramp preserves exact black/white and reaches full dither strength four codes from either output endpoint (`4/255` sRGB8, approximately `4/1023` linear RGB10_A2) |
 | GLSL `DITHER_ENABLE` | `1.` when enabled; toggled to `0.` by `videoDitherPatch` without losing the selected scale |
 | Three 5002244 instructions at `0x10826c`, `0x1082dc`, `0x10834c` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
+| Three 5002313 instructions at `0x10b2d4`, `0x10b344`, `0x10b3b4` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | RGB10_A2 shader output | Explicit sRGB EOTF converts calibrated code values to the linear OpenXR swapchain |
 
 **Options:**
@@ -187,7 +205,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | `saturation` | `1.12` | 0.00–3.00 | Second argument in `mix()` |
 | `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and all three projection swapchain formats |
 
-`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the 2,251,920-byte 5002244 library, the unique shader/NUL boundary, all three known instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
+`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires either the 2,251,920-byte 5002244 or 2,276,872-byte 5002313 library, the unique shader/NUL boundary, all three layout-specific instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
 
 Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation remains a runtime acceptance gate for both modes.
 
@@ -247,7 +265,7 @@ Static tests validate GLSL structure, fixed size, and binary placement but do no
 
 | APK artifact | Patches that write to it |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (8 B @ 0x1422c4), `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
+| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
 | `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `changePackageNamePatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |

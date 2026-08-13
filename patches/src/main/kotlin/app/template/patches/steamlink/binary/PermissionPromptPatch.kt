@@ -5,7 +5,7 @@ import app.morphe.patcher.patch.PatchException
 
 // Replaces RequestAndroidPermissions() with `mov w0,#1; ret` so the runtime
 // permission dialog never fires and tears down the live XR stream.
-// Internal sub-patch; not exposed top-level. Applies only to versionCode 5002244 (size 2,251,920).
+// Internal sub-patch; not exposed top-level. Fixed offsets are selected by a verified layout.
 private val SEARCH = byteArrayOf(
     // AArch64: sub sp,sp,#0x60 (SUB SP frame allocation) + stp x29,x30,[sp,#0x10] (callee-save prologue)
     0xff.toByte(), 0x83.toByte(), 0x01.toByte(), 0xd1.toByte(),  // sub sp, sp, #0x60
@@ -17,36 +17,44 @@ private val REPLACE = byteArrayOf(
     0xc0.toByte(), 0x03.toByte(), 0x5f.toByte(), 0xd6.toByte(),  // ret
 )
 
-// libvrlink_scene.so ELF file offset for RequestAndroidPermissions() entry point, versionCode 5002244
-private const val REQUEST_ANDROID_PERMISSIONS_OFFSET_5002244 = 0x1422c4
-private const val LIBVRLINK_SCENE_SIZE_5002244 = 2_251_920
+private data class PermissionPromptLayout(
+    val versionCode: Int,
+    val fileSize: Int,
+    val requestAndroidPermissionsOffset: Int,
+)
+
+private val PERMISSION_PROMPT_LAYOUTS = listOf(
+    PermissionPromptLayout(5002244, 2_251_920, 0x1422c4),
+    PermissionPromptLayout(5002313, 2_276_872, 0x1472a8),
+)
+
+internal fun patchPermissionPrompt(bytes: ByteArray): ByteArray {
+    val layout = PERMISSION_PROMPT_LAYOUTS.singleOrNull { it.fileSize == bytes.size }
+        ?: return bytes.copyOf()
+    val offset = layout.requestAndroidPermissionsOffset
+    if (offset < 0 || offset + SEARCH.size > bytes.size) {
+        throw PatchException(
+            "RequestAndroidPermissions offset is outside versionCode ${layout.versionCode}",
+        )
+    }
+
+    val current = bytes.copyOfRange(offset, offset + SEARCH.size)
+    return when {
+        current.contentEquals(REPLACE) -> bytes.copyOf()
+        current.contentEquals(SEARCH) -> bytes.copyOf().apply { REPLACE.copyInto(this, offset) }
+        else -> throw PatchException(
+            "Unexpected RequestAndroidPermissions bytes for versionCode ${layout.versionCode} " +
+                "at 0x${offset.toString(16)}",
+        )
+    }
+}
 
 internal val disablePermissionPromptNativePatch = rawResourcePatch {
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
         val bytes = file.readBytes()
-        val offset = REQUEST_ANDROID_PERMISSIONS_OFFSET_5002244
-
-        if (offset + SEARCH.size > bytes.size) {
-            return@execute
-        }
-
-        val current = bytes.copyOfRange(offset, offset + SEARCH.size)
-        when {
-            current.contentEquals(REPLACE) -> Unit
-            current.contentEquals(SEARCH) -> {
-                REPLACE.copyInto(bytes, offset)
-                file.writeBytes(bytes)
-            }
-            bytes.size == LIBVRLINK_SCENE_SIZE_5002244 -> throw PatchException(
-                "Unexpected RequestAndroidPermissions bytes at 0x" +
-                    offset.toString(16),
-            )
-            else -> {
-                // Unknown binary layout (for example 5002172/5002206): skip instead of
-                // crashing the entire Android XR compatibility chain.
-            }
-        }
+        val patched = patchPermissionPrompt(bytes)
+        if (!patched.contentEquals(bytes)) file.writeBytes(patched)
     }
 }
 

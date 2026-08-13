@@ -52,7 +52,7 @@ internal fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
         highpDisabled + highpEnabled
 
     if (stateCount != 1) {
-        if (bytes.size != VIDEO_LIBRARY_SIZE_5002244) return bytes.copyOf()
+        if (!isSupportedVideoLibrarySize(bytes.size)) return bytes.copyOf()
         throw PatchException(
             "Unsupported or ambiguous video dither state: " +
                 "stock disabled=$stockDisabled enabled=$stockEnabled, " +

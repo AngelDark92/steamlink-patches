@@ -66,6 +66,15 @@ private val CADENCE_LAYOUTS = listOf(
             CadenceBlock(0x000F36E4L, 0x000F36D4L, 0x000F372CL, 0x000F373CL, 0x000F3768L, 0x000F3770L, 9, 10),
         ),
     ),
+    CadenceLayout(
+        versionCode = 5002313,
+        fileSize = 2_276_872,
+        blocks = listOf(
+            CadenceBlock(0x000F5484L, 0x000F5474L, 0x000F54CCL, 0x000F54E0L, 0x000F5508L, 0x000F54ECL, 10, 9),
+            CadenceBlock(0x000F5588L, 0x000F5578L, 0x000F55D0L, 0x000F55E4L, 0x000F560CL, 0x000F55F0L, 10, 9),
+            CadenceBlock(0x000F5650L, 0x000F5640L, 0x000F5698L, 0x000F56A8L, 0x000F56D4L, 0x000F56DCL, 9, 10),
+        ),
+    ),
 )
 
 private enum class CadenceField {

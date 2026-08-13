@@ -82,19 +82,24 @@ class VideoOutputPrecisionTest {
     }
 
     @Test
-    fun `swapchain format patch changes all three instructions and is reversible`() {
-        val srgb = syntheticLibrary()
-        val rgb10 = setProjectionSwapchainFormat(srgb, VideoOutputPrecision.RGB10_A2_EXPERIMENTAL)
+    fun `swapchain format patch supports both verified layouts and is reversible`() {
+        listOf(
+            VIDEO_LIBRARY_SIZE_5002244 to SWAPCHAIN_FORMAT_OFFSETS_5002244,
+            VIDEO_LIBRARY_SIZE_5002313 to SWAPCHAIN_FORMAT_OFFSETS_5002313,
+        ).forEach { (size, offsets) ->
+            val srgb = syntheticLibrary(size, offsets)
+            val rgb10 = setProjectionSwapchainFormat(srgb, VideoOutputPrecision.RGB10_A2_EXPERIMENTAL)
 
-        SWAPCHAIN_FORMAT_OFFSETS_5002244.forEach { offset ->
-            assertContentEquals(
-                byteArrayOf(0x29, 0x0b, 0x90.toByte(), 0x52),
-                rgb10.copyOfRange(offset, offset + 4),
-            )
+            offsets.forEach { offset ->
+                assertContentEquals(
+                    byteArrayOf(0x29, 0x0b, 0x90.toByte(), 0x52),
+                    rgb10.copyOfRange(offset, offset + 4),
+                )
+            }
+            val changedOffsets = srgb.indices.filter { srgb[it] != rgb10[it] }
+            assertEquals(9, changedOffsets.size)
+            assertContentEquals(srgb, setProjectionSwapchainFormat(rgb10, VideoOutputPrecision.SRGB8_HIGHP))
         }
-        val changedOffsets = srgb.indices.filter { srgb[it] != rgb10[it] }
-        assertEquals(9, changedOffsets.size)
-        assertContentEquals(srgb, setProjectionSwapchainFormat(rgb10, VideoOutputPrecision.SRGB8_HIGHP))
     }
 
     @Test
@@ -125,7 +130,10 @@ class VideoOutputPrecisionTest {
         }
     }
 
-    private fun syntheticLibrary(): ByteArray = ByteArray(VIDEO_LIBRARY_SIZE_5002244).apply {
+    private fun syntheticLibrary(
+        size: Int = VIDEO_LIBRARY_SIZE_5002244,
+        offsets: IntArray = SWAPCHAIN_FORMAT_OFFSETS_5002244,
+    ): ByteArray = ByteArray(size).apply {
         val before = byteArrayOf(
             0xe1.toByte(), 0xa3.toByte(), 0x00, 0x91.toByte(),
             0xe0.toByte(), 0x03, 0x14, 0xaa.toByte(),
@@ -138,7 +146,7 @@ class VideoOutputPrecisionTest {
             0x08, 0x21, 0x40, 0xb9.toByte(),
             0xe8.toByte(), 0x3b, 0x00, 0xb9.toByte(),
         )
-        SWAPCHAIN_FORMAT_OFFSETS_5002244.forEach { offset ->
+        offsets.forEach { offset ->
             before.copyInto(this, offset - before.size)
             instruction.copyInto(this, offset)
             after.copyInto(this, offset + instruction.size)

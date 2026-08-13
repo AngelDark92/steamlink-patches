@@ -5,7 +5,7 @@
   "patches": [
     {
       "name": "Android XR native permission names",
-      "description": "Replaces native Oculus face/eye permission checks with the Android XR permission names used by the legacy Galaxy XR build.",
+      "description": "Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -218,7 +218,7 @@
     },
     {
       "name": "Force HMD initialization gates",
-      "description": "Bypasses the two legacy-tested capability gates in QSVLDeviceHmd::Init for Steam Link build 5002244.",
+      "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -244,7 +244,7 @@
     },
     {
       "name": "Force lobby permission-state gate",
-      "description": "Bypasses the legacy-tested permission-state gate in XrSceneLobby for Steam Link build 5002244.",
+      "description": "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -270,7 +270,7 @@
     },
     {
       "name": "Force stream XR gates",
-      "description": "Bypasses the three legacy-tested XR feature/permission gates in XrSceneStream::Init for Steam Link build 5002244.",
+      "description": "Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -341,7 +341,7 @@
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
-              "description": null
+              "description": "HMD-only pose fix layouts verified for versionCodes 5001712, 5002172, 5002206, 5002244, and 5002313."
             }
           ]
         }
@@ -401,7 +401,7 @@
     },
     {
       "name": "OLED color calibration",
-      "description": "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link 5002244.",
+      "description": "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244 and 5002313.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [

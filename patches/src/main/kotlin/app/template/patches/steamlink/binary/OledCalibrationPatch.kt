@@ -13,8 +13,11 @@ private val SHADER_EXTENSION =
 private val SHADER_VERSION = "#version 300 es\n".toByteArray(Charsets.US_ASCII)
 internal const val VIDEO_SHADER_SIZE = 1087
 internal const val VIDEO_LIBRARY_SIZE_5002244 = 2_251_920
+internal const val VIDEO_LIBRARY_SIZE_5002313 = 2_276_872
 private const val VIDEO_LIBRARY_SHA256_5002244 =
     "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12"
+private const val VIDEO_LIBRARY_SHA256_5002313 =
+    "e4d3575a130dc013e4c8fe4fb965217028229f89b13ba821c01b492e457398bb"
 
 private val SRGB8_INSTRUCTION = byteArrayOf(0x69, 0x88.toByte(), 0x91.toByte(), 0x52)
 private val RGB10_A2_INSTRUCTION = byteArrayOf(0x29, 0x0b, 0x90.toByte(), 0x52)
@@ -30,6 +33,32 @@ private val SWAPCHAIN_CONTEXT_AFTER = byteArrayOf(
     0xe8.toByte(), 0x3b, 0x00, 0xb9.toByte(),
 )
 internal val SWAPCHAIN_FORMAT_OFFSETS_5002244 = intArrayOf(0x10826c, 0x1082dc, 0x10834c)
+internal val SWAPCHAIN_FORMAT_OFFSETS_5002313 = intArrayOf(0x10b2d4, 0x10b344, 0x10b3b4)
+
+private data class VideoLibraryLayout(
+    val versionCode: Int,
+    val fileSize: Int,
+    val stockSha256: String,
+    val swapchainFormatOffsets: IntArray,
+)
+
+private val VIDEO_LIBRARY_LAYOUTS = listOf(
+    VideoLibraryLayout(
+        5002244,
+        VIDEO_LIBRARY_SIZE_5002244,
+        VIDEO_LIBRARY_SHA256_5002244,
+        SWAPCHAIN_FORMAT_OFFSETS_5002244,
+    ),
+    VideoLibraryLayout(
+        5002313,
+        VIDEO_LIBRARY_SIZE_5002313,
+        VIDEO_LIBRARY_SHA256_5002313,
+        SWAPCHAIN_FORMAT_OFFSETS_5002313,
+    ),
+)
+
+internal fun isSupportedVideoLibrarySize(size: Int): Boolean =
+    VIDEO_LIBRARY_LAYOUTS.any { it.fileSize == size }
 
 internal enum class VideoOutputPrecision(val optionValue: String) {
     SRGB8_HIGHP("srgb8-highp"),
@@ -145,15 +174,18 @@ internal fun setProjectionSwapchainFormat(
     bytes: ByteArray,
     outputPrecision: VideoOutputPrecision,
 ): ByteArray {
-    if (bytes.size != VIDEO_LIBRARY_SIZE_5002244) {
+    val layout = VIDEO_LIBRARY_LAYOUTS.singleOrNull { it.fileSize == bytes.size }
+    if (layout == null) {
+        val supported = VIDEO_LIBRARY_LAYOUTS.joinToString { candidate ->
+            "${candidate.versionCode} size=${candidate.fileSize} stockSha256=${candidate.stockSha256}"
+        }
         throw PatchException(
             "Unsupported libvrlink_scene.so size=${bytes.size}, sha256=${bytes.sha256()}; " +
-                "RGB output precision is guarded to 5002244 size=$VIDEO_LIBRARY_SIZE_5002244 " +
-                "stockSha256=$VIDEO_LIBRARY_SHA256_5002244",
+                "RGB output precision supports $supported",
         )
     }
 
-    val states = SWAPCHAIN_FORMAT_OFFSETS_5002244.map { offset ->
+    val states = layout.swapchainFormatOffsets.map { offset ->
         if (!bytes.matchesAt(offset - SWAPCHAIN_CONTEXT_BEFORE.size, SWAPCHAIN_CONTEXT_BEFORE) ||
             !bytes.matchesAt(offset + SRGB8_INSTRUCTION.size, SWAPCHAIN_CONTEXT_AFTER)
         ) {
@@ -178,14 +210,14 @@ internal fun setProjectionSwapchainFormat(
         VideoOutputPrecision.RGB10_A2_EXPERIMENTAL -> RGB10_A2_INSTRUCTION
     }
     return bytes.copyOf().apply {
-        SWAPCHAIN_FORMAT_OFFSETS_5002244.forEach { replacement.copyInto(this, it) }
+        layout.swapchainFormatOffsets.forEach { replacement.copyInto(this, it) }
     }
 }
 
 @Suppress("unused")
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
-    description = "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link 5002244.",
+    description = "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244 and 5002313.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_STEAM_LINK)
@@ -240,7 +272,7 @@ val oledCalibrationPatch = rawResourcePatch(
         val bytes = file.readBytes()
         // Shader and swapchain edits are coupled. On an unrecognized native layout, skip both
         // rather than aborting the complete APK experiment or writing fixed offsets blindly.
-        if (bytes.size != VIDEO_LIBRARY_SIZE_5002244) return@execute
+        if (!isSupportedVideoLibrarySize(bytes.size)) return@execute
         val shaderPos = findVideoShader(bytes)
         val (selectedGamma, selectedSaturation) = when (profile) {
             "initial" -> 1.06f to 1.12f

@@ -5,6 +5,7 @@ import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import app.template.patches.steamlink.binary.disablePermissionPromptNativePatch
+import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
 import java.io.File
@@ -21,6 +22,36 @@ private fun loadResource(name: String): ByteArray =
 /** Iterate a [NodeList] as a [Sequence]. */
 private fun NodeList.asSequence(): Sequence<org.w3c.dom.Node> = sequence {
     for (i in 0 until length) yield(item(i))
+}
+
+internal fun upsertManifestFeature(
+    doc: Document,
+    manifest: Element,
+    app: Element,
+    name: String,
+    required: Boolean,
+    version: String?,
+) {
+    val matches = doc.getElementsByTagName("uses-feature").asSequence()
+        .filterIsInstance<Element>()
+        .filter { it.getAttribute("android:name") == name }
+        .toList()
+    val feature = matches.firstOrNull() ?: doc.createElement("uses-feature").also {
+        it.setAttribute("android:name", name)
+        manifest.insertBefore(it, app)
+    }
+    feature.setAttribute("android:required", required.toString())
+    version?.let { feature.setAttribute("android:version", it) }
+        ?: feature.removeAttribute("android:version")
+    matches.drop(1).forEach { duplicate -> duplicate.parentNode.removeChild(duplicate) }
+}
+
+internal fun removeDirectApplicationProperty(app: Element, name: String) {
+    app.childNodes.asSequence()
+        .filterIsInstance<Element>()
+        .filter { it.tagName == "property" && it.getAttribute("android:name") == name }
+        .toList()
+        .forEach { app.removeChild(it) }
 }
 
 // ---------------------------------------------------------------------------
@@ -205,13 +236,7 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                 FeatureDef("android.hardware.xr.input.eye_tracking", false),
             )
             for (f in newFeatures) {
-                if (!exists("uses-feature", f.name)) {
-                    val el = doc.createElement("uses-feature")
-                    el.setAttribute("android:name", f.name)
-                    el.setAttribute("android:required", f.required.toString())
-                    f.version?.let { el.setAttribute("android:version", it) }
-                    addBeforeApp(el)
-                }
+                upsertManifestFeature(doc, manifest, app, f.name, f.required, f.version)
             }
 
             val existingQueries = manifest.getElementsByTagName("queries")
@@ -292,6 +317,11 @@ val xrLauncherBootstrapPatch = resourcePatch(
     finalize {
         document("AndroidManifest.xml").use { doc ->
             val app = doc.documentElement.getElementsByTagName("application").item(0) as Element
+            val xrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
+
+            // Build 5002313 declares this at application scope. Remove only the direct
+            // application child so the activity-specific managed/unmanaged modes below win.
+            removeDirectApplicationProperty(app, xrStartMode)
 
             val gxrActivityName = "com.valvesoftware.steamlink.GalaxyXRPermissionActivity"
             val hasGxrActivity = app.getElementsByTagName("activity").let { al ->
@@ -330,13 +360,15 @@ val xrLauncherBootstrapPatch = resourcePatch(
                 .filterIsInstance<Element>()
                 .firstOrNull { it.getAttribute("android:name") == vrLinkName }
                 ?.let { vrLink ->
-                    val xrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
-                    val hasMode = vrLink.getElementsByTagName("property").let { pl ->
-                        (0 until pl.length).any {
-                            (pl.item(it) as Element).getAttribute("android:name") == xrStartMode
-                        }
-                    }
-                    if (!hasMode) {
+                    val existingMode = vrLink.getElementsByTagName("property").asSequence()
+                        .filterIsInstance<Element>()
+                        .firstOrNull { it.getAttribute("android:name") == xrStartMode }
+                    if (existingMode != null) {
+                        existingMode.setAttribute(
+                            "android:value",
+                            "XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED",
+                        )
+                    } else {
                         val prop = doc.createElement("property")
                         prop.setAttribute("android:name", xrStartMode)
                         // XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED: VRLink owns the full XR frame, no spatial OS chrome
@@ -386,15 +418,14 @@ val xrLauncherBootstrapPatch = resourcePatch(
                         .toList()
                         .forEach { steamLink.removeChild(it) }
 
-                    val steamXrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
                     val existingSteamStartMode = steamLink.getElementsByTagName("property").asSequence()
                         .filterIsInstance<Element>()
-                        .firstOrNull { it.getAttribute("android:name") == steamXrStartMode }
+                        .firstOrNull { it.getAttribute("android:name") == xrStartMode }
                     if (existingSteamStartMode != null) {
                         existingSteamStartMode.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
                     } else {
                         val steamModeProp = doc.createElement("property")
-                        steamModeProp.setAttribute("android:name", steamXrStartMode)
+                        steamModeProp.setAttribute("android:name", xrStartMode)
                         // Keep SteamLink picker in managed full-space panel mode.
                         steamModeProp.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_MANAGED")
                         steamLink.insertBefore(steamModeProp, steamLink.firstChild)

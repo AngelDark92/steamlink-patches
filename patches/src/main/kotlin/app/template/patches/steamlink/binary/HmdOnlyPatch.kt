@@ -81,6 +81,19 @@ private val HMD_LAYOUTS = listOf(
             VelocityPatch(0x000FED6CL, 48),
         ),
     ),
+    HmdLayout(
+        versionCode = 5002313,
+        fileSize = 2_276_872,
+        hookVaddr = 0x00100B8CL,
+        velocityPatches = listOf(
+            VelocityPatch(0x00100E00L, 28),
+            VelocityPatch(0x00100E04L, 32),
+            VelocityPatch(0x00100E08L, 36),
+            VelocityPatch(0x00100E14L, 40),
+            VelocityPatch(0x00100E18L, 44),
+            VelocityPatch(0x00100E24L, 48),
+        ),
+    ),
 )
 
 private val NOP = byteArrayOf(0x1f, 0x20, 0x03, 0xd5.toByte())

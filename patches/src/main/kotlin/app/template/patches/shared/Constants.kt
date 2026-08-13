@@ -16,6 +16,7 @@ object Constants {
             AppTarget(version = "2.0.22"),
             AppTarget(
                 version = null,
+                versionCodes = null,
                 isExperimental = true,
                 description = "Unlisted Steam Link versions are experimental and may not patch safely.",
             ),
@@ -31,6 +32,7 @@ object Constants {
             AppTarget(version = "2.0.22"),
             AppTarget(
                 version = null,
+                versionCodes = null,
                 isExperimental = true,
                 description = "Unlisted Steam Link versions are experimental and may not patch safely.",
             ),
@@ -45,10 +47,12 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = "2.0.22",
-                description = "HMD-only pose fix layouts verified for versionCodes 5001712, 5002172, 5002206, and 5002244.",
+                versionCodes = null,
+                description = "HMD-only pose fix layouts verified for versionCodes 5001712, 5002172, 5002206, 5002244, and 5002313.",
             ),
             AppTarget(
                 version = null,
+                versionCodes = null,
                 isExperimental = true,
                 description = "Unlisted Steam Link versions are experimental and may not patch safely.",
             ),
