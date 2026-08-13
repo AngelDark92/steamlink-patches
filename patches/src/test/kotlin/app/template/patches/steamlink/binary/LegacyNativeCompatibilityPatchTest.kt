@@ -50,6 +50,81 @@ class LegacyNativeCompatibilityPatchTest {
     }
 
     @Test
+    fun `permission targets support both verified layouts`() {
+        val layouts = listOf(
+            Triple(2_251_920, 0x93952, 0x9C10E),
+            Triple(2_276_872, 0x94B4F, 0x9D861),
+        )
+
+        layouts.forEach { (size, faceTarget, eyeTarget) ->
+            val input = ByteArray(size).apply {
+                faceOriginal.copyInto(this, faceTarget)
+                eyeOriginal.copyInto(this, eyeTarget)
+            }
+
+            val patched = patchNativePermissionNames(input)
+
+            assertContentEquals(facePatched, patched.copyOfRange(faceTarget, faceTarget + facePatched.size))
+            assertContentEquals(eyePatched, patched.copyOfRange(eyeTarget, eyeTarget + eyePatched.size))
+            assertContentEquals(patched, patchNativePermissionNames(patched))
+        }
+    }
+
+    @Test
+    fun `5002313 permission targets tolerate stock eye replacement collision`() {
+        val faceTarget = 0x94B4F
+        val eyeTarget = 0x9D861
+        val stockEyeReplacement = 0x9CCC6
+        val input = ByteArray(2_276_872).apply {
+            faceOriginal.copyInto(this, faceTarget)
+            eyeOriginal.copyInto(this, eyeTarget)
+            eyePatched.copyInto(this, stockEyeReplacement)
+        }
+
+        val patched = patchNativePermissionNames(input)
+
+        assertContentEquals(facePatched, patched.copyOfRange(faceTarget, faceTarget + facePatched.size))
+        assertContentEquals(eyePatched, patched.copyOfRange(eyeTarget, eyeTarget + eyePatched.size))
+        assertContentEquals(
+            eyePatched,
+            patched.copyOfRange(stockEyeReplacement, stockEyeReplacement + eyePatched.size),
+        )
+        assertContentEquals(patched, patchNativePermissionNames(patched))
+    }
+
+    @Test
+    fun `5002313 mixed permission target state completes remaining edit`() {
+        val faceTarget = 0x94B4F
+        val eyeTarget = 0x9D861
+        val input = ByteArray(2_276_872).apply {
+            facePatched.copyInto(this, faceTarget)
+            eyeOriginal.copyInto(this, eyeTarget)
+            eyePatched.copyInto(this, 0x9CCC6)
+        }
+
+        val patched = patchNativePermissionNames(input)
+
+        assertContentEquals(facePatched, patched.copyOfRange(faceTarget, faceTarget + facePatched.size))
+        assertContentEquals(eyePatched, patched.copyOfRange(eyeTarget, eyeTarget + eyePatched.size))
+    }
+
+    @Test
+    fun `5002313 invalid permission target remains strict and atomic`() {
+        val faceTarget = 0x94B4F
+        val eyeTarget = 0x9D861
+        val input = ByteArray(2_276_872).apply {
+            faceOriginal.copyInto(this, faceTarget)
+            eyeOriginal.copyInto(this, eyeTarget)
+            this[eyeTarget] = 0x55
+        }
+
+        assertFailsWith<PatchException> {
+            patchNativePermissionNames(input)
+        }
+        assertContentEquals(faceOriginal, input.copyOfRange(faceTarget, faceTarget + faceOriginal.size))
+    }
+
+    @Test
     fun `fixed HMD and lobby gates support both verified layouts`() {
         val layouts = listOf(
             FixedLayout(

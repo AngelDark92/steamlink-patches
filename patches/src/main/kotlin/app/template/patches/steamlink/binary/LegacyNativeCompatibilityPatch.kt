@@ -79,15 +79,41 @@ private fun applyNativeEdits(
 private data class NativeLayoutEdits(
     val versionCode: Int,
     val fileSize: Int,
+    val permissionNames: List<NativeEdit>,
     val hmdInitialization: List<NativeEdit>,
     val lobbyPermissionState: List<NativeEdit>,
     val streamInitialization: List<NativeEdit>,
+)
+
+private val facePermissionOriginal =
+    ascii("com.oculus.permission.FACE_TRACKING") + byteArrayOf(0)
+private val facePermissionReplacement =
+    paddedAscii("android.permission.HAND_TRACKING", 36)
+private val eyePermissionOriginal =
+    ascii("com.oculus.permission.EYE_TRACKING") + byteArrayOf(0, 0x7d, 0)
+private val eyePermissionReplacement =
+    ascii("android.permission.EYE_TRACKING_FINE") + byteArrayOf(0)
+
+private fun permissionNameEdits(faceOffset: Int, eyeOffset: Int, locateByPattern: Boolean) = listOf(
+    NativeEdit(
+        offset = faceOffset,
+        original = facePermissionOriginal,
+        replacement = facePermissionReplacement,
+        locateByPattern = locateByPattern,
+    ),
+    NativeEdit(
+        offset = eyeOffset,
+        original = eyePermissionOriginal,
+        replacement = eyePermissionReplacement,
+        locateByPattern = locateByPattern,
+    ),
 )
 
 private val NATIVE_LAYOUTS = listOf(
     NativeLayoutEdits(
         versionCode = 5002244,
         fileSize = 2_251_920,
+        permissionNames = permissionNameEdits(0x93952, 0x9C10E, locateByPattern = false),
         hmdInitialization = listOf(
             NativeEdit(0xFD040, byteArrayOf(0xe0.toByte(), 0x00, 0x00, 0x36), NOP),
             NativeEdit(0xFD048, byteArrayOf(0xa8.toByte(), 0x00, 0x00, 0x34), NOP),
@@ -104,6 +130,7 @@ private val NATIVE_LAYOUTS = listOf(
     NativeLayoutEdits(
         versionCode = 5002313,
         fileSize = 2_276_872,
+        permissionNames = permissionNameEdits(0x94B4F, 0x9D861, locateByPattern = false),
         hmdInitialization = listOf(
             NativeEdit(0xFF010, byteArrayOf(0x20, 0x01, 0x00, 0x36), NOP),
             NativeEdit(0xFF018, byteArrayOf(0xe8.toByte(), 0x00, 0x00, 0x34), NOP),
@@ -149,28 +176,20 @@ private fun ByteArray.findPatternOffsets(pattern: ByteArray): List<Int> {
     }
 }
 
-private val permissionNameEdits = listOf(
-    NativeEdit(
-        offset = 0x93952,
-        original = ascii("com.oculus.permission.FACE_TRACKING") + byteArrayOf(0),
-        replacement = paddedAscii("android.permission.HAND_TRACKING", 36),
-        locateByPattern = true,
-    ),
-    NativeEdit(
-        offset = 0x9C10E,
-        original = ascii("com.oculus.permission.EYE_TRACKING") + byteArrayOf(0, 0x7d, 0),
-        replacement = ascii("android.permission.EYE_TRACKING_FINE") + byteArrayOf(0),
-        locateByPattern = true,
-    ),
-)
+private val relocatablePermissionNameEdits =
+    permissionNameEdits(0, 0, locateByPattern = true)
 
-internal fun patchNativePermissionNames(bytes: ByteArray): ByteArray =
-    applyNativeEdits(
+internal fun patchNativePermissionNames(bytes: ByteArray): ByteArray {
+    val layout = NATIVE_LAYOUTS.singleOrNull { it.fileSize == bytes.size }
+    return applyNativeEdits(
         bytes,
-        "Android XR native permission names",
-        permissionNameEdits,
-        strictLayout = NATIVE_LAYOUTS.any { it.fileSize == bytes.size },
+        layout?.let {
+            "Android XR native permission names (versionCode ${it.versionCode})"
+        } ?: "Android XR native permission names",
+        layout?.permissionNames ?: relocatablePermissionNameEdits,
+        strictLayout = layout != null,
     )
+}
 
 internal fun patchHmdInitializationGates(bytes: ByteArray): ByteArray =
     applyLayoutNativeEdits(bytes, "Force HMD initialization gates") { it.hmdInitialization }
