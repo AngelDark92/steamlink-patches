@@ -37,7 +37,9 @@ class PatchCompatibilityMatrixTest {
         }
         excluded5002318.forEach { patch ->
             assertFalse(patch.supports(5002318), patch.name)
-            assertFalse(patch.default, "${patch.name} must not be recommended by versionName-only Managers")
+        }
+        legacyRecommended.forEach { patch ->
+            assertTrue(patch.default, "${patch.name} must remain recommended on its older compatible builds")
         }
     }
 
@@ -108,6 +110,11 @@ class PatchCompatibilityMatrixTest {
             xrManifestCapabilityPackPatch,
             xrLauncherBootstrapPatch,
             xrInputRoutingConfigPatch,
+        )
+
+        val legacyRecommended = excluded5002318 - listOf(
+            changePackageNamePatch,
+            controllerVelocityPatch,
         )
     }
 }

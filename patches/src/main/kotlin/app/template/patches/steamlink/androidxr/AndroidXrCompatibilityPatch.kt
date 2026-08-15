@@ -99,7 +99,7 @@ private val androidXrLibPatch = rawResourcePatch {
 val xrCoreRuntimePatch = bytecodePatch(
     name = "XR Core Runtime",
     description = "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(androidXrLibPatch, androidXrUiExtensionPatch, xrDirectInputFixPatch)
@@ -109,7 +109,7 @@ val xrCoreRuntimePatch = bytecodePatch(
 val xrDeviceConfigBaselinePatch = rawResourcePatch(
     name = "XR Device Config Baseline",
     description = "Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
@@ -132,7 +132,7 @@ val xrDeviceConfigBaselinePatch = rawResourcePatch(
 val xrManifestCapabilityPackPatch = resourcePatch(
     name = "XR Manifest Capability Pack",
     description = "Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
@@ -391,7 +391,7 @@ internal val xrPermissionSettingsBootstrapPatch = resourcePatch {
 val xrLauncherBootstrapPatch = resourcePatch(
     name = "XR Launcher Bootstrap (Home Space)",
     description = "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     // Keep the legacy launcher self-contained: its manifest activity needs the helper-only DEX,
@@ -544,7 +544,7 @@ val xrLauncherBootstrapPatch = resourcePatch(
 val xrInputRoutingConfigPatch = rawResourcePatch(
     name = "XR Input Routing Config",
     description = "Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrLauncherBootstrapPatch)

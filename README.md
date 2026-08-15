@@ -8,7 +8,7 @@ Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. Th
 
 Target APK: `com.valvesoftware.steamlinkvr` v2.0.22. Exact supported versionCodes are 5001712, 5002172, 5002206, 5002244, 5002313, and 5002318. Build 5002318 exposes only Device identity, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches.
 
-Use Morphe Manager 1.22 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Legacy-only patches are disabled by default, so older Managers no longer recommend them for build 5002318; they remain selectable on older APKs, and supported patches still install their historical legacy dependencies automatically there.
+Use Morphe Manager 1.22 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Legacy patches remain recommended for their older exact build targets and are excluded from 5002318 by versionCode; Manager 1.7 cannot represent that distinction.
 
 To download it:
 1. Open steam console `steam://open/console`
