@@ -1,3 +1,9 @@
+## [1.10.0-dev.12](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.11...v1.10.0-dev.12) (2026-08-15)
+
+### 🐛 Bug Fixes
+
+* patches are now still default true for older builds ([1bb0e36](https://github.com/AngelDark92/steamlink-patches/commit/1bb0e368cbcbf4b437ffb32d40465bb2a44e9681))
+
 ## [1.10.0-dev.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.10...v1.10.0-dev.11) (2026-08-15)
 
 ### 🐛 Bug Fixes
