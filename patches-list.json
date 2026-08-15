@@ -6,7 +6,7 @@
     {
       "name": "Android XR native permission names",
       "description": "Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR.",
-      "default": true,
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -127,6 +127,7 @@
       "description": "Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
       "default": true,
       "dependencies": [
+        "ResourcePatch",
         "ResourcePatch",
         "ResourcePatch"
       ],
@@ -570,7 +571,7 @@
     },
     {
       "name": "Device identity",
-      "description": "Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched.",
+      "description": "Overrides the HMD identity reported to SteamVR. Build 5002318 changes only the model so its stock controller/hand profiles and OpenXR extensions remain intact.",
       "default": true,
       "dependencies": [
         "RawResourcePatch"
@@ -713,7 +714,7 @@
         {
           "key": "profile",
           "title": "HMD identity",
-          "description": "assets/config/hmd_config.json: overwrites sSerialNumber, sManufacturerName, sModelNumber, sControllerType, sDeviceType, sInputProfilePath, requestedExtensions.",
+          "description": "5002318: changes only sModelNumber. Legacy builds retain their full verified identity payload.",
           "required": true,
           "type": "kotlin.String",
           "default": "meta-quest-pro",
@@ -728,7 +729,7 @@
     {
       "name": "Force HMD initialization gates",
       "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313.",
-      "default": true,
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -847,7 +848,7 @@
     {
       "name": "Force lobby permission-state gate",
       "description": "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313.",
-      "default": true,
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -966,7 +967,7 @@
     {
       "name": "Force stream XR gates",
       "description": "Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
-      "default": true,
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -1228,7 +1229,7 @@
     {
       "name": "Microphone input preset",
       "description": "Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication.",
-      "default": true,
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
@@ -1555,6 +1556,7 @@
       "description": "Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
       "default": true,
       "dependencies": [
+        "ResourcePatch",
         "ResourcePatch",
         "ResourcePatch"
       ],
@@ -2001,7 +2003,7 @@
     {
       "name": "XR Core Runtime",
       "description": "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
-      "default": true,
+      "default": false,
       "dependencies": [
         "RawResourcePatch",
         "BytecodePatch",
@@ -2124,7 +2126,7 @@
     {
       "name": "XR Device Config Baseline",
       "description": "Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets.",
-      "default": true,
+      "default": false,
       "dependencies": [
         "BytecodePatch"
       ],
@@ -2245,7 +2247,7 @@
     {
       "name": "XR Input Routing Config",
       "description": "Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows.",
-      "default": true,
+      "default": false,
       "dependencies": [
         "ResourcePatch"
       ],
@@ -2366,9 +2368,11 @@
     {
       "name": "XR Launcher Bootstrap (Home Space)",
       "description": "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
-      "default": true,
+      "default": false,
       "dependencies": [
-        "ResourcePatch"
+        "ResourcePatch",
+        "BytecodePatch",
+        "BytecodePatch"
       ],
       "compatiblePackages": [
         {
@@ -2487,7 +2491,7 @@
     {
       "name": "XR Manifest Capability Pack",
       "description": "Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties.",
-      "default": true,
+      "default": false,
       "dependencies": [
         "BytecodePatch"
       ],
@@ -2611,7 +2615,7 @@
       "default": false,
       "dependencies": [
         "ResourcePatch",
-        "BytecodePatch",
+        "ResourcePatch",
         "RawResourcePatch"
       ],
       "compatiblePackages": [
@@ -2756,7 +2760,7 @@
       "default": false,
       "dependencies": [
         "ResourcePatch",
-        "BytecodePatch",
+        "ResourcePatch",
         "RawResourcePatch"
       ],
       "compatiblePackages": [
@@ -2901,7 +2905,7 @@
       "default": false,
       "dependencies": [
         "ResourcePatch",
-        "BytecodePatch",
+        "ResourcePatch",
         "RawResourcePatch"
       ],
       "compatiblePackages": [

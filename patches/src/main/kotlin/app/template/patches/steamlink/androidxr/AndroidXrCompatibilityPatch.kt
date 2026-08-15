@@ -62,6 +62,10 @@ private val androidXrLibPatch = rawResourcePatch {
     dependsOn(disablePermissionPromptNativePatch)
 
     execute {
+        // Build 5002318 owns a complete native Android XR path. Preserve its native permission
+        // routine, runtime loaders, and hand/controller config instead of installing the legacy bridge.
+        if (packageMetadata.versionCode == "5002318") return@execute
+
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         // OpenXR runtime bridge native library for Galaxy XR platform integration
         File(libDir, "libgxr_xr_bridge.so").writeBytes(loadResource("libgxr_xr_bridge.so"))
@@ -95,7 +99,7 @@ private val androidXrLibPatch = rawResourcePatch {
 val xrCoreRuntimePatch = bytecodePatch(
     name = "XR Core Runtime",
     description = "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(androidXrLibPatch, androidXrUiExtensionPatch, xrDirectInputFixPatch)
@@ -105,12 +109,16 @@ val xrCoreRuntimePatch = bytecodePatch(
 val xrDeviceConfigBaselinePatch = rawResourcePatch(
     name = "XR Device Config Baseline",
     description = "Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
 
     execute {
+        // 5002318 stock requests XR_EXT_hand_interaction and defines hand grip/aim poses.
+        // The legacy controller_config.json has neither, so replacing it disables native hands.
+        if (packageMetadata.versionCode == "5002318") return@execute
+
         get("assets/config/hmd_config.json").writeBytes(loadResource("hmd_config.json"))
         get("assets/config/controller_config.json").writeBytes(loadResource("controller_config.json"))
         // assets/config/default_config.json — preflight.ignore_microphone_muted=false
@@ -124,13 +132,17 @@ val xrDeviceConfigBaselinePatch = rawResourcePatch(
 val xrManifestCapabilityPackPatch = resourcePatch(
     name = "XR Manifest Capability Pack",
     description = "Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
 
     finalize {
         document("AndroidManifest.xml").use { doc ->
+            // Preserve 5002318's native target SDK, vendor declarations, required hand feature,
+            // loader selection, and permission flow. This pack exists for legacy builds only.
+            if (packageMetadata.versionCode == "5002318") return@use
+
             val manifest = doc.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element
 
@@ -305,17 +317,98 @@ val xrManifestCapabilityPackPatch = resourcePatch(
     }
 }
 
+/**
+ * Minimal permission/settings launcher used by patches that remain valid on build 5002318.
+ *
+ * This deliberately does not depend on XR Core/Manifest/Device Config and does not add a
+ * FULL_SPACE_UNMANAGED override. Valve's stock 5002318 manifest, permission routine, controller
+ * config, and XR_EXT_hand_interaction routing must remain authoritative.
+ */
+internal val xrPermissionSettingsBootstrapPatch = resourcePatch {
+    dependsOn(androidXrMinimalUiExtensionPatch, xrResolutionProbePatch)
+
+    finalize {
+        document("AndroidManifest.xml").use { doc ->
+            val app = doc.documentElement.getElementsByTagName("application").item(0) as Element
+            val gxrActivityName = "com.valvesoftware.steamlink.GalaxyXRPermissionActivity"
+            val hasGxrActivity = app.getElementsByTagName("activity").asSequence()
+                .filterIsInstance<Element>()
+                .any { it.getAttribute("android:name") == gxrActivityName }
+
+            if (!hasGxrActivity) {
+                val activity = doc.createElement("activity")
+                activity.setAttribute("android:name", gxrActivityName)
+                activity.setAttribute("android:exported", "true")
+                activity.setAttribute("android:screenOrientation", "landscape")
+                activity.setAttribute("android:theme", "@android:style/Theme.Black.NoTitleBar.Fullscreen")
+
+                val filter = doc.createElement("intent-filter")
+                doc.createElement("action").also {
+                    it.setAttribute("android:name", "android.intent.action.MAIN")
+                    filter.appendChild(it)
+                }
+                doc.createElement("category").also {
+                    it.setAttribute("android:name", "android.intent.category.LAUNCHER")
+                    filter.appendChild(it)
+                }
+                activity.appendChild(filter)
+
+                doc.createElement("layout").also {
+                    it.setAttribute("android:defaultWidth", "1280.0px")
+                    it.setAttribute("android:defaultHeight", "800.0px")
+                    activity.appendChild(it)
+                }
+
+                app.insertBefore(activity, app.getElementsByTagName("activity").item(0))
+            }
+
+            // Route launcher starts through the permission/settings activity without changing
+            // Valve's 5002318 VRLink XR start mode or SteamLink panel dimensions.
+            app.getElementsByTagName("activity").asSequence()
+                .filterIsInstance<Element>()
+                .firstOrNull {
+                    it.getAttribute("android:name") == "com.valvesoftware.steamlink.SteamLink"
+                }
+                ?.let { steamLink ->
+                    steamLink.getElementsByTagName("intent-filter").asSequence()
+                        .filterIsInstance<Element>()
+                        .filter { filter ->
+                            filter.getElementsByTagName("category").asSequence()
+                                .filterIsInstance<Element>()
+                                .any {
+                                    it.getAttribute("android:name") ==
+                                        "android.intent.category.LAUNCHER"
+                                }
+                        }
+                        .toList()
+                        .forEach { steamLink.removeChild(it) }
+                }
+        }
+    }
+}
+
 @Suppress("unused")
 val xrLauncherBootstrapPatch = resourcePatch(
     name = "XR Launcher Bootstrap (Home Space)",
     description = "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
-    dependsOn(xrManifestCapabilityPackPatch)
+    // Keep the legacy launcher self-contained: its manifest activity needs the helper-only DEX,
+    // and the lifecycle probe supplies the historical overlay activation hook. These same
+    // dependencies are deduplicated when a supported patch also uses the minimal bootstrap.
+    dependsOn(
+        xrManifestCapabilityPackPatch,
+        androidXrMinimalUiExtensionPatch,
+        xrResolutionProbePatch,
+    )
 
     finalize {
         document("AndroidManifest.xml").use { doc ->
+            // Current Managers exclude this patch for 5002318. Manager 1.7 cannot distinguish
+            // build codes sharing versionName 2.0.22, so also make accidental execution harmless.
+            if (packageMetadata.versionCode == "5002318") return@use
+
             val app = doc.documentElement.getElementsByTagName("application").item(0) as Element
             val xrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
 
@@ -451,12 +544,13 @@ val xrLauncherBootstrapPatch = resourcePatch(
 val xrInputRoutingConfigPatch = rawResourcePatch(
     name = "XR Input Routing Config",
     description = "Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrLauncherBootstrapPatch)
 
     execute {
+        if (packageMetadata.versionCode == "5002318") return@execute
         get("assets/config/ui_config.json").writeBytes(loadResource("ui_config.json"))
     }
 }

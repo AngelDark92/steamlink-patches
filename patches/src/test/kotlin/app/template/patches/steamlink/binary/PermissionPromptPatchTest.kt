@@ -20,7 +20,6 @@ class PermissionPromptPatchTest {
         listOf(
             Triple(2_251_920, 0x1422c4, 5002244),
             Triple(2_276_872, 0x1472a8, 5002313),
-            Triple(2_277_488, 0x147418, 5002318),
         ).forEach { (size, offset, versionCode) ->
             val input = ByteArray(size).apply { original.copyInto(this, offset) }
             val patched = patchPermissionPrompt(input)
@@ -36,9 +35,17 @@ class PermissionPromptPatchTest {
 
     @Test
     fun `verified permission prompt layouts reject changed prologue`() {
-        listOf(2_251_920, 2_276_872, 2_277_488).forEach { size ->
+        listOf(2_251_920, 2_276_872).forEach { size ->
             assertFailsWith<PatchException> { patchPermissionPrompt(ByteArray(size)) }
         }
+    }
+
+    @Test
+    fun `5002318 native permission request remains untouched`() {
+        val offset = 0x147418
+        val input = ByteArray(2_277_488).apply { original.copyInto(this, offset) }
+
+        assertContentEquals(input, patchPermissionPrompt(input))
     }
 
     @Test

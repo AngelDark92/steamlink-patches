@@ -2,9 +2,15 @@ package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.bytecodePatch
 
-// Merges extension.mpe DEX into the base APK. New classes added:
-// GalaxyXRPermissionActivity, GxrOverlayBridge, GxrSdlBridge, GxrSurfaceCallback.
-// Existing classes extended (new methods/fields merged): SDLSurface, SDLControllerManager, SDLGenericMotionListener_API14.
+// Helper-only extension. Morphe does not compatibility-filter transitive dependencies, so this
+// must never contain fragments for Valve's existing SDL/controller classes. The helpers are inert
+// on 5002318; build-aware Kotlin patches install their call sites only on legacy builds.
 internal val androidXrUiExtensionPatch = bytecodePatch {
     extendWith("extensions/extension.mpe")
+}
+
+// New helper classes only. Unlike extension.mpe this contains no SDLSurface,
+// SDLControllerManager, or SDLGenericMotionListener_API14 fragments.
+internal val androidXrMinimalUiExtensionPatch = bytecodePatch {
+    extendWith("extensions/minimal-extension.mpe")
 }

@@ -5,16 +5,22 @@ Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
 Steam Link 2.0.22 build 5002318 exposes only Device identity, OLED color calibration,
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
-and the three experimental XR projection patches. XR Core/manifest/launcher patches remain
-internal dependencies where an allowed patch requires their implementation, but are not
-independently compatible with 5002318.
+and the three experimental XR projection patches. Their shared legacy dependency chain branches
+on versionCode: older builds retain the historical provisioning, while every legacy mutation is a
+no-op on 5002318 so Valve's native hand/controller routing stays intact.
+
+Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
+filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
+still display incompatible patches by design. Legacy-only patches are disabled by default so
+versionName-only Managers do not recommend them for 5002318; they remain selectable and
+compatible with older verified builds.
 
 ---
 
 ## androidxr group
 
 ### XR Core Runtime (`xrCoreRuntimePatch`)
-**Default: enabled**
+**Default: disabled** (legacy builds)
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_xr_bridge.so` | New file (Galaxy XR OpenXR runtime bridge) |
@@ -22,17 +28,17 @@ independently compatible with 5002318.
 | `res/drawable-anydpi/ic_launcher_background_gradient.xml` | New file (resource ID 0x7f010000) |
 | `res/values/public.xml` | Full replace (stable IDs: ic_launcher_background_gradient=0x7f010000, ic_launcher=0x7f010001/0x7f030000) |
 | `res/values/ids.xml` | Create if missing (empty `<resources/>`) |
-| Extension DEX (base APK) | Merges `extension.mpe`: adds `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, `GxrSdlBridge`, `GxrSurfaceCallback`; extends `SDLSurface`, `SDLControllerManager`, `SDLGenericMotionListener_API14` |
+| Extension DEX (base APK) | Merges helper-only `extension.mpe`, which defines `GxrSdlBridge`; existing SDL/controller classes are edited only by the legacy build-aware bytecode step |
 
 Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244), `0x1472a8` (5002313), or `0x147418` (5002318) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; unknown layouts are skipped |
+| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244) or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; 5002318 and unknown layouts are preserved |
 
 ---
 
 ### XR Device Config Baseline (`xrDeviceConfigBaselinePatch`)
-**Default: enabled** — depends on `xrCoreRuntimePatch`
+**Default: disabled** (legacy builds) — depends on `xrCoreRuntimePatch`
 | Artifact | Edit |
 |---|---|
 | `assets/config/hmd_config.json` | Full replace — Galaxy XR HMD identity (sSerialNumber=VRLINKHMDGALAXYXR, sManufacturerName=Samsung, sModelNumber=Galaxy XR, sControllerType=galaxy_xr_hmd, requestedExtensions=[XR_EXT_eye_gaze_interaction]) |
@@ -43,7 +49,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### XR Manifest Capability Pack (`xrManifestCapabilityPackPatch`)
-**Default: enabled** — depends on `xrCoreRuntimePatch`
+**Default: disabled** (legacy builds) — depends on `xrCoreRuntimePatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-sdk@android:minSdkVersion` | Set to `29` |
@@ -64,7 +70,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### XR Launcher Bootstrap (`xrLauncherBootstrapPatch`)
-**Default: enabled** — depends on `xrManifestCapabilityPackPatch`
+**Default: disabled** (legacy builds) — depends on `xrManifestCapabilityPackPatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `application/activity@android:name` | Adds `com.valvesoftware.steamlink.GalaxyXRPermissionActivity` (exported=true, MAIN/LAUNCHER, 1280×800px layout) |
@@ -77,7 +83,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### XR Input Routing Config (`xrInputRoutingConfigPatch`)
-**Default: enabled** — depends on `xrLauncherBootstrapPatch`
+**Default: disabled** (legacy builds) — depends on `xrLauncherBootstrapPatch`
 | Artifact | Edit |
 |---|---|
 | `assets/config/ui_config.json` | Full replace — XR pointer aim/select bindings for touch_controller and hand_interaction_ext; haptic bindings |
@@ -111,15 +117,18 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Appear On Top (`appearOnTopPatch`)
-**Default: enabled** — depends on `xrLauncherBootstrapPatch`
+**Default: enabled** — depends only on the private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
+| `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves stock 5002318 target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config |
+| Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, and `GxrResolutionProbe`; contains no SDL/controller class fragments |
+| `SteamLink` lifecycle methods | Adds the overlay/resolution probe calls without modifying `SDLSurface`, `SDLControllerManager`, or generic-motion routing |
 
 ---
 
 ### Unrestricted Battery Usage (`unrestrictedBatteryUsagePatch`)
-**Default: enabled** — depends on `xrLauncherBootstrapPatch`
+**Default: enabled** — depends only on the private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
@@ -175,7 +184,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 ---
 
 ### Native XR Compatibility Gates
-**Default: enabled**
+**Default: disabled** (legacy builds)
 | Patch | 5002244 target(s) | 5002313 target(s) |
 |---|---|---|
 | Android XR native permission names | Pattern-locates Oculus face/eye strings | Pattern-locates the relocated face/eye strings |
@@ -236,21 +245,23 @@ Static tests validate GLSL structure, fixed size, and binary placement but do no
 ## identity group
 
 ### Device Identity (`deviceIdentityPatch`)
-**Default: enabled** — depends on `xrDeviceConfigBaselinePatch`
-> ⚠️ Overwrites `assets/config/hmd_config.json` written by `xrDeviceConfigBaselinePatch`. Dependency ordering guarantees this runs second.
+**Default: enabled** — retains the legacy XR Core/device-config dependency, whose mutations are guarded off on 5002318
 
 | Artifact | Edit |
 |---|---|
-| `assets/config/hmd_config.json` | Full replace (overrides baseline) with profile-specific file |
+| `assets/config/hmd_config.json` (5002318) | Targeted merge: changes only fallback `unknown.sModelNumber`; all other bytes are preserved |
+| `assets/config/hmd_config.json` (legacy builds) | Retains the previously verified full profile-specific identity payload |
 
-**Fields overwritten:** `sSerialNumber`, `sManufacturerName`, `sModelNumber`, `sControllerType`, `sDeviceType`, `sInputProfilePath`, `requestedExtensions` (all per-profile values under `staticProps.*`)
+This intentionally preserves 5002318's requested extensions and vendor profiles. In particular,
+`controller_config.json` remains byte-identical, retaining `XR_EXT_hand_interaction`,
+`/interaction_profiles/ext/hand_interaction_ext`, and its hand grip/aim poses.
 
 **Option `profile`:**
-| Value | File used |
+| Value | `sModelNumber` |
 |---|---|
-| `samsung-default` | No change (baseline retained) |
-| `meta-quest-pro` | `steamlink/identity/hmd_config_meta_quest_pro.json` |
-| `pico-4-pro` | `steamlink/identity/hmd_config_pico_4_pro.json` |
+| `samsung-default` | No change |
+| `meta-quest-pro` | `Oculus Quest Pro` |
+| `pico-4-pro` | `PICO 4 Pro` |
 
 ---
 

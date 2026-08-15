@@ -50,6 +50,16 @@ class LegacyNativeCompatibilityPatchTest {
     }
 
     @Test
+    fun `5002318 native permission fallback names remain untouched`() {
+        val input = ByteArray(2_277_488).apply {
+            faceOriginal.copyInto(this, 0x94AB5)
+            eyeOriginal.copyInto(this, 0x9D7C7)
+        }
+
+        assertContentEquals(input, patchNativePermissionNames(input))
+    }
+
+    @Test
     fun `permission targets support both verified layouts`() {
         val layouts = listOf(
             Triple(2_251_920, 0x93952, 0x9C10E),

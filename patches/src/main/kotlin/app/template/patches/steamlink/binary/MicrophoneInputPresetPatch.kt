@@ -43,7 +43,7 @@ private fun ByteArray.matchesAt(offset: Int, pattern: ByteArray): Boolean =
 val microphoneInputPresetPatch = rawResourcePatch(
     name = "Microphone input preset",
     description = "Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
@@ -62,9 +62,13 @@ val microphoneInputPresetPatch = rawResourcePatch(
     )
 
     execute {
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        // 5002318 is intentionally outside this legacy patch's supported set. Manager 1.7 cannot
+        // filter same-version build codes, so preserve Valve's stock microphone path if selected.
+        if (packageMetadata.versionCode == "5002318") return@execute
+
         val selected = SUPPORTED_PRESETS[preset]
             ?: throw PatchException("Unknown microphone input preset: $preset")
-        val file = get("lib/arm64-v8a/libvrlink_scene.so")
         val bytes = file.readBytes()
         val matches = mutableListOf<Int>()
 

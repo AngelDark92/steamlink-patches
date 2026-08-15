@@ -2,9 +2,11 @@ package app.template.patches.steamlink
 
 import app.morphe.patcher.patch.Patch
 import app.template.patches.steamlink.androidxr.appearOnTopPatch
+import app.template.patches.steamlink.androidxr.androidXrUiExtensionPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityPatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
 import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
+import app.template.patches.steamlink.androidxr.xrDirectInputFixPatch
 import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
@@ -35,6 +37,7 @@ class PatchCompatibilityMatrixTest {
         }
         excluded5002318.forEach { patch ->
             assertFalse(patch.supports(5002318), patch.name)
+            assertFalse(patch.default, "${patch.name} must not be recommended by versionName-only Managers")
         }
     }
 
@@ -45,12 +48,38 @@ class PatchCompatibilityMatrixTest {
         }
     }
 
+    @Test
+    fun `legacy automatic dependency behavior remains wired for older builds`() {
+        val identityClosure = deviceIdentityPatch.dependencyClosure()
+        assertTrue(xrDeviceConfigBaselinePatch in identityClosure)
+        assertTrue(xrCoreRuntimePatch in identityClosure)
+        assertTrue(androidXrUiExtensionPatch in identityClosure)
+        assertTrue(xrDirectInputFixPatch in identityClosure)
+
+        listOf(
+            appearOnTopPatch,
+            unrestrictedBatteryUsagePatch,
+            xrProjectionTraceControlPatch,
+            xrProjectionSettingsQualityPatch,
+            xrProjectionSettingsStrippedPatch,
+        ).forEach { patch ->
+            assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
+        }
+    }
+
     private fun Patch<*>.supports(versionCode: Int): Boolean =
         compatibility.orEmpty().any { compatibility ->
             compatibility.targets.any { target ->
                 target.version == "2.0.22" && target.versionCodes?.values?.contains(versionCode) == true
             }
         }
+
+    private fun Patch<*>.dependencyClosure(visited: MutableSet<Patch<*>> = mutableSetOf()): Set<Patch<*>> {
+        dependencies.forEach { dependency ->
+            if (visited.add(dependency)) dependency.dependencyClosure(visited)
+        }
+        return visited
+    }
 
     private companion object {
         val allowed5002318 = listOf(

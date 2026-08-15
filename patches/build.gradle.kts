@@ -52,6 +52,7 @@ dependencies {
 
 // Output directory for the assembled extension DEX, included in the JAR.
 val extensionOutputDir = layout.buildDirectory.dir("generated/extension-resources")
+val minimalExtensionOutputDir = layout.buildDirectory.dir("generated/minimal-extension-resources")
 
 // Assemble GxrSdlBridge + GalaxyXRPermissionActivity smali files into extension.mpe.
 val assembleExtension by tasks.registering(JavaExec::class) {
@@ -61,7 +62,10 @@ val assembleExtension by tasks.registering(JavaExec::class) {
     val smaliSrcDir = file("src/main/resources/steamlink/androidxr/smali")
     val smaliSources =
         fileTree(smaliSrcDir) {
-            include("**/*.smali")
+            // The dependency graph is static in Morphe, so this extension may also be merged when
+            // an allowed patch is applied to 5002318. Include only brand-new helper classes: all
+            // edits to Valve's existing SDL/controller classes stay in build-aware Kotlin code.
+            include("org/libsdl/app/GxrSdlBridge.smali")
             // Exclude test variants that redefine production classes.
             exclude("test_variants/**")
         }
@@ -84,17 +88,49 @@ val assembleExtension by tasks.registering(JavaExec::class) {
     }
 }
 
+// 5002318 already has native SDL/controller/hand routing. Its surviving permission/settings
+// patches need only new helper classes, never the legacy SDL class fragments from extension.mpe.
+val assembleMinimalExtension by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Assemble the 5002318-safe permission/overlay helper extension"
+
+    val smaliSrcDir = file("src/main/resources/steamlink/androidxr/smali")
+    val smaliSources = fileTree(smaliSrcDir) {
+        include("com/valvesoftware/steamlink/GalaxyXRPermissionActivity.smali")
+        include("com/valvesoftware/steamlink/GxrOverlayBridge.smali")
+        include("com/valvesoftware/steamlink/GxrResolutionProbe.smali")
+    }
+    val outputFile = minimalExtensionOutputDir.map { it.file("extensions/minimal-extension.mpe") }
+
+    inputs.files(smaliSources)
+    outputs.file(outputFile)
+
+    classpath = smaliAssembler
+    mainClass.set("com.android.tools.smali.smali.Main")
+    doFirst {
+        val out = outputFile.get().asFile
+        out.parentFile.mkdirs()
+        args(
+            "a",
+            "-a", "33",
+            "-o", out.absolutePath,
+            *smaliSources.files.map { it.absolutePath }.sorted().toTypedArray(),
+        )
+    }
+}
+
 // Include the assembled extension.mpe in the patches JAR.
 sourceSets.main {
     resources.srcDir(extensionOutputDir)
+    resources.srcDir(minimalExtensionOutputDir)
 }
 
 tasks.named("processResources") {
-    dependsOn(assembleExtension)
+    dependsOn(assembleExtension, assembleMinimalExtension)
 }
 
 tasks.named("sourcesJar") {
-    dependsOn(assembleExtension)
+    dependsOn(assembleExtension, assembleMinimalExtension)
 }
 
 tasks {

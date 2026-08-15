@@ -60,6 +60,10 @@ internal val xrDirectInputFixPatch = bytecodePatch {
     dependsOn(androidXrUiExtensionPatch)
 
     execute {
+        // Dependencies execute even when their own compatibility excludes this build. Valve's
+        // 5002318 SDL/controller path already supports native hands, so leave it byte-for-byte.
+        if (packageMetadata.versionCode == "5002318") return@execute
+
         val surfaceChanged = mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
             .first { it.name == "surfaceChanged" && it.parameterTypes.size == 4 }
         val displayMetricsClass = "Landroid/util/DisplayMetrics;"
@@ -118,6 +122,15 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                 )
             }
 
+    }
+}
+
+/**
+ * Overlay/resolution activation hook shared by legacy and native 5002318 launchers.
+ * It changes only SteamLink lifecycle methods and intentionally avoids every SDL/controller class.
+ */
+internal val xrResolutionProbePatch = bytecodePatch {
+    execute {
         val steamLinkClass = mutableClassDefBy("Lcom/valvesoftware/steamlink/SteamLink;")
         val runResolutionProbe = { method: MutableMethod, index: Int, probeMethod: String ->
             method.addInstruction(

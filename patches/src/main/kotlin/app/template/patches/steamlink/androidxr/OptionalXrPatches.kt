@@ -35,7 +35,12 @@ val unrestrictedBatteryUsagePatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
-    dependsOn(xrLauncherBootstrapPatch, unrestrictedBatteryManifestPatch)
+    // Restore the legacy automatic foundation while its build guards make it a no-op on 5002318.
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        unrestrictedBatteryManifestPatch,
+    )
 }
 
 private val appearOnTopManifestPatch = resourcePatch {
@@ -65,7 +70,11 @@ val appearOnTopPatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
-    dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        appearOnTopManifestPatch,
+    )
 }
 
 private fun resolutionTraceResource(name: String): ByteArray =
@@ -116,7 +125,9 @@ private fun projectionExperimentPatch(
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.toTypedArray())
-    dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch)
+    // Legacy builds retain their complete launcher foundation. Every legacy mutation is guarded
+    // off on 5002318, where only the minimal permission/probe bootstrap remains active.
+    dependsOn(xrLauncherBootstrapPatch, xrPermissionSettingsBootstrapPatch)
     when (mode) {
         "projection_trace_control" -> dependsOn(projectionTraceControlLayerPatch)
         "projection_settings_quality" -> dependsOn(projectionSettingsQualityLayerPatch)

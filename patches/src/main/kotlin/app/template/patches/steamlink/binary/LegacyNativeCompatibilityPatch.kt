@@ -180,6 +180,10 @@ private val relocatablePermissionNameEdits =
     permissionNameEdits(0, 0, locateByPattern = true)
 
 internal fun patchNativePermissionNames(bytes: ByteArray): ByteArray {
+    // 5002318 already contains the Android XR permission names and working runtime request flow.
+    // Pattern-rewriting its retained Oculus fallback names can break vendor/hand capability routing.
+    if (bytes.size == 2_277_488) return bytes.copyOf()
+
     val layout = NATIVE_LAYOUTS.singleOrNull { it.fileSize == bytes.size }
     return applyNativeEdits(
         bytes,
@@ -204,7 +208,7 @@ internal fun patchStreamXrGates(bytes: ByteArray): ByteArray =
 val androidXrNativePermissionNamesPatch = rawResourcePatch(
     name = "Android XR native permission names",
     description = "Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
@@ -220,7 +224,7 @@ val androidXrNativePermissionNamesPatch = rawResourcePatch(
 val forceHmdInitializationGatesPatch = rawResourcePatch(
     name = "Force HMD initialization gates",
     description = "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
@@ -236,7 +240,7 @@ val forceHmdInitializationGatesPatch = rawResourcePatch(
 val forceLobbyPermissionStateGatePatch = rawResourcePatch(
     name = "Force lobby permission-state gate",
     description = "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
@@ -252,7 +256,7 @@ val forceLobbyPermissionStateGatePatch = rawResourcePatch(
 val forceStreamXrGatesPatch = rawResourcePatch(
     name = "Force stream XR gates",
     description = "Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 

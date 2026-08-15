@@ -7,11 +7,14 @@
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
 Target APK: `com.valvesoftware.steamlinkvr` v2.0.22. Exact supported versionCodes are 5001712, 5002172, 5002206, 5002244, 5002313, and 5002318. Build 5002318 exposes only Device identity, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches.
+
+Use Morphe Manager 1.22 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Legacy-only patches are disabled by default, so older Managers no longer recommend them for build 5002318; they remain selectable on older APKs, and supported patches still install their historical legacy dependencies automatically there.
+
 To download it:
 1. Open steam console `steam://open/console`
 2. In the steam console tab run `download_depot 250820 250824 634053834998054244`
 3. After steam reports download complete retrieve the apk from `C:\Program Files (x86)\Steam\steamapps\content\app_250820\depot_250824\drivers\vrlink\resources\android-steamlinkvr-release.apk` and copy it onto your headset
-4. Select it with Morphe and either run the default patches or enable expert mode to select the ones you want to enable.
+4. Select it with Morphe. For build 5002318, prefer normal compatibility-filtered mode; Expert mode can show incompatible legacy patches. Enable only the seven listed 5002318 patches (plus an optional projection experiment).
 
 ## 🩹 Patches list
 
@@ -33,7 +36,7 @@ To download it:
 | [Appear on top](#appear-on-top) | Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 |  |
 | [Change package name](#change-package-name) | Renames the app package so it can be installed alongside the original Steam Link. Default appends '.gxr'. Changing the package name may break features that rely on the original identity. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Package name |
 | [Controller velocity fix](#controller-velocity-fix) | Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Maximum sample gap (ms)<br>• Controller pose-send cadence<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
-| [Device identity](#device-identity) | Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 | • HMD identity |
+| [Device identity](#device-identity) | Overrides the HMD identity reported to SteamVR. Build 5002318 changes only the model so its stock controller/hand profiles and OpenXR extensions remain intact. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 | • HMD identity |
 | [Force HMD initialization gates](#force-hmd-initialization-gates) | Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 | [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 | [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
