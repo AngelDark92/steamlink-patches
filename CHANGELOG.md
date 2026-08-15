@@ -1,3 +1,9 @@
+## [1.10.0-dev.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.10...v1.10.0-dev.11) (2026-08-15)
+
+### 🐛 Bug Fixes
+
+* removed unneeded patches ([0940942](https://github.com/AngelDark92/steamlink-patches/commit/0940942a20bcf8b2cbdea17371d343bb13d757a9))
+
 ## [1.10.0-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.9...v1.10.0-dev.10) (2026-08-15)
 
 ### ✨ New Features
