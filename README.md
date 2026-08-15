@@ -6,7 +6,7 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
-Target APK: `com.valvesoftware.steamlinkvr` v2.0.22 (all build numbers; guarded native layouts include versionCodes 5002244 and 5002313).
+Target APK: `com.valvesoftware.steamlinkvr` v2.0.22. Exact supported versionCodes are 5001712, 5002172, 5002206, 5002244, 5002313, and 5002318. Build 5002318 exposes only Device identity, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches.
 To download it:
 1. Open steam console `steam://open/console`
 2. In the steam console tab run `download_depot 250820 250824 634053834998054244`
@@ -23,31 +23,31 @@ To download it:
 
 **🎯 Supported versions:**
 
-| 2.0.22 |
-| :---: |
-|  | Unlisted Steam Link versions are experimental and may not patch safely. |
+| 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports only Device identity, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches. |
 
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| [Android XR native permission names](#android-xr-native-permission-names) | Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR. |  |
-| [Appear on top](#appear-on-top) | Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup. |  |
-| [Change package name](#change-package-name) | Renames the app package so it can be installed alongside the original Steam Link. Default appends '.gxr'. Changing the package name may break features that rely on the original identity. | • Package name |
-| [Controller velocity fix](#controller-velocity-fix) | Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame. | • Maximum sample gap (ms)<br>• Controller pose-send cadence<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
-| [Device identity](#device-identity) | Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched. | • HMD identity |
-| [Force HMD initialization gates](#force-hmd-initialization-gates) | Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313. |  |
-| [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313. |  |
-| [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged. |  |
-| [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT). |  |
-| [HMD-only pose fix](#hmd-only-pose-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. | • Pose offset (ms) |
-| [Microphone input preset](#microphone-input-preset) | Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication. | • Microphone mode |
-| [OLED color calibration](#oled-color-calibration) | Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244 and 5002313. | • Calibration profile<br>• Gamma<br>• Saturation<br>• Video output precision |
-| [Unrestricted battery usage](#unrestricted-battery-usage) | Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming. |  |
-| [Video dither](#video-dither) | Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants. | • Enable dither |
-| [XR Core Runtime](#xr-core-runtime) | Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches. |  |
-| [XR Device Config Baseline](#xr-device-config-baseline) | Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets. |  |
-| [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. |  |
-| [XR Launcher Bootstrap (Home Space)](#xr-launcher-bootstrap-home-space) | Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring. |  |
-| [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. |  |
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Android XR native permission names](#android-xr-native-permission-names) | Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [Appear on top](#appear-on-top) | Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 |  |
+| [Change package name](#change-package-name) | Renames the app package so it can be installed alongside the original Steam Link. Default appends '.gxr'. Changing the package name may break features that rely on the original identity. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Package name |
+| [Controller velocity fix](#controller-velocity-fix) | Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Maximum sample gap (ms)<br>• Controller pose-send cadence<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
+| [Device identity](#device-identity) | Overrides the HMD manufacturer/model identity reported to SteamVR (hmd_config.json only; controller identity is unaffected). 'samsung-default' leaves the file untouched. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 | • HMD identity |
+| [Force HMD initialization gates](#force-hmd-initialization-gates) | Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT). | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 |  |
+| [Microphone input preset](#microphone-input-preset) | Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Microphone mode |
+| [OLED color calibration](#oled-color-calibration) | Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244, 5002313, and 5002318. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 | • Calibration profile<br>• Gamma<br>• Saturation<br>• Video output precision |
+| [Unrestricted battery usage](#unrestricted-battery-usage) | Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 |  |
+| [Video dither](#video-dither) | Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 | • Enable dither |
+| [Visual Delay Fix](#visual-delay-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 | • Pose offset (ms) |
+| [XR Core Runtime](#xr-core-runtime) | Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [XR Device Config Baseline](#xr-device-config-baseline) | Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [XR Launcher Bootstrap (Home Space)](#xr-launcher-bootstrap-home-space) | Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
+| [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 
 </details>
 
@@ -57,15 +57,15 @@ To download it:
 
 **🎯 Supported versions:**
 
-| 2.0.22 |
-| :---: |
-|  | Unlisted Steam Link versions are experimental and may not patch safely. |
+| 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| Experimental XR projection patches for Steam Link 2.0.22 build 5001712. | Experimental XR projection patches for Steam Link 2.0.22 build 5002172. | Experimental XR projection patches for Steam Link 2.0.22 build 5002206. | Experimental XR projection patches for Steam Link 2.0.22 build 5002244. | Experimental XR projection patches for Steam Link 2.0.22 build 5002313. | Experimental XR projection patches for Steam Link 2.0.22 build 5002318. |
 
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| [XR projection quality settings](#xr-projection-quality-settings) | Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it. |  |
-| [XR projection settings stripped](#xr-projection-settings-stripped) | Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe. |  |
-| [XR projection trace control](#xr-projection-trace-control) | Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition. |  |
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [XR projection quality settings](#xr-projection-quality-settings) | Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 |  |
+| [XR projection settings stripped](#xr-projection-settings-stripped) | Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 |  |
+| [XR projection trace control](#xr-projection-trace-control) | Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318 |  |
 
 </details>
 

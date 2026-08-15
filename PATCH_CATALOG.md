@@ -3,6 +3,12 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
+Steam Link 2.0.22 build 5002318 exposes only Device identity, OLED color calibration,
+Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
+and the three experimental XR projection patches. XR Core/manifest/launcher patches remain
+internal dependencies where an allowed patch requires their implementation, but are not
+independently compatible with 5002318.
+
 ---
 
 ## androidxr group
@@ -21,7 +27,7 @@ Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244) or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; unknown layouts are skipped |
+| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244), `0x1472a8` (5002313), or `0x147418` (5002318) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; unknown layouts are skipped |
 
 ---
 
@@ -146,7 +152,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 
 ## binary group
 
-### HMD-Only Pose Fix (`hmdOnlyPatch`)
+### Visual Delay Fix (`hmdOnlyPatch`)
 **Default: enabled**
 | Artifact | Edit |
 |---|---|
@@ -164,6 +170,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | 5002206 | 2,239,920 | `0xFDD68` | `0x213820` |
 | 5002244 | 2,251,920 | `0xFEAD8` | `0x2166B0` |
 | 5002313 | 2,276,872 | `0x100B8C` | `0x21C770` |
+| 5002318 | 2,277,488 | `0x100B0C` | `0x21C9D0` |
 
 ---
 
@@ -182,7 +189,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 
 ### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
 **Default: enabled**
-> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5002244 and 5002313.
+> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5002244, 5002313, and 5002318.
 
 | Artifact | Edit |
 |---|---|
@@ -195,6 +202,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 | GLSL `DITHER_ENABLE` | `1.` when enabled; toggled to `0.` by `videoDitherPatch` without losing the selected scale |
 | Three 5002244 instructions at `0x10826c`, `0x1082dc`, `0x10834c` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | Three 5002313 instructions at `0x10b2d4`, `0x10b344`, `0x10b3b4` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
+| Three 5002318 instructions at `0x10b430`, `0x10b4a0`, `0x10b510` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | RGB10_A2 shader output | Explicit sRGB EOTF converts calibrated code values to the linear OpenXR swapchain |
 
 **Options:**
@@ -205,7 +213,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 | `saturation` | `1.12` | 0.00–3.00 | Second argument in `mix()` |
 | `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and all three projection swapchain formats |
 
-`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires either the 2,251,920-byte 5002244 or 2,276,872-byte 5002313 library, the unique shader/NUL boundary, all three layout-specific instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
+`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the guarded 2,251,920-byte 5002244, 2,276,872-byte 5002313, or 2,277,488-byte 5002318 library layout, the unique shader/NUL boundary, all three layout-specific instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
 
 Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation remains a runtime acceptance gate for both modes.
 

@@ -38,7 +38,8 @@ internal fun targetsForReleaseChannel(
     val experimentalPatch = compatibility.name == EXPERIMENTAL_COMPATIBILITY_NAME
     when (releaseChannel) {
         ReleaseChannel.STABLE -> !experimentalPatch && !target.isExperimental
-        ReleaseChannel.EXPERIMENTAL -> experimentalPatch || target.isExperimental
+        // Pre-release bundles are a superset: retain stable patches and add experimental ones.
+        ReleaseChannel.EXPERIMENTAL -> true
         ReleaseChannel.ALL -> true
     }
 }

@@ -3,7 +3,7 @@ package app.template.patches.steamlink.binary
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 
 // The video fragment shader ships with the dither line commented out with "//" prefix.
@@ -86,7 +86,7 @@ val videoDitherPatch = rawResourcePatch(
     description = "Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     dependsOn(oledCalibrationPatch)
 
     val enable by booleanOption(

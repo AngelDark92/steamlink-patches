@@ -4,7 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -14,10 +14,13 @@ private val SHADER_VERSION = "#version 300 es\n".toByteArray(Charsets.US_ASCII)
 internal const val VIDEO_SHADER_SIZE = 1087
 internal const val VIDEO_LIBRARY_SIZE_5002244 = 2_251_920
 internal const val VIDEO_LIBRARY_SIZE_5002313 = 2_276_872
+internal const val VIDEO_LIBRARY_SIZE_5002318 = 2_277_488
 private const val VIDEO_LIBRARY_SHA256_5002244 =
     "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12"
 private const val VIDEO_LIBRARY_SHA256_5002313 =
     "e4d3575a130dc013e4c8fe4fb965217028229f89b13ba821c01b492e457398bb"
+private const val VIDEO_LIBRARY_SHA256_5002318 =
+    "3c8d1ce13fd61edff5ce65efe6eedcc8565c89b66bab371550986a5c75407e56"
 
 private val SRGB8_INSTRUCTION = byteArrayOf(0x69, 0x88.toByte(), 0x91.toByte(), 0x52)
 private val RGB10_A2_INSTRUCTION = byteArrayOf(0x29, 0x0b, 0x90.toByte(), 0x52)
@@ -34,6 +37,7 @@ private val SWAPCHAIN_CONTEXT_AFTER = byteArrayOf(
 )
 internal val SWAPCHAIN_FORMAT_OFFSETS_5002244 = intArrayOf(0x10826c, 0x1082dc, 0x10834c)
 internal val SWAPCHAIN_FORMAT_OFFSETS_5002313 = intArrayOf(0x10b2d4, 0x10b344, 0x10b3b4)
+internal val SWAPCHAIN_FORMAT_OFFSETS_5002318 = intArrayOf(0x10b430, 0x10b4a0, 0x10b510)
 
 private data class VideoLibraryLayout(
     val versionCode: Int,
@@ -54,6 +58,12 @@ private val VIDEO_LIBRARY_LAYOUTS = listOf(
         VIDEO_LIBRARY_SIZE_5002313,
         VIDEO_LIBRARY_SHA256_5002313,
         SWAPCHAIN_FORMAT_OFFSETS_5002313,
+    ),
+    VideoLibraryLayout(
+        5002318,
+        VIDEO_LIBRARY_SIZE_5002318,
+        VIDEO_LIBRARY_SHA256_5002318,
+        SWAPCHAIN_FORMAT_OFFSETS_5002318,
     ),
 )
 
@@ -217,10 +227,10 @@ internal fun setProjectionSwapchainFormat(
 @Suppress("unused")
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
-    description = "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244 and 5002313.",
+    description = "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244, 5002313, and 5002318.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
 
     val profile by stringOption(
         key = "profile",

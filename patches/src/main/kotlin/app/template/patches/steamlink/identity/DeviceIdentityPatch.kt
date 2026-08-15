@@ -3,7 +3,7 @@ package app.template.patches.steamlink.identity
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 
 private fun identityResource(name: String): ByteArray =
@@ -18,7 +18,7 @@ val deviceIdentityPatch = rawResourcePatch(
         "controller identity is unaffected). 'samsung-default' leaves the file untouched.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     dependsOn(xrDeviceConfigBaselinePatch)
 
     val profile by stringOption(

@@ -4,8 +4,8 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
 import java.io.File
 
@@ -34,7 +34,7 @@ val unrestrictedBatteryUsagePatch = bytecodePatch(
     description = "Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     dependsOn(xrLauncherBootstrapPatch, unrestrictedBatteryManifestPatch)
 }
 
@@ -64,7 +64,7 @@ val appearOnTopPatch = bytecodePatch(
     description = "Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
 }
 
@@ -115,7 +115,7 @@ private fun projectionExperimentPatch(
     description = description,
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.toTypedArray())
     dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch)
     when (mode) {
         "projection_trace_control" -> dependsOn(projectionTraceControlLayerPatch)

@@ -26,6 +26,7 @@ private data class PermissionPromptLayout(
 private val PERMISSION_PROMPT_LAYOUTS = listOf(
     PermissionPromptLayout(5002244, 2_251_920, 0x1422c4),
     PermissionPromptLayout(5002313, 2_276_872, 0x1472a8),
+    PermissionPromptLayout(5002318, 2_277_488, 0x147418),
 )
 
 internal fun patchPermissionPrompt(bytes: ByteArray): ByteArray {

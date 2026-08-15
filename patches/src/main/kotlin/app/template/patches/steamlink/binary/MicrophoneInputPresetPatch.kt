@@ -3,7 +3,7 @@ package app.template.patches.steamlink.binary
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
 
 // QSVLClientAudioNdk::Init(bool, int), immediately before
 // AAudioStreamBuilder_setInputPreset(builder, preset):
@@ -45,7 +45,7 @@ val microphoneInputPresetPatch = rawResourcePatch(
     description = "Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
     val preset by stringOption(
         key = "preset",

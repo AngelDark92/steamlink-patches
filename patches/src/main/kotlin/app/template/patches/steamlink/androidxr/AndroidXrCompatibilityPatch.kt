@@ -3,7 +3,7 @@ package app.template.patches.steamlink.androidxr
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
 import app.template.patches.steamlink.binary.disablePermissionPromptNativePatch
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -97,7 +97,7 @@ val xrCoreRuntimePatch = bytecodePatch(
     description = "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(androidXrLibPatch, androidXrUiExtensionPatch, xrDirectInputFixPatch)
 }
 
@@ -107,7 +107,7 @@ val xrDeviceConfigBaselinePatch = rawResourcePatch(
     description = "Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
 
     execute {
@@ -126,7 +126,7 @@ val xrManifestCapabilityPackPatch = resourcePatch(
     description = "Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
 
     finalize {
@@ -311,7 +311,7 @@ val xrLauncherBootstrapPatch = resourcePatch(
     description = "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrManifestCapabilityPackPatch)
 
     finalize {
@@ -453,7 +453,7 @@ val xrInputRoutingConfigPatch = rawResourcePatch(
     description = "Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrLauncherBootstrapPatch)
 
     execute {

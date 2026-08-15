@@ -5,7 +5,7 @@ import app.morphe.patcher.patch.floatOption
 import app.morphe.patcher.patch.longOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -64,7 +64,7 @@ val controllerVelocityPatch = rawResourcePatch(
     description = "Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
 
     val maxDeltaMs by longOption(

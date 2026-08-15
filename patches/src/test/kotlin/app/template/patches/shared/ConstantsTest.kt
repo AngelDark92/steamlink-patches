@@ -1,27 +1,28 @@
 package app.template.patches.shared
 
 import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
 class ConstantsTest {
     @Test
-    fun `all 2_0_22 builds are stable and other versions are experimental`() {
-        val compatibilities = listOf(
-            Constants.COMPATIBILITY_STEAM_LINK,
-            Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL,
-            Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY,
+    fun `compatibilities enumerate exact verified 2_0_22 builds`() {
+        assertEquals(
+            listOf(5001712, 5002172, 5002206, 5002244, 5002313),
+            Constants.COMPATIBILITIES_STEAM_LINK_LEGACY.versionCodes(),
         )
+        assertEquals(
+            listOf(5001712, 5002172, 5002206, 5002244, 5002313, 5002318),
+            Constants.COMPATIBILITIES_STEAM_LINK.versionCodes(),
+        )
+        assertEquals(
+            listOf(5001712, 5002172, 5002206, 5002244, 5002313, 5002318),
+            Constants.COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.versionCodes(),
+        )
+    }
 
-        compatibilities.forEach { compatibility ->
-            val supported = compatibility.targets.single { it.version == "2.0.22" }
-            assertFalse(supported.isExperimental)
-            assertNull(supported.versionCodes)
-
-            val fallback = compatibility.targets.single { it.version == null }
-            assertTrue(fallback.isExperimental)
-            assertNull(fallback.versionCodes)
-        }
+    private fun List<app.morphe.patcher.patch.Compatibility>.versionCodes() = map { compatibility ->
+        val target = compatibility.targets.single()
+        assertEquals("2.0.22", target.version)
+        target.versionCodes!!.values.toSet().single()
     }
 }

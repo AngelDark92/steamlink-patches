@@ -2,7 +2,7 @@ package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
 import java.io.File
 
 private val NOP = byteArrayOf(0x1f, 0x20, 0x03, 0xd5.toByte())
@@ -206,7 +206,7 @@ val androidXrNativePermissionNamesPatch = rawResourcePatch(
     description = "Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
@@ -222,7 +222,7 @@ val forceHmdInitializationGatesPatch = rawResourcePatch(
     description = "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
     execute {
         applyLayoutNativeEdits(
@@ -238,7 +238,7 @@ val forceLobbyPermissionStateGatePatch = rawResourcePatch(
     description = "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
     execute {
         applyLayoutNativeEdits(
@@ -254,7 +254,7 @@ val forceStreamXrGatesPatch = rawResourcePatch(
     description = "Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
 
     execute {
         applyLayoutNativeEdits(
