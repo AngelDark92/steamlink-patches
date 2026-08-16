@@ -1,3 +1,9 @@
+## [1.10.0-dev.13](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.12...v1.10.0-dev.13) (2026-08-16)
+
+### ✨ New Features
+
+* add sliders to patches ([cc5fe22](https://github.com/AngelDark92/steamlink-patches/commit/cc5fe22de1d238c737101bcc43311b3fb2238465))
+
 ## [1.10.0-dev.12](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.11...v1.10.0-dev.12) (2026-08-15)
 
 ### 🐛 Bug Fixes
