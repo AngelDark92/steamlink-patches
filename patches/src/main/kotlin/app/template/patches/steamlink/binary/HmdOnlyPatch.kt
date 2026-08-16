@@ -1,7 +1,7 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.longOption
+import app.morphe.patcher.patch.intSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.steamlink.util.BinaryPatchHelper.vaddrToFileOffset
@@ -256,14 +256,16 @@ val hmdOnlyPatch = rawResourcePatch(
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
 
-    val offsetMs by longOption(
+    val offsetMs = intSliderOption(
         key = "offsetMs",
-        default = 60L,
+        min = 0,
+        max = 4000,
+        default = 60,
+        step = 1,
         title = "Pose offset (ms)",
         // 60 ms tested default for Galaxy XR; max 4000 ms (4 s) practical upper bound
         description = "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 60 ms. Allowed range: 0 to 4000 ms.",
         required = true,
-        validator = { value -> value != null && value in 0L..4000L },
     )
 
     execute {
@@ -271,7 +273,7 @@ val hmdOnlyPatch = rawResourcePatch(
         val bytes = file.readBytes()
         // An unrecognized native layout must not block the rest of an experimental APK patch.
         // Fixed instruction addresses are unsafe to guess, so leave this one mutation untouched.
-        val patched = patchVisualDelay(bytes, offsetMs!!)
+        val patched = patchVisualDelay(bytes, offsetMs.value!!.toLong())
         if (!patched.contentEquals(bytes)) file.writeBytes(patched)
     }
 }

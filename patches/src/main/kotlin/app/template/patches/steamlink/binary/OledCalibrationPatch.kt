@@ -1,7 +1,7 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.floatOption
+import app.morphe.patcher.patch.floatSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
@@ -245,24 +245,26 @@ val oledCalibrationPatch = rawResourcePatch(
         required = true,
     )
 
-    val gamma by floatOption(
+    val gamma = floatSliderOption(
         key = "gamma",
+        min = 0.50f,
+        max = 2.50f,
         default = 1.06f,
-        values = mapOf("Initial APK (1.06)" to 1.06f, "Final balanced (1.20)" to 1.20f),
+        step = 0.01f,
         title = "Gamma",
         description = "Used by Custom profile. Allowed range: 0.50 to 2.50.",
         required = true,
-        validator = { value -> value != null && value in 0.50f..2.50f },
     )
 
-    val saturation by floatOption(
+    val saturation = floatSliderOption(
         key = "saturation",
+        min = 0.00f,
+        max = 3.00f,
         default = 1.12f,
-        values = mapOf("Initial APK (1.12)" to 1.12f, "Final balanced (1.45)" to 1.45f),
+        step = 0.01f,
         title = "Saturation",
         description = "Used by Custom profile. Allowed range: 0.00 to 3.00.",
         required = true,
-        validator = { value -> value != null && value in 0.00f..3.00f },
     )
 
     val outputPrecision by stringOption(
@@ -287,7 +289,7 @@ val oledCalibrationPatch = rawResourcePatch(
         val (selectedGamma, selectedSaturation) = when (profile) {
             "initial" -> 1.06f to 1.12f
             "final-balanced" -> 1.20f to 1.45f
-            "custom" -> gamma!! to saturation!!
+            "custom" -> gamma.value!! to saturation.value!!
             else -> throw PatchException("Unknown OLED calibration profile: $profile")
         }
         val precision = VideoOutputPrecision.fromOption(outputPrecision)
