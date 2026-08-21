@@ -1,3 +1,9 @@
+## [1.10.0-dev.14](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.13...v1.10.0-dev.14) (2026-08-21)
+
+### 🐛 Bug Fixes
+
+* patches now compatible with 5002322 ([d0d14e8](https://github.com/AngelDark92/steamlink-patches/commit/d0d14e805c1543f238dda53f1896d3092af2aabb))
+
 ## [1.10.0-dev.13](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.12...v1.10.0-dev.13) (2026-08-16)
 
 ### ✨ New Features

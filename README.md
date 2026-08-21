@@ -19,16 +19,16 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.0-dev.13](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.13)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;22 patches total
+> **[v1.10.0-dev.14](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.14)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
 <details open>
-<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
+<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;20 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
 | 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports only Device identity, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches. | Build 5002322 supports only Device identity, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches. |
+| Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports only Device identity, OLED color calibration, Appear on top, native GXRP telemetry, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches. | Build 5002322 supports only Device identity, OLED color calibration, Appear on top, native GXRP telemetry, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
@@ -36,12 +36,12 @@ To download it:
 | [Appear on top](#appear-on-top) | Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
 | [Change package name](#change-package-name) | Renames the app package so it can be installed alongside the original Steam Link. Default appends '.gxr'. Changing the package name may break features that rely on the original identity. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Package name |
 | [Controller velocity fix](#controller-velocity-fix) | Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Maximum sample gap (ms)<br>• Controller pose-send cadence<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
-| [Device identity](#device-identity) | Overrides the HMD identity reported to SteamVR. The native Galaxy profile atomically upserts the three runtime HMD records while preserving stock controller/hand profiles and OpenXR extensions. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 | • HMD identity |
-| Galaxy XR native telemetry | Optional GXRP layer for eye/face frames in a private single-user APK; requires PC LAN IPv4, ports, and private 64-hex pairing token. The token is extractable from the APK, which must not be distributed. Does not replace native controller/hand configuration. | 5002318, 5002322 | • PC listen IPv4<br>• Control/tracking ports<br>• Pairing token |
+| [Device identity](#device-identity) | Overrides the HMD identity reported to SteamVR. The Galaxy profile installs its complete transport identity while preserving stock controller/hand routing and extensions. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 | • HMD identity |
 | [Force HMD initialization gates](#force-hmd-initialization-gates) | Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 | [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 | [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 | [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT). | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
+| [Galaxy XR native telemetry](#galaxy-xr-native-telemetry) | Installs the GXRP OpenXR telemetry layer for a private, single-user native Android-XR APK. The pairing token is embedded in the patched APK and is extractable, so never distribute that APK. | 5002318, 5002322 | • PC listen IPv4<br>• GXRP control port<br>• GXRP tracking port<br>• GXRP pairing token |
 | [Microphone input preset](#microphone-input-preset) | Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Microphone mode |
 | [OLED color calibration](#oled-color-calibration) | Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244, 5002313, 5002318, and 5002322. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 | • Calibration profile<br>• Gamma<br>• Saturation<br>• Video output precision |
 | [Unrestricted battery usage](#unrestricted-battery-usage) | Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
