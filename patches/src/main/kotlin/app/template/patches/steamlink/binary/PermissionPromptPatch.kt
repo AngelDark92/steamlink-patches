@@ -27,14 +27,15 @@ private val PERMISSION_PROMPT_LAYOUTS = listOf(
     PermissionPromptLayout(5002244, 2_251_920, 0x1422c4),
     PermissionPromptLayout(5002313, 2_276_872, 0x1472a8),
     PermissionPromptLayout(5002318, 2_277_488, 0x147418),
+    PermissionPromptLayout(5002322, 2_283_400, 0x148aac),
 )
 
 internal fun patchPermissionPrompt(bytes: ByteArray): ByteArray {
     val layout = PERMISSION_PROMPT_LAYOUTS.singleOrNull { it.fileSize == bytes.size }
         ?: return bytes.copyOf()
-    // 5002318 ships a working native Android XR permission path. Suppressing it can launch VR
+    // Native-XR builds ship a working Android XR permission path. Suppressing it can launch VR
     // without HAND_TRACKING when a custom launcher grant is missing or denied, so preserve it.
-    if (layout.versionCode == 5002318) return bytes.copyOf()
+    if (layout.versionCode == 5002318 || layout.versionCode == 5002322) return bytes.copyOf()
 
     val offset = layout.requestAndroidPermissionsOffset
     if (offset < 0 || offset + SEARCH.size > bytes.size) {

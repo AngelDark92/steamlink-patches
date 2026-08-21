@@ -1,9 +1,13 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.intSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_NATIVE_XR
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 import app.template.patches.steamlink.binary.disablePermissionPromptNativePatch
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -62,9 +66,9 @@ private val androidXrLibPatch = rawResourcePatch {
     dependsOn(disablePermissionPromptNativePatch)
 
     execute {
-        // Build 5002318 owns a complete native Android XR path. Preserve its native permission
+        // Native-XR builds own a complete Android XR path. Preserve their native permission
         // routine, runtime loaders, and hand/controller config instead of installing the legacy bridge.
-        if (packageMetadata.versionCode == "5002318") return@execute
+        if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
 
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         // OpenXR runtime bridge native library for Galaxy XR platform integration
@@ -115,9 +119,9 @@ val xrDeviceConfigBaselinePatch = rawResourcePatch(
     dependsOn(xrCoreRuntimePatch)
 
     execute {
-        // 5002318 stock requests XR_EXT_hand_interaction and defines hand grip/aim poses.
+        // Native-XR stock requests XR_EXT_hand_interaction and defines hand grip/aim poses.
         // The legacy controller_config.json has neither, so replacing it disables native hands.
-        if (packageMetadata.versionCode == "5002318") return@execute
+        if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
 
         get("assets/config/hmd_config.json").writeBytes(loadResource("hmd_config.json"))
         get("assets/config/controller_config.json").writeBytes(loadResource("controller_config.json"))
@@ -139,9 +143,9 @@ val xrManifestCapabilityPackPatch = resourcePatch(
 
     finalize {
         document("AndroidManifest.xml").use { doc ->
-            // Preserve 5002318's native target SDK, vendor declarations, required hand feature,
+            // Preserve native builds' target SDK, vendor declarations, required hand feature,
             // loader selection, and permission flow. This pack exists for legacy builds only.
-            if (packageMetadata.versionCode == "5002318") return@use
+            if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@use
 
             val manifest = doc.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element
@@ -317,11 +321,118 @@ val xrManifestCapabilityPackPatch = resourcePatch(
     }
 }
 
+// The native Android-XR Steam Link builds already contain Valve's complete XR path. They still
+// need the small telemetry API layer that publishes authenticated GXRP eye/face frames to the
+// Windows compatibility driver. Keep this separate from the legacy bridge so it cannot replace
+// native controller, hand, launcher, or HMD configuration.
+private val nativeGxrpLayerFilesPatch = rawResourcePatch {
+    execute {
+        if (!isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
+
+        val library = get("lib/arm64-v8a/libgxr_xr_bridge.so")
+        library.parentFile!!.mkdirs()
+        library.writeBytes(loadResource("libgxr_xr_bridge.so"))
+
+        val layerManifest = get(
+            "assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_xr_bridge.json",
+        )
+        layerManifest.parentFile!!.mkdirs()
+        layerManifest.writeBytes(loadResource("XR_APILAYER_local_GalaxyXR_xr_bridge.json"))
+    }
+}
+
+internal fun upsertDirectApplicationMetadata(
+    document: Document,
+    app: Element,
+    name: String,
+    value: String,
+) {
+    val matches = app.childNodes.asSequence()
+        .filterIsInstance<Element>()
+        .filter { it.tagName == "meta-data" && it.getAttribute("android:name") == name }
+        .toList()
+    val metadata = matches.firstOrNull() ?: document.createElement("meta-data").also(app::appendChild)
+    metadata.setAttribute("android:name", name)
+    metadata.setAttribute("android:value", value)
+    matches.drop(1).forEach(app::removeChild)
+}
+
+@Suppress("unused")
+val nativeGxrpTelemetryPatch = resourcePatch(
+    name = "Galaxy XR native telemetry",
+    description = "Installs the GXRP OpenXR telemetry layer for a private, single-user native Android-XR APK. The pairing token is embedded in the patched APK and is extractable, so never distribute that APK.",
+    default = false,
+) {
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_NATIVE_XR.toTypedArray())
+    dependsOn(nativeGxrpLayerFilesPatch)
+
+    val hostIpv4 by stringOption(
+        key = "hostIpv4",
+        default = "127.0.0.1",
+        values = mapOf("Enter PC LAN IPv4" to "127.0.0.1"),
+        title = "PC listen IPv4",
+        description = "Active IPv4 address of the Windows PC running CustomHeadsetOpenVR. Loopback cannot be reached from the headset.",
+        required = true,
+    ) { value ->
+        value?.split('.')?.let { parts ->
+            parts.size == 4 && parts.all { part ->
+                part.toIntOrNull()?.let { it in 0..255 } == true
+            } && value != "0.0.0.0" && !value.startsWith("127.")
+        } == true
+    }
+    val controlPort = intSliderOption(
+        key = "controlPort",
+        min = 1024,
+        max = 65535,
+        default = 29981,
+        step = 1,
+        title = "GXRP control port",
+        description = "Authenticated GXRP TCP control/handshake port. Must match the Windows driver.",
+        required = true,
+    )
+    val trackingPort = intSliderOption(
+        key = "trackingPort",
+        min = 1024,
+        max = 65535,
+        default = 29982,
+        step = 1,
+        title = "GXRP tracking port",
+        description = "Authenticated GXRP UDP eye/face frame port. Must match the Windows driver.",
+        required = true,
+    )
+    val pairingTokenHex by stringOption(
+        key = "pairingTokenHex",
+        default = "UNCONFIGURED",
+        values = mapOf("Enter private 64-hex token" to "UNCONFIGURED"),
+        title = "GXRP pairing token",
+        description = "Private 32-byte token as exactly 64 hex characters. It is embedded in the patched APK: never commit, upload, or distribute that APK.",
+        required = true,
+    ) { value -> value?.matches(Regex("(?i)[0-9a-f]{64}")) == true && value.toSet().size > 1 }
+
+    finalize {
+        if (!isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@finalize
+        document("AndroidManifest.xml").use { document ->
+            val app = document.documentElement.getElementsByTagName("application").item(0) as Element
+            val metadata = linkedMapOf(
+                "gxr.telemetry.enabled" to "true",
+                "gxr.telemetry.host" to hostIpv4!!,
+                "gxr.telemetry.controlPort" to controlPort.value!!.toString(),
+                "gxr.telemetry.trackingPort" to trackingPort.value!!.toString(),
+                "gxr.telemetry.pairingTokenHex" to pairingTokenHex!!,
+                "gxr.build.versionCode" to packageMetadata.versionCode,
+            )
+            metadata.forEach { (name, value) ->
+                upsertDirectApplicationMetadata(document, app, name, value)
+            }
+        }
+    }
+}
+
 /**
- * Minimal permission/settings launcher used by patches that remain valid on build 5002318.
+ * Minimal permission/settings launcher used by patches that remain valid on native-XR builds.
  *
  * This deliberately does not depend on XR Core/Manifest/Device Config and does not add a
- * FULL_SPACE_UNMANAGED override. Valve's stock 5002318 manifest, permission routine, controller
+ * FULL_SPACE_UNMANAGED override. Valve's stock native manifest, permission routine, controller
  * config, and XR_EXT_hand_interaction routing must remain authoritative.
  */
 internal val xrPermissionSettingsBootstrapPatch = resourcePatch {
@@ -363,7 +474,7 @@ internal val xrPermissionSettingsBootstrapPatch = resourcePatch {
             }
 
             // Route launcher starts through the permission/settings activity without changing
-            // Valve's 5002318 VRLink XR start mode or SteamLink panel dimensions.
+            // Valve's native VRLink XR start mode or SteamLink panel dimensions.
             app.getElementsByTagName("activity").asSequence()
                 .filterIsInstance<Element>()
                 .firstOrNull {
@@ -405,9 +516,9 @@ val xrLauncherBootstrapPatch = resourcePatch(
 
     finalize {
         document("AndroidManifest.xml").use { doc ->
-            // Current Managers exclude this patch for 5002318. Manager 1.7 cannot distinguish
+            // Current Managers exclude this patch for native-XR builds. Manager 1.7 cannot distinguish
             // build codes sharing versionName 2.0.22, so also make accidental execution harmless.
-            if (packageMetadata.versionCode == "5002318") return@use
+            if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@use
 
             val app = doc.documentElement.getElementsByTagName("application").item(0) as Element
             val xrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
@@ -550,7 +661,7 @@ val xrInputRoutingConfigPatch = rawResourcePatch(
     dependsOn(xrLauncherBootstrapPatch)
 
     execute {
-        if (packageMetadata.versionCode == "5002318") return@execute
+        if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
         get("assets/config/ui_config.json").writeBytes(loadResource("ui_config.json"))
     }
 }

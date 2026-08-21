@@ -8,24 +8,34 @@ import kotlin.test.assertFalse
 
 class VisualDelayPatchTest {
     @Test
-    fun `5002318 layout patches all guarded sites and is idempotent`() {
-        val stock = synthetic5002318Elf()
-        val patched = patchVisualDelay(stock, 60)
+    fun `native layouts patch all guarded sites and are idempotent`() {
+        nativeLayouts.forEach { layout ->
+            val stock = syntheticElf(layout)
+            val patched = patchVisualDelay(stock, 60)
 
-        assertFalse(stock.contentEquals(patched))
-        assertContentEquals(patched, patchVisualDelay(patched, 60))
-        velocityStores.forEach { (offset, byteOffset) ->
-            assertContentEquals(strWzrX19(byteOffset), patched.copyOfRange(offset, offset + 4))
+            assertFalse(stock.contentEquals(patched), layout.versionCode.toString())
+            assertContentEquals(patched, patchVisualDelay(patched, 60), layout.versionCode.toString())
+            layout.velocityStores.forEach { (offset, byteOffset) ->
+                assertContentEquals(
+                    strWzrX19(byteOffset),
+                    patched.copyOfRange(offset, offset + 4),
+                    layout.versionCode.toString(),
+                )
+            }
         }
     }
 
     @Test
-    fun `5002318 layout rejects a changed hook without partial mutation`() {
-        val changed = synthetic5002318Elf().apply { this[hookOffset] = 0 }
-        val snapshot = changed.copyOf()
+    fun `native layouts reject a changed hook without partial mutation`() {
+        nativeLayouts.forEach { layout ->
+            val changed = syntheticElf(layout).apply { this[layout.hookOffset] = 0 }
+            val snapshot = changed.copyOf()
 
-        assertFailsWith<PatchException> { patchVisualDelay(changed, 60) }
-        assertContentEquals(snapshot, changed)
+            assertFailsWith<PatchException>(layout.versionCode.toString()) {
+                patchVisualDelay(changed, 60)
+            }
+            assertContentEquals(snapshot, changed, layout.versionCode.toString())
+        }
     }
 
     @Test
@@ -34,7 +44,7 @@ class VisualDelayPatchTest {
         assertContentEquals(input, patchVisualDelay(input, 60))
     }
 
-    private fun synthetic5002318Elf() = ByteArray(2_277_488).apply {
+    private fun syntheticElf(layout: TestLayout) = ByteArray(layout.fileSize).apply {
         writeU32LE(0, 0x464C457F)
         writeU64LE(32, 64)
         writeU16LE(54, 56)
@@ -44,8 +54,8 @@ class VisualDelayPatchTest {
         writeU64LE(64 + 16, 0)
         writeU64LE(64 + 32, size.toLong())
 
-        byteArrayOf(0xe2.toByte(), 0x07, 0x40, 0xf9.toByte()).copyInto(this, hookOffset)
-        velocityStores.forEachIndexed { index, (offset, byteOffset) ->
+        byteArrayOf(0xe2.toByte(), 0x07, 0x40, 0xf9.toByte()).copyInto(this, layout.hookOffset)
+        layout.velocityStores.forEachIndexed { index, (offset, byteOffset) ->
             writeU32LE(
                 offset,
                 0xBD000000.toInt() or ((byteOffset / 4) shl 10) or (19 shl 5) or (index + 1),
@@ -76,14 +86,40 @@ class VisualDelayPatchTest {
     }
 
     private companion object {
-        const val hookOffset = 0x100B0C
-        val velocityStores = listOf(
-            0x100D80 to 28,
-            0x100D84 to 32,
-            0x100D88 to 36,
-            0x100D94 to 40,
-            0x100D98 to 44,
-            0x100DA4 to 48,
+        data class TestLayout(
+            val versionCode: Int,
+            val fileSize: Int,
+            val hookOffset: Int,
+            val velocityStores: List<Pair<Int, Int>>,
+        )
+
+        val nativeLayouts = listOf(
+            TestLayout(
+                5002318,
+                2_277_488,
+                0x100B0C,
+                listOf(
+                    0x100D80 to 28,
+                    0x100D84 to 32,
+                    0x100D88 to 36,
+                    0x100D94 to 40,
+                    0x100D98 to 44,
+                    0x100DA4 to 48,
+                ),
+            ),
+            TestLayout(
+                5002322,
+                2_283_400,
+                0x101154,
+                listOf(
+                    0x1013C8 to 28,
+                    0x1013CC to 32,
+                    0x1013D0 to 36,
+                    0x1013DC to 40,
+                    0x1013E0 to 44,
+                    0x1013EC to 48,
+                ),
+            ),
         )
     }
 }

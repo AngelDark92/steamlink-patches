@@ -2,6 +2,8 @@ package app.template.patches.shared
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ConstantsTest {
     @Test
@@ -10,12 +12,15 @@ class ConstantsTest {
             listOf(5001712, 5002172, 5002206, 5002244, 5002313),
             Constants.COMPATIBILITIES_STEAM_LINK_LEGACY.versionCodes(),
         )
+        assertTrue(Constants.isNativeXrSteamLinkBuild("5002318"))
+        assertTrue(Constants.isNativeXrSteamLinkBuild("5002322"))
+        assertFalse(Constants.isNativeXrSteamLinkBuild("5002313"))
         assertEquals(
-            listOf(5001712, 5002172, 5002206, 5002244, 5002313, 5002318),
+            listOf(5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322),
             Constants.COMPATIBILITIES_STEAM_LINK.versionCodes(),
         )
         assertEquals(
-            listOf(5001712, 5002172, 5002206, 5002244, 5002313, 5002318),
+            listOf(5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322),
             Constants.COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.versionCodes(),
         )
     }

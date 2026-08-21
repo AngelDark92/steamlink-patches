@@ -31,12 +31,14 @@ import kotlin.test.assertTrue
 
 class PatchCompatibilityMatrixTest {
     @Test
-    fun `5002318 exposes only the supported stable and experimental patches`() {
-        allowed5002318.forEach { patch ->
-            assertTrue(patch.supports(5002318), patch.name)
-        }
-        excluded5002318.forEach { patch ->
-            assertFalse(patch.supports(5002318), patch.name)
+    fun `native builds expose only the supported stable and experimental patches`() {
+        listOf(5002318, 5002322).forEach { versionCode ->
+            allowedNativeXr.forEach { patch ->
+                assertTrue(patch.supports(versionCode), "${patch.name} on $versionCode")
+            }
+            excludedNativeXr.forEach { patch ->
+                assertFalse(patch.supports(versionCode), "${patch.name} on $versionCode")
+            }
         }
         legacyRecommended.forEach { patch ->
             assertTrue(patch.default, "${patch.name} must remain recommended on its older compatible builds")
@@ -45,7 +47,7 @@ class PatchCompatibilityMatrixTest {
 
     @Test
     fun `previous verified build compatibility is preserved`() {
-        (allowed5002318 + excluded5002318).forEach { patch ->
+        (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertTrue(patch.supports(5002313), patch.name)
         }
     }
@@ -84,7 +86,7 @@ class PatchCompatibilityMatrixTest {
     }
 
     private companion object {
-        val allowed5002318 = listOf(
+        val allowedNativeXr = listOf(
             deviceIdentityPatch,
             oledCalibrationPatch,
             appearOnTopPatch,
@@ -97,7 +99,7 @@ class PatchCompatibilityMatrixTest {
             xrProjectionSettingsStrippedPatch,
         )
 
-        val excluded5002318 = listOf(
+        val excludedNativeXr = listOf(
             changePackageNamePatch,
             microphoneInputPresetPatch,
             androidXrNativePermissionNamesPatch,
@@ -112,7 +114,7 @@ class PatchCompatibilityMatrixTest {
             xrInputRoutingConfigPatch,
         )
 
-        val legacyRecommended = excluded5002318 - listOf(
+        val legacyRecommended = excludedNativeXr - listOf(
             changePackageNamePatch,
             controllerVelocityPatch,
         )

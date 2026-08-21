@@ -18,6 +18,7 @@ class PatchListGeneratorTest {
             listOf("2.0.22"),
             targetsForReleaseChannel(latest, ReleaseChannel.EXPERIMENTAL).map { it.version },
         )
+        assertEquals(5002322, latest.targets.single().versionCodes!!.values.toSet().single())
     }
 
     @Test
@@ -34,6 +35,11 @@ class PatchListGeneratorTest {
                 COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.last(),
                 ReleaseChannel.EXPERIMENTAL,
             ).map { it.version },
+        )
+        assertEquals(
+            5002322,
+            COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.last()
+                .targets.single().versionCodes!!.values.toSet().single(),
         )
     }
 }

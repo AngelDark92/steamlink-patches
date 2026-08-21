@@ -180,9 +180,9 @@ private val relocatablePermissionNameEdits =
     permissionNameEdits(0, 0, locateByPattern = true)
 
 internal fun patchNativePermissionNames(bytes: ByteArray): ByteArray {
-    // 5002318 already contains the Android XR permission names and working runtime request flow.
+    // Native-XR builds already contain the Android XR permission names and working request flow.
     // Pattern-rewriting its retained Oculus fallback names can break vendor/hand capability routing.
-    if (bytes.size == 2_277_488) return bytes.copyOf()
+    if (bytes.size == 2_277_488 || bytes.size == 2_283_400) return bytes.copyOf()
 
     val layout = NATIVE_LAYOUTS.singleOrNull { it.fileSize == bytes.size }
     return applyNativeEdits(

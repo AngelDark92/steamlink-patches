@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 
 // QSVLClientAudioNdk::Init(bool, int), immediately before
 // AAudioStreamBuilder_setInputPreset(builder, preset):
@@ -63,9 +64,9 @@ val microphoneInputPresetPatch = rawResourcePatch(
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
-        // 5002318 is intentionally outside this legacy patch's supported set. Manager 1.7 cannot
+        // Native-XR builds are intentionally outside this legacy patch's supported set. Manager 1.7 cannot
         // filter same-version build codes, so preserve Valve's stock microphone path if selected.
-        if (packageMetadata.versionCode == "5002318") return@execute
+        if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
 
         val selected = SUPPORTED_PRESETS[preset]
             ?: throw PatchException("Unknown microphone input preset: $preset")

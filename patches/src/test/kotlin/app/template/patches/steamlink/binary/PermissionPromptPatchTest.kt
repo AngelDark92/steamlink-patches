@@ -41,11 +41,14 @@ class PermissionPromptPatchTest {
     }
 
     @Test
-    fun `5002318 native permission request remains untouched`() {
-        val offset = 0x147418
-        val input = ByteArray(2_277_488).apply { original.copyInto(this, offset) }
-
-        assertContentEquals(input, patchPermissionPrompt(input))
+    fun `native permission requests remain untouched`() {
+        listOf(
+            Triple(5002318, 2_277_488, 0x147418),
+            Triple(5002322, 2_283_400, 0x148aac),
+        ).forEach { (versionCode, size, offset) ->
+            val input = ByteArray(size).apply { original.copyInto(this, offset) }
+            assertContentEquals(input, patchPermissionPrompt(input), versionCode.toString())
+        }
     }
 
     @Test

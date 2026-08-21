@@ -10,7 +10,12 @@ object Constants {
 
     private const val STEAM_LINK_PACKAGE = "com.valvesoftware.steamlinkvr"
     private const val STEAM_LINK_VERSION = "2.0.22"
-    private val PRE_5002318_BUILDS = intArrayOf(5001712, 5002172, 5002206, 5002244, 5002313)
+    private val LEGACY_STEAM_LINK_BUILDS =
+        intArrayOf(5001712, 5002172, 5002206, 5002244, 5002313)
+    private val NATIVE_XR_STEAM_LINK_BUILDS = intArrayOf(5002318, 5002322)
+
+    fun isNativeXrSteamLinkBuild(versionCode: String): Boolean =
+        NATIVE_XR_STEAM_LINK_BUILDS.any { it.toString() == versionCode }
 
     private fun steamLinkBuildCompatibility(
         versionCode: Int,
@@ -31,20 +36,24 @@ object Constants {
     )
 
     val COMPATIBILITIES_STEAM_LINK_LEGACY =
-        PRE_5002318_BUILDS.map(::steamLinkBuildCompatibility)
+        LEGACY_STEAM_LINK_BUILDS.map(::steamLinkBuildCompatibility)
 
-    private val COMPATIBILITY_STEAM_LINK_5002318 = steamLinkBuildCompatibility(
-        versionCode = 5002318,
-        description = "Build 5002318 supports only Device identity, OLED color calibration, " +
-            "Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, " +
-            "Video dither, and the experimental XR projection patches.",
-    )
+    val COMPATIBILITIES_STEAM_LINK_NATIVE_XR =
+        NATIVE_XR_STEAM_LINK_BUILDS.map { versionCode ->
+            steamLinkBuildCompatibility(
+                versionCode = versionCode,
+                description = "Build $versionCode supports only Device identity, OLED color " +
+                    "calibration, Appear on top, native GXRP telemetry, GXR face bridge, Visual Delay Fix, " +
+                    "Unrestricted battery usage, Video dither, and the experimental XR " +
+                    "projection patches.",
+            )
+        }
 
     val COMPATIBILITIES_STEAM_LINK =
-        COMPATIBILITIES_STEAM_LINK_LEGACY + COMPATIBILITY_STEAM_LINK_5002318
+        COMPATIBILITIES_STEAM_LINK_LEGACY + COMPATIBILITIES_STEAM_LINK_NATIVE_XR
 
     val COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL =
-        (PRE_5002318_BUILDS + 5002318).map { versionCode ->
+        (LEGACY_STEAM_LINK_BUILDS + NATIVE_XR_STEAM_LINK_BUILDS).map { versionCode ->
             steamLinkBuildCompatibility(
                 versionCode = versionCode,
                 name = EXPERIMENTAL_COMPATIBILITY_NAME,

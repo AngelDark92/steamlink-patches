@@ -63,7 +63,7 @@ val assembleExtension by tasks.registering(JavaExec::class) {
     val smaliSources =
         fileTree(smaliSrcDir) {
             // The dependency graph is static in Morphe, so this extension may also be merged when
-            // an allowed patch is applied to 5002318. Include only brand-new helper classes: all
+            // an allowed patch is applied to a native-XR build. Include only brand-new helper classes: all
             // edits to Valve's existing SDL/controller classes stay in build-aware Kotlin code.
             include("org/libsdl/app/GxrSdlBridge.smali")
             // Exclude test variants that redefine production classes.
@@ -88,11 +88,11 @@ val assembleExtension by tasks.registering(JavaExec::class) {
     }
 }
 
-// 5002318 already has native SDL/controller/hand routing. Its surviving permission/settings
+// Native-XR builds already have SDL/controller/hand routing. Their surviving permission/settings
 // patches need only new helper classes, never the legacy SDL class fragments from extension.mpe.
 val assembleMinimalExtension by tasks.registering(JavaExec::class) {
     group = "build"
-    description = "Assemble the 5002318-safe permission/overlay helper extension"
+    description = "Assemble the native-XR-safe permission/overlay helper extension"
 
     val smaliSrcDir = file("src/main/resources/steamlink/androidxr/smali")
     val smaliSources = fileTree(smaliSrcDir) {

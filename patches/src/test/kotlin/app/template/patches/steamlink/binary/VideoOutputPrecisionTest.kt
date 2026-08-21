@@ -87,6 +87,7 @@ class VideoOutputPrecisionTest {
             VIDEO_LIBRARY_SIZE_5002244 to SWAPCHAIN_FORMAT_OFFSETS_5002244,
             VIDEO_LIBRARY_SIZE_5002313 to SWAPCHAIN_FORMAT_OFFSETS_5002313,
             VIDEO_LIBRARY_SIZE_5002318 to SWAPCHAIN_FORMAT_OFFSETS_5002318,
+            VIDEO_LIBRARY_SIZE_5002322 to SWAPCHAIN_FORMAT_OFFSETS_5002322,
         ).forEach { (size, offsets) ->
             val srgb = syntheticLibrary(size, offsets)
             val rgb10 = setProjectionSwapchainFormat(srgb, VideoOutputPrecision.RGB10_A2_EXPERIMENTAL)

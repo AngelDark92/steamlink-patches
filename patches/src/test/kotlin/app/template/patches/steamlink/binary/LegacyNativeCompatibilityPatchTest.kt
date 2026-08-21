@@ -50,13 +50,14 @@ class LegacyNativeCompatibilityPatchTest {
     }
 
     @Test
-    fun `5002318 native permission fallback names remain untouched`() {
-        val input = ByteArray(2_277_488).apply {
-            faceOriginal.copyInto(this, 0x94AB5)
-            eyeOriginal.copyInto(this, 0x9D7C7)
+    fun `native permission fallback names remain untouched`() {
+        listOf(2_277_488, 2_283_400).forEach { size ->
+            val input = ByteArray(size).apply {
+                faceOriginal.copyInto(this, 0x94AB5)
+                eyeOriginal.copyInto(this, 0x9D7C7)
+            }
+            assertContentEquals(input, patchNativePermissionNames(input), size.toString())
         }
-
-        assertContentEquals(input, patchNativePermissionNames(input))
     }
 
     @Test

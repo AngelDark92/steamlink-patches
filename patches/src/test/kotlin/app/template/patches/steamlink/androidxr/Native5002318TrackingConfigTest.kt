@@ -6,10 +6,27 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import javax.xml.parsers.DocumentBuilderFactory
 
-class Native5002318TrackingConfigTest {
+class NativeXrTrackingConfigTest {
     @Test
-    fun `5002318 helper extension contains no SDL or controller class fragments`() {
+    fun `native GXRP metadata is direct idempotent application state`() {
+        val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
+        val manifest = document.createElement("manifest").also(document::appendChild)
+        val app = document.createElement("application").also(manifest::appendChild)
+
+        upsertDirectApplicationMetadata(document, app, "gxr.telemetry.host", "192.168.1.27")
+        upsertDirectApplicationMetadata(document, app, "gxr.telemetry.host", "192.168.1.30")
+
+        val matches = (0 until app.getElementsByTagName("meta-data").length)
+            .map { app.getElementsByTagName("meta-data").item(it) as org.w3c.dom.Element }
+            .filter { it.getAttribute("android:name") == "gxr.telemetry.host" }
+        assertEquals(1, matches.size)
+        assertEquals("192.168.1.30", matches.single().getAttribute("android:value"))
+    }
+
+    @Test
+    fun `native helper extension contains no SDL or controller class fragments`() {
         assertEquals(
             setOf(
                 "Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;",
@@ -21,7 +38,7 @@ class Native5002318TrackingConfigTest {
     }
 
     @Test
-    fun `legacy extension also contains helpers only so transitive merge is inert on 5002318`() {
+    fun `legacy extension also contains helpers only so transitive merge is inert on native builds`() {
         assertEquals(
             setOf("Lorg/libsdl/app/GxrSdlBridge;"),
             extensionClassTypes("/extensions/extension.mpe"),
@@ -29,8 +46,8 @@ class Native5002318TrackingConfigTest {
     }
 
     @Test
-    fun `5002318 stock controller config carries native hand routing absent from legacy baseline`() {
-        // Minimal fixture copied from decoded 5002318 controller_config.json. Keep these markers
+    fun `native stock controller config carries hand routing absent from legacy baseline`() {
+        // Minimal fixture shared by byte-identical 5002318/5002322 controller configs. Keep markers
         // together: the runtime needs the extension, hand profile/type, and both exported poses.
         val stock =
             """
@@ -55,7 +72,7 @@ class Native5002318TrackingConfigTest {
         )
 
         requiredNativeRouting.forEach { marker ->
-            assertTrue(stock.contains(marker), "5002318 stock is missing $marker")
+            assertTrue(stock.contains(marker), "native stock is missing $marker")
             assertFalse(legacy.contains(marker), "legacy baseline unexpectedly contains $marker")
         }
         assertTrue(stock.contains("/input/grip/pose"))

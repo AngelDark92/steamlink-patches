@@ -3,16 +3,16 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
-Steam Link 2.0.22 build 5002318 exposes only Device identity, OLED color calibration,
-Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
+Steam Link 2.0.22 builds 5002318 and 5002322 expose only Device identity, OLED color calibration,
+Appear on top, Galaxy XR native telemetry, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
 and the three experimental XR projection patches. Their shared legacy dependency chain branches
 on versionCode: older builds retain the historical provisioning, while every legacy mutation is a
-no-op on 5002318 so Valve's native hand/controller routing stays intact.
+no-op on both native-XR builds so Valve's hand/controller routing stays intact.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
 still display incompatible patches by design. Legacy-only patches keep their historical default
-for older exact build targets and are excluded from 5002318 by versionCode. Manager 1.7 cannot
+for older exact build targets and are excluded from 5002318/5002322 by versionCode. Manager 1.7 cannot
 represent that per-build distinction.
 
 ---
@@ -33,7 +33,20 @@ represent that per-build distinction.
 Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244) or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; 5002318 and unknown layouts are preserved |
+| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244) or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; 5002318, 5002322, and unknown layouts are preserved |
+
+---
+
+### Galaxy XR Native Telemetry (`nativeGxrpTelemetryPatch`)
+**Default: disabled** (native 5002318/5002322 only)
+
+| Artifact | Edit |
+|---|---|
+| `lib/arm64-v8a/libgxr_xr_bridge.so` | Adds the GXRP OpenXR telemetry API layer only; native Valve XR/controller/hand binaries are untouched |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_xr_bridge.json` | Adds implicit API-layer manifest |
+| `AndroidManifest.xml` application metadata | Upserts `gxr.telemetry.enabled`, host, TCP/UDP ports, private pairing token, and build version code |
+
+`hostIpv4` must be a non-loopback unicast IPv4; `pairingTokenHex` must be a nontrivial 64-hex value. No token is stored in this repository. The available precompiled bridge reads the token from APK manifest metadata, so the patched APK is a private, single-user artifact and must not be committed, uploaded, or distributed. Possession of that APK reveals the token. A distributable production build requires a source-level bridge change that provisions the token at runtime from app-private, Android-Keystore-backed storage.
 
 ---
 
@@ -117,18 +130,18 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Appear On Top (`appearOnTopPatch`)
-**Default: enabled** — depends only on the private minimal permission/settings bootstrap
+**Default: enabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
-| `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves stock 5002318 target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config |
+| `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves stock 5002318/5002322 target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config |
 | Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, and `GxrResolutionProbe`; contains no SDL/controller class fragments |
 | `SteamLink` lifecycle methods | Adds the overlay/resolution probe calls without modifying `SDLSurface`, `SDLControllerManager`, or generic-motion routing |
 
 ---
 
 ### Unrestricted Battery Usage (`unrestrictedBatteryUsagePatch`)
-**Default: enabled** — depends only on the private minimal permission/settings bootstrap
+**Default: enabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
@@ -180,6 +193,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 | 5002244 | 2,251,920 | `0xFEAD8` | `0x2166B0` |
 | 5002313 | 2,276,872 | `0x100B8C` | `0x21C770` |
 | 5002318 | 2,277,488 | `0x100B0C` | `0x21C9D0` |
+| 5002322 | 2,283,400 | `0x101154` | `0x21E0E0` |
 
 ---
 
@@ -198,7 +212,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 
 ### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
 **Default: enabled**
-> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5002244, 5002313, and 5002318.
+> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5002244, 5002313, 5002318, and 5002322.
 
 | Artifact | Edit |
 |---|---|
@@ -212,6 +226,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 | Three 5002244 instructions at `0x10826c`, `0x1082dc`, `0x10834c` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | Three 5002313 instructions at `0x10b2d4`, `0x10b344`, `0x10b3b4` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | Three 5002318 instructions at `0x10b430`, `0x10b4a0`, `0x10b510` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
+| Three 5002322 instructions at `0x10ba78`, `0x10bae8`, `0x10bb58` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | RGB10_A2 shader output | Explicit sRGB EOTF converts calibrated code values to the linear OpenXR swapchain |
 
 **Options:**
@@ -222,7 +237,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 | `saturation` | `1.12` | 0.00–3.00 | Second argument in `mix()` |
 | `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and all three projection swapchain formats |
 
-`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the guarded 2,251,920-byte 5002244, 2,276,872-byte 5002313, or 2,277,488-byte 5002318 library layout, the unique shader/NUL boundary, all three layout-specific instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
+`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the guarded 2,251,920-byte 5002244, 2,276,872-byte 5002313, 2,277,488-byte 5002318, or 2,283,400-byte 5002322 library layout, the unique shader/NUL boundary, all three layout-specific instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
 
 Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation remains a runtime acceptance gate for both modes.
 
@@ -245,21 +260,23 @@ Static tests validate GLSL structure, fixed size, and binary placement but do no
 ## identity group
 
 ### Device Identity (`deviceIdentityPatch`)
-**Default: enabled** — retains the legacy XR Core/device-config dependency, whose mutations are guarded off on 5002318
+**Default: enabled** — retains the legacy XR Core/device-config dependency, whose mutations are guarded off on native-XR builds
 
 | Artifact | Edit |
 |---|---|
-| `assets/config/hmd_config.json` (5002318) | Targeted merge: changes only fallback `unknown.sModelNumber`; all other bytes are preserved |
+| `assets/config/hmd_config.json` (5002318/5002322, Galaxy profile) | Atomic targeted merge: upserts exact `unknown`, `xrvst2`, and `xrvst2ue` entries with stable Galaxy serial/model/device identity and `{galaxyxrresources}` input/render roots; unrelated extensions, profiles, offsets, and controller configuration are preserved |
+| `assets/config/hmd_config.json` (5002318/5002322, Quest/Pico) | Changes only the runtime fallback model string |
 | `assets/config/hmd_config.json` (legacy builds) | Retains the previously verified full profile-specific identity payload |
 
-This intentionally preserves 5002318's requested extensions and vendor profiles. In particular,
+This intentionally preserves the native builds' requested extensions and vendor profiles. In particular,
 `controller_config.json` remains byte-identical, retaining `XR_EXT_hand_interaction`,
 `/interaction_profiles/ext/hand_interaction_ext`, and its hand grip/aim poses.
 
 **Option `profile`:**
 | Value | `sModelNumber` |
 |---|---|
-| `samsung-default` | No change |
+| `samsung-galaxy-xr` | Full Galaxy XR identity (default) |
+| `stock-no-change` | Byte-identical stock identity |
 | `meta-quest-pro` | `Oculus Quest Pro` |
 | `pico-4-pro` | `PICO 4 Pro` |
 

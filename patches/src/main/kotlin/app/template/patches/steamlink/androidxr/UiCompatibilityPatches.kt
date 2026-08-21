@@ -4,7 +4,7 @@ import app.morphe.patcher.patch.bytecodePatch
 
 // Helper-only extension. Morphe does not compatibility-filter transitive dependencies, so this
 // must never contain fragments for Valve's existing SDL/controller classes. The helpers are inert
-// on 5002318; build-aware Kotlin patches install their call sites only on legacy builds.
+// on native-XR builds; build-aware Kotlin patches install their call sites only on legacy builds.
 internal val androidXrUiExtensionPatch = bytecodePatch {
     extendWith("extensions/extension.mpe")
 }

@@ -35,7 +35,7 @@ val unrestrictedBatteryUsagePatch = bytecodePatch(
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
-    // Restore the legacy automatic foundation while its build guards make it a no-op on 5002318.
+    // Restore the legacy automatic foundation while its native-build guards make it a no-op.
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
@@ -126,7 +126,7 @@ private fun projectionExperimentPatch(
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.toTypedArray())
     // Legacy builds retain their complete launcher foundation. Every legacy mutation is guarded
-    // off on 5002318, where only the minimal permission/probe bootstrap remains active.
+    // off on native-XR builds, where only the minimal permission/probe bootstrap remains active.
     dependsOn(xrLauncherBootstrapPatch, xrPermissionSettingsBootstrapPatch)
     when (mode) {
         "projection_trace_control" -> dependsOn(projectionTraceControlLayerPatch)
