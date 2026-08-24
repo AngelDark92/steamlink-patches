@@ -3,7 +3,7 @@ package app.template.patches.steamlink.binary
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 
 // QSVLClientAudioNdk::Init(bool, int), immediately before
@@ -25,6 +25,16 @@ private val SUPPORTED_PRESETS = mapOf(
     "voice-performance" to 10,
 )
 
+private data class NativeMicrophoneLayout(
+    val librarySize: Int,
+    val instructionOffset: Int,
+)
+
+private val NATIVE_MICROPHONE_LAYOUTS = mapOf(
+    "5002318" to NativeMicrophoneLayout(2_277_488, 0xF3240),
+    "5002322" to NativeMicrophoneLayout(2_283_400, 0xF37E0),
+)
+
 private fun movW1Immediate(value: Int): ByteArray {
     require(value in 0..0xffff)
     val instruction = 0x52800001 or (value shl 5) // MOVZ W1, #value
@@ -44,9 +54,9 @@ private fun ByteArray.matchesAt(offset: Int, pattern: ByteArray): Boolean =
 val microphoneInputPresetPatch = rawResourcePatch(
     name = "Microphone input preset",
     description = "Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication.",
-    default = false,
+    default = true,
 ) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
 
     val preset by stringOption(
         key = "preset",
@@ -64,14 +74,37 @@ val microphoneInputPresetPatch = rawResourcePatch(
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
-        // Native-XR builds are intentionally outside this legacy patch's supported set. Manager 1.7 cannot
-        // filter same-version build codes, so preserve Valve's stock microphone path if selected.
-        if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
-
         val selected = SUPPORTED_PRESETS[preset]
             ?: throw PatchException("Unknown microphone input preset: $preset")
         val bytes = file.readBytes()
         val matches = mutableListOf<Int>()
+
+        if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) {
+            val layout = NATIVE_MICROPHONE_LAYOUTS[packageMetadata.versionCode]
+                ?: throw PatchException("No verified microphone layout for Steam Link ${packageMetadata.versionCode}")
+            if (bytes.size != layout.librarySize) {
+                throw PatchException(
+                    "Unsupported native microphone library size=${bytes.size}; expected ${layout.librarySize}",
+                )
+            }
+            val currentIsSupported = SUPPORTED_PRESETS.values.any {
+                bytes.matchesAt(layout.instructionOffset, movW1Immediate(it))
+            }
+            if (!bytes.matchesAt(layout.instructionOffset - INPUT_PRESET_PREFIX.size, INPUT_PRESET_PREFIX) ||
+                !currentIsSupported
+            ) {
+                throw PatchException(
+                    "Native microphone instruction did not match the verified layout at 0x${layout.instructionOffset.toString(16)}",
+                )
+            }
+            val replacement = movW1Immediate(selected)
+            if (!bytes.matchesAt(layout.instructionOffset, replacement)) {
+                val result = bytes.copyOf()
+                replacement.copyInto(result, layout.instructionOffset)
+                file.writeBytes(result)
+            }
+            return@execute
+        }
 
         for (offset in 0..bytes.size - INPUT_PRESET_PREFIX.size - 4) {
             if (!bytes.matchesAt(offset, INPUT_PRESET_PREFIX)) continue

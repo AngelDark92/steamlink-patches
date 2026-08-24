@@ -32,7 +32,7 @@ private val unrestrictedBatteryManifestPatch = resourcePatch {
 val unrestrictedBatteryUsagePatch = bytecodePatch(
     name = "Unrestricted battery usage",
     description = "Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     // Restore the legacy automatic foundation while its native-build guards make it a no-op.
@@ -67,7 +67,7 @@ private val appearOnTopManifestPatch = resourcePatch {
 val appearOnTopPatch = bytecodePatch(
     name = "Appear on top",
     description = "Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     dependsOn(

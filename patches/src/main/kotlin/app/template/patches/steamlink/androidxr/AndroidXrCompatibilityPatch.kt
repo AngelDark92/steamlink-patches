@@ -3,9 +3,7 @@ package app.template.patches.steamlink.androidxr
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_NATIVE_XR
 import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 import app.template.patches.steamlink.binary.disablePermissionPromptNativePatch
 import org.w3c.dom.Document
@@ -21,15 +19,6 @@ private fun loadResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
         ?: error("Missing bundled resource: steamlink/androidxr/$name"))
         .use { it.readBytes() }
-
-internal const val NATIVE_GXRP_CONTROL_PORT = 29981
-internal const val NATIVE_GXRP_TRACKING_PORT = 29982
-
-internal fun isUsableNativeGxrpHostIpv4(value: String?): Boolean {
-    val octets = value?.split('.')?.map { it.toIntOrNull() ?: return false } ?: return false
-    if (octets.size != 4 || octets.any { it !in 0..255 }) return false
-    return octets[0] in 1..223 && octets[0] != 127
-}
 
 /** Iterate a [NodeList] as a [Sequence]. */
 private fun NodeList.asSequence(): Sequence<org.w3c.dom.Node> = sequence {
@@ -324,97 +313,6 @@ val xrManifestCapabilityPackPatch = resourcePatch(
                 prop.setAttribute("android:name", xrBoundaryMeta)
                 prop.setAttribute("android:value", "XR_BOUNDARY_TYPE_LARGE")
                 app.insertBefore(prop, app.firstChild)
-            }
-        }
-    }
-}
-
-// The native Android-XR Steam Link builds already contain Valve's complete XR path. They still
-// need the small telemetry API layer that publishes authenticated GXRP eye/face frames to the
-// Windows compatibility driver. Keep this separate from the legacy bridge so it cannot replace
-// native controller, hand, launcher, or HMD configuration.
-private val nativeGxrpLayerFilesPatch = rawResourcePatch {
-    execute {
-        if (!isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
-
-        val library = get("lib/arm64-v8a/libgxr_xr_bridge.so")
-        library.parentFile!!.mkdirs()
-        library.writeBytes(loadResource("libgxr_xr_bridge.so"))
-
-        val layerManifest = get(
-            "assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_xr_bridge.json",
-        )
-        layerManifest.parentFile!!.mkdirs()
-        layerManifest.writeBytes(loadResource("XR_APILAYER_local_GalaxyXR_xr_bridge.json"))
-    }
-}
-
-internal fun upsertDirectApplicationMetadata(
-    document: Document,
-    app: Element,
-    name: String,
-    value: String,
-) {
-    val matches = app.childNodes.asSequence()
-        .filterIsInstance<Element>()
-        .filter { it.tagName == "meta-data" && it.getAttribute("android:name") == name }
-        .toList()
-    val metadata = matches.firstOrNull() ?: document.createElement("meta-data").also(app::appendChild)
-    metadata.setAttribute("android:name", name)
-    metadata.setAttribute("android:value", value)
-    matches.drop(1).forEach(app::removeChild)
-}
-
-internal fun nativeGxrpApplicationMetadata(
-    hostIpv4: String,
-    pairingTokenHex: String,
-    versionCode: String,
-): Map<String, String> = linkedMapOf(
-    "gxr.telemetry.enabled" to "true",
-    "gxr.telemetry.host" to hostIpv4,
-    "gxr.telemetry.controlPort" to NATIVE_GXRP_CONTROL_PORT.toString(),
-    "gxr.telemetry.trackingPort" to NATIVE_GXRP_TRACKING_PORT.toString(),
-    "gxr.telemetry.pairingTokenHex" to pairingTokenHex,
-    "gxr.build.versionCode" to versionCode,
-)
-
-@Suppress("unused")
-val nativeGxrpTelemetryPatch = resourcePatch(
-    name = "Galaxy XR native telemetry",
-    description = "Installs the GXRP OpenXR telemetry layer for a private, single-user native Android-XR APK. GXRP ports use the automatic 29981/29982 defaults, and the final APK can enroll its exact hashes with the one-command host setup tool. The pairing token remains extractable, so never distribute that APK.",
-    default = true,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_NATIVE_XR.toTypedArray())
-    dependsOn(nativeGxrpLayerFilesPatch)
-
-    val hostIpv4 by stringOption(
-        key = "hostIpv4",
-        default = "127.0.0.1",
-        values = mapOf("Enter PC LAN IPv4" to "127.0.0.1"),
-        title = "PC listen IPv4",
-        description = "Active IPv4 address of the Windows PC running CustomHeadsetOpenVR. Loopback cannot be reached from the headset.",
-        required = true,
-    ) { value -> isUsableNativeGxrpHostIpv4(value) }
-    val pairingTokenHex by stringOption(
-        key = "pairingTokenHex",
-        default = "UNCONFIGURED",
-        values = mapOf("Enter private 64-hex token" to "UNCONFIGURED"),
-        title = "GXRP pairing token",
-        description = "Private 32-byte token as exactly 64 hex characters. It is embedded in the patched APK: never commit, upload, or distribute that APK.",
-        required = true,
-    ) { value -> value?.matches(Regex("(?i)[0-9a-f]{64}")) == true && value.toSet().size > 1 }
-
-    finalize {
-        if (!isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@finalize
-        document("AndroidManifest.xml").use { document ->
-            val app = document.documentElement.getElementsByTagName("application").item(0) as Element
-            val metadata = nativeGxrpApplicationMetadata(
-                hostIpv4 = hostIpv4!!,
-                pairingTokenHex = pairingTokenHex!!,
-                versionCode = packageMetadata.versionCode,
-            )
-            metadata.forEach { (name, value) ->
-                upsertDirectApplicationMetadata(document, app, name, value)
             }
         }
     }

@@ -244,7 +244,7 @@ val oledCalibrationPatch = rawResourcePatch(
 
     val profile by stringOption(
         key = "profile",
-        default = "initial",
+        default = "final-balanced",
         values = mapOf(
             "Initial tested (gamma 1.06, saturation 1.12)" to "initial",
             "Final balanced tested (gamma 1.20, saturation 1.45)" to "final-balanced",
@@ -259,7 +259,7 @@ val oledCalibrationPatch = rawResourcePatch(
         key = "gamma",
         min = 0.50f,
         max = 2.50f,
-        default = 1.06f,
+        default = 1.20f,
         step = 0.01f,
         title = "Gamma",
         description = "Used by Custom profile. Allowed range: 0.50 to 2.50.",
@@ -270,7 +270,7 @@ val oledCalibrationPatch = rawResourcePatch(
         key = "saturation",
         min = 0.00f,
         max = 3.00f,
-        default = 1.12f,
+        default = 1.45f,
         step = 0.01f,
         title = "Saturation",
         description = "Used by Custom profile. Allowed range: 0.00 to 3.00.",

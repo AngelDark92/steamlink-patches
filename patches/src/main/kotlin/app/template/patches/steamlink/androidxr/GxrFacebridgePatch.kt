@@ -59,10 +59,16 @@ private val gxrFacebridgeManifestPatch = resourcePatch {
 val gxrFacebridgePatch = rawResourcePatch(
     name = "GXR face bridge",
     description = "Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT).",
-    default = false,
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
-    dependsOn(gxrFacebridgeManifestPatch)
+    // Keep the complete legacy launcher foundation while using only the minimal
+    // permission/settings activity on native-XR builds. The activity requests FACE_TRACKING.
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        gxrFacebridgeManifestPatch,
+    )
 
     execute { /* all work done by sub-patches */ }
 }

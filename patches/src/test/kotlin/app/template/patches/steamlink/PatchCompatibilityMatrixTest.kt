@@ -5,7 +5,6 @@ import app.template.patches.steamlink.androidxr.appearOnTopPatch
 import app.template.patches.steamlink.androidxr.androidXrUiExtensionPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityPatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
-import app.template.patches.steamlink.androidxr.nativeGxrpTelemetryPatch
 import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.xrDirectInputFixPatch
 import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
@@ -53,7 +52,7 @@ class PatchCompatibilityMatrixTest {
 
     @Test
     fun `previous verified build compatibility is preserved`() {
-        (allowedNativeXr - nativeGxrpTelemetryPatch + excludedNativeXr).forEach { patch ->
+        (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertTrue(patch.supports(5002313), patch.name)
         }
     }
@@ -94,7 +93,7 @@ class PatchCompatibilityMatrixTest {
     private companion object {
         val allowedNativeXr = listOf(
             deviceIdentityPatch,
-            nativeGxrpTelemetryPatch,
+            microphoneInputPresetPatch,
             oledCalibrationPatch,
             appearOnTopPatch,
             gxrFacebridgePatch,
@@ -108,7 +107,6 @@ class PatchCompatibilityMatrixTest {
 
         val excludedNativeXr = listOf(
             changePackageNamePatch,
-            microphoneInputPresetPatch,
             androidXrNativePermissionNamesPatch,
             forceHmdInitializationGatesPatch,
             forceLobbyPermissionStateGatePatch,
@@ -123,8 +121,11 @@ class PatchCompatibilityMatrixTest {
 
         val recommendedDefaults = setOf(
             deviceIdentityPatch,
-            nativeGxrpTelemetryPatch,
+            microphoneInputPresetPatch,
             oledCalibrationPatch,
+            appearOnTopPatch,
+            gxrFacebridgePatch,
+            unrestrictedBatteryUsagePatch,
             videoDitherPatch,
             hmdOnlyPatch,
         )

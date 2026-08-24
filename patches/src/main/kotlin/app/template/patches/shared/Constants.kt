@@ -42,8 +42,8 @@ object Constants {
         NATIVE_XR_STEAM_LINK_BUILDS.map { versionCode ->
             steamLinkBuildCompatibility(
                 versionCode = versionCode,
-                description = "Build $versionCode supports only Device identity, OLED color " +
-                    "calibration, Appear on top, native GXRP telemetry, GXR face bridge, Visual Delay Fix, " +
+                description = "Build $versionCode supports only Device identity, Microphone input preset, OLED color " +
+                    "calibration, Appear on top, GXR face bridge, Visual Delay Fix, " +
                     "Unrestricted battery usage, Video dither, and the experimental XR " +
                     "projection patches.",
             )

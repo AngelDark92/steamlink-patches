@@ -6,47 +6,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
-import javax.xml.parsers.DocumentBuilderFactory
 
 class NativeXrTrackingConfigTest {
-    @Test
-    fun `native GXRP host requires usable unicast IPv4`() {
-        assertTrue(isUsableNativeGxrpHostIpv4("192.168.1.27"))
-        assertTrue(isUsableNativeGxrpHostIpv4("10.0.0.4"))
-        listOf(null, "", "0.1.2.3", "127.0.0.1", "224.0.0.1", "240.0.0.1", "255.255.255.255")
-            .forEach { assertFalse(isUsableNativeGxrpHostIpv4(it), "$it must be rejected") }
-    }
-
-    @Test
-    fun `native GXRP metadata uses fixed host-matching ports`() {
-        val metadata = nativeGxrpApplicationMetadata(
-            hostIpv4 = "192.168.1.27",
-            pairingTokenHex = "ab".repeat(32),
-            versionCode = "5002322",
-        )
-
-        assertEquals("29981", metadata["gxr.telemetry.controlPort"])
-        assertEquals("29982", metadata["gxr.telemetry.trackingPort"])
-        assertEquals("192.168.1.27", metadata["gxr.telemetry.host"])
-        assertEquals("5002322", metadata["gxr.build.versionCode"])
-    }
-
-    @Test
-    fun `native GXRP metadata is direct idempotent application state`() {
-        val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()
-        val manifest = document.createElement("manifest").also(document::appendChild)
-        val app = document.createElement("application").also(manifest::appendChild)
-
-        upsertDirectApplicationMetadata(document, app, "gxr.telemetry.host", "192.168.1.27")
-        upsertDirectApplicationMetadata(document, app, "gxr.telemetry.host", "192.168.1.30")
-
-        val matches = (0 until app.getElementsByTagName("meta-data").length)
-            .map { app.getElementsByTagName("meta-data").item(it) as org.w3c.dom.Element }
-            .filter { it.getAttribute("android:name") == "gxr.telemetry.host" }
-        assertEquals(1, matches.size)
-        assertEquals("192.168.1.30", matches.single().getAttribute("android:value"))
-    }
-
     @Test
     fun `native helper extension contains no SDL or controller class fragments`() {
         assertEquals(

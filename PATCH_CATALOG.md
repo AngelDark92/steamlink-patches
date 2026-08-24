@@ -3,17 +3,17 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
-Steam Link 2.0.22 builds 5002318 and 5002322 expose only Device identity, OLED color calibration,
-Appear on top, Galaxy XR native telemetry, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
+Steam Link 2.0.22 builds 5002318 and 5002322 expose only Device identity, Microphone input preset, OLED color calibration,
+Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
 and the three experimental XR projection patches. Their shared legacy dependency chain branches
 on versionCode: older builds retain the historical provisioning, while every legacy mutation is a
 no-op on both native-XR builds so Valve's hand/controller routing stays intact.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
-still display incompatible patches by design. Only Device identity, Galaxy XR native telemetry,
-OLED color calibration, Video dither, and Visual Delay Fix are recommended by default. Every
-other public patch remains selectable but defaults off, including legacy-only patches.
+still display incompatible patches by design. Device identity, Microphone input preset, OLED color
+calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and
+Video dither are recommended by default. Experimental and legacy-only patches default off.
 
 ---
 
@@ -34,19 +34,6 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244) or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; 5002318, 5002322, and unknown layouts are preserved |
-
----
-
-### Galaxy XR Native Telemetry (`nativeGxrpTelemetryPatch`)
-**Default: enabled** (native 5002318/5002322 only)
-
-| Artifact | Edit |
-|---|---|
-| `lib/arm64-v8a/libgxr_xr_bridge.so` | Adds the GXRP OpenXR telemetry API layer only; native Valve XR/controller/hand binaries are untouched |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_xr_bridge.json` | Adds implicit API-layer manifest |
-| `AndroidManifest.xml` application metadata | Upserts `gxr.telemetry.enabled`, host, TCP/UDP ports, private pairing token, and build version code |
-
-`hostIpv4` must be a non-loopback unicast IPv4; `pairingTokenHex` must be a nontrivial 64-hex value. No token is stored in this repository. The available precompiled bridge reads the token from APK manifest metadata, so the patched APK is a private, single-user artifact and must not be committed, uploaded, or distributed. Possession of that APK reveals the token. A distributable production build requires a source-level bridge change that provisions the token at runtime from app-private, Android-Keystore-backed storage.
 
 ---
 
@@ -120,7 +107,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### GXR Face Bridge (`gxrFacebridgePatch`)
-**Default: disabled** — no dependencies on other XR patches
+**Default: enabled** — depends on the guarded permission bootstrap
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_face_bridge.so` | New file (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) |
@@ -130,7 +117,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Appear On Top (`appearOnTopPatch`)
-**Default: disabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
+**Default: enabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
@@ -141,7 +128,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Unrestricted Battery Usage (`unrestrictedBatteryUsagePatch`)
-**Default: disabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
+**Default: enabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
@@ -173,6 +160,21 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 ---
 
 ## binary group
+
+### Microphone Input Preset (`microphoneInputPresetPatch`)
+**Default: enabled**
+
+| Artifact | Edit |
+|---|---|
+| `lib/arm64-v8a/libvrlink_scene.so` | Replaces the verified AAudio input-preset `MOV W1` instruction with Voice Recognition by default |
+
+Native layouts are independently pinned to build 5002318 size 2,277,488 at
+`0xF3240` and build 5002322 size 2,283,400 at `0xF37E0`. Both validate the
+surrounding load instruction and a supported original/already-patched preset;
+unknown or mismatched native layouts fail closed. Older builds retain the
+existing unique semantic signature matcher.
+
+---
 
 ### Visual Delay Fix (`hmdOnlyPatch`)
 **Default: enabled**
