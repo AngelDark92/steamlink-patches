@@ -1,7 +1,6 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patcher.patch.intSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
@@ -22,6 +21,15 @@ private fun loadResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
         ?: error("Missing bundled resource: steamlink/androidxr/$name"))
         .use { it.readBytes() }
+
+internal const val NATIVE_GXRP_CONTROL_PORT = 29981
+internal const val NATIVE_GXRP_TRACKING_PORT = 29982
+
+internal fun isUsableNativeGxrpHostIpv4(value: String?): Boolean {
+    val octets = value?.split('.')?.map { it.toIntOrNull() ?: return false } ?: return false
+    if (octets.size != 4 || octets.any { it !in 0..255 }) return false
+    return octets[0] in 1..223 && octets[0] != 127
+}
 
 /** Iterate a [NodeList] as a [Sequence]. */
 private fun NodeList.asSequence(): Sequence<org.w3c.dom.Node> = sequence {
@@ -103,7 +111,7 @@ private val androidXrLibPatch = rawResourcePatch {
 val xrCoreRuntimePatch = bytecodePatch(
     name = "XR Core Runtime",
     description = "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(androidXrLibPatch, androidXrUiExtensionPatch, xrDirectInputFixPatch)
@@ -113,7 +121,7 @@ val xrCoreRuntimePatch = bytecodePatch(
 val xrDeviceConfigBaselinePatch = rawResourcePatch(
     name = "XR Device Config Baseline",
     description = "Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
@@ -136,7 +144,7 @@ val xrDeviceConfigBaselinePatch = rawResourcePatch(
 val xrManifestCapabilityPackPatch = resourcePatch(
     name = "XR Manifest Capability Pack",
     description = "Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
@@ -357,11 +365,24 @@ internal fun upsertDirectApplicationMetadata(
     matches.drop(1).forEach(app::removeChild)
 }
 
+internal fun nativeGxrpApplicationMetadata(
+    hostIpv4: String,
+    pairingTokenHex: String,
+    versionCode: String,
+): Map<String, String> = linkedMapOf(
+    "gxr.telemetry.enabled" to "true",
+    "gxr.telemetry.host" to hostIpv4,
+    "gxr.telemetry.controlPort" to NATIVE_GXRP_CONTROL_PORT.toString(),
+    "gxr.telemetry.trackingPort" to NATIVE_GXRP_TRACKING_PORT.toString(),
+    "gxr.telemetry.pairingTokenHex" to pairingTokenHex,
+    "gxr.build.versionCode" to versionCode,
+)
+
 @Suppress("unused")
 val nativeGxrpTelemetryPatch = resourcePatch(
     name = "Galaxy XR native telemetry",
-    description = "Installs the GXRP OpenXR telemetry layer for a private, single-user native Android-XR APK. The pairing token is embedded in the patched APK and is extractable, so never distribute that APK.",
-    default = false,
+    description = "Installs the GXRP OpenXR telemetry layer for a private, single-user native Android-XR APK. GXRP ports use the automatic 29981/29982 defaults, and the final APK can enroll its exact hashes with the one-command host setup tool. The pairing token remains extractable, so never distribute that APK.",
+    default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_NATIVE_XR.toTypedArray())
     dependsOn(nativeGxrpLayerFilesPatch)
@@ -373,33 +394,7 @@ val nativeGxrpTelemetryPatch = resourcePatch(
         title = "PC listen IPv4",
         description = "Active IPv4 address of the Windows PC running CustomHeadsetOpenVR. Loopback cannot be reached from the headset.",
         required = true,
-    ) { value ->
-        value?.split('.')?.let { parts ->
-            parts.size == 4 && parts.all { part ->
-                part.toIntOrNull()?.let { it in 0..255 } == true
-            } && value != "0.0.0.0" && !value.startsWith("127.")
-        } == true
-    }
-    val controlPort = intSliderOption(
-        key = "controlPort",
-        min = 1024,
-        max = 65535,
-        default = 29981,
-        step = 1,
-        title = "GXRP control port",
-        description = "Authenticated GXRP TCP control/handshake port. Must match the Windows driver.",
-        required = true,
-    )
-    val trackingPort = intSliderOption(
-        key = "trackingPort",
-        min = 1024,
-        max = 65535,
-        default = 29982,
-        step = 1,
-        title = "GXRP tracking port",
-        description = "Authenticated GXRP UDP eye/face frame port. Must match the Windows driver.",
-        required = true,
-    )
+    ) { value -> isUsableNativeGxrpHostIpv4(value) }
     val pairingTokenHex by stringOption(
         key = "pairingTokenHex",
         default = "UNCONFIGURED",
@@ -413,13 +408,10 @@ val nativeGxrpTelemetryPatch = resourcePatch(
         if (!isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@finalize
         document("AndroidManifest.xml").use { document ->
             val app = document.documentElement.getElementsByTagName("application").item(0) as Element
-            val metadata = linkedMapOf(
-                "gxr.telemetry.enabled" to "true",
-                "gxr.telemetry.host" to hostIpv4!!,
-                "gxr.telemetry.controlPort" to controlPort.value!!.toString(),
-                "gxr.telemetry.trackingPort" to trackingPort.value!!.toString(),
-                "gxr.telemetry.pairingTokenHex" to pairingTokenHex!!,
-                "gxr.build.versionCode" to packageMetadata.versionCode,
+            val metadata = nativeGxrpApplicationMetadata(
+                hostIpv4 = hostIpv4!!,
+                pairingTokenHex = pairingTokenHex!!,
+                versionCode = packageMetadata.versionCode,
             )
             metadata.forEach { (name, value) ->
                 upsertDirectApplicationMetadata(document, app, name, value)
@@ -502,7 +494,7 @@ internal val xrPermissionSettingsBootstrapPatch = resourcePatch {
 val xrLauncherBootstrapPatch = resourcePatch(
     name = "XR Launcher Bootstrap (Home Space)",
     description = "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     // Keep the legacy launcher self-contained: its manifest activity needs the helper-only DEX,
@@ -655,7 +647,7 @@ val xrLauncherBootstrapPatch = resourcePatch(
 val xrInputRoutingConfigPatch = rawResourcePatch(
     name = "XR Input Routing Config",
     description = "Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrLauncherBootstrapPatch)

@@ -5,6 +5,7 @@ import app.template.patches.steamlink.androidxr.appearOnTopPatch
 import app.template.patches.steamlink.androidxr.androidXrUiExtensionPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityPatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
+import app.template.patches.steamlink.androidxr.nativeGxrpTelemetryPatch
 import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.xrDirectInputFixPatch
 import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
@@ -26,6 +27,7 @@ import app.template.patches.steamlink.binary.videoDitherPatch
 import app.template.patches.steamlink.identity.changePackageNamePatch
 import app.template.patches.steamlink.identity.deviceIdentityPatch
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -40,14 +42,18 @@ class PatchCompatibilityMatrixTest {
                 assertFalse(patch.supports(versionCode), "${patch.name} on $versionCode")
             }
         }
-        legacyRecommended.forEach { patch ->
-            assertTrue(patch.default, "${patch.name} must remain recommended on its older compatible builds")
+        (allowedNativeXr + excludedNativeXr).forEach { patch ->
+            assertEquals(
+                patch in recommendedDefaults,
+                patch.default,
+                "${patch.name} has the wrong global recommendation default",
+            )
         }
     }
 
     @Test
     fun `previous verified build compatibility is preserved`() {
-        (allowedNativeXr + excludedNativeXr).forEach { patch ->
+        (allowedNativeXr - nativeGxrpTelemetryPatch + excludedNativeXr).forEach { patch ->
             assertTrue(patch.supports(5002313), patch.name)
         }
     }
@@ -88,6 +94,7 @@ class PatchCompatibilityMatrixTest {
     private companion object {
         val allowedNativeXr = listOf(
             deviceIdentityPatch,
+            nativeGxrpTelemetryPatch,
             oledCalibrationPatch,
             appearOnTopPatch,
             gxrFacebridgePatch,
@@ -114,9 +121,12 @@ class PatchCompatibilityMatrixTest {
             xrInputRoutingConfigPatch,
         )
 
-        val legacyRecommended = excludedNativeXr - listOf(
-            changePackageNamePatch,
-            controllerVelocityPatch,
+        val recommendedDefaults = setOf(
+            deviceIdentityPatch,
+            nativeGxrpTelemetryPatch,
+            oledCalibrationPatch,
+            videoDitherPatch,
+            hmdOnlyPatch,
         )
     }
 }

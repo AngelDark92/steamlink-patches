@@ -11,16 +11,16 @@ no-op on both native-XR builds so Valve's hand/controller routing stays intact.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
-still display incompatible patches by design. Legacy-only patches keep their historical default
-for older exact build targets and are excluded from 5002318/5002322 by versionCode. Manager 1.7 cannot
-represent that per-build distinction.
+still display incompatible patches by design. Only Device identity, Galaxy XR native telemetry,
+OLED color calibration, Video dither, and Visual Delay Fix are recommended by default. Every
+other public patch remains selectable but defaults off, including legacy-only patches.
 
 ---
 
 ## androidxr group
 
 ### XR Core Runtime (`xrCoreRuntimePatch`)
-**Default: enabled** (legacy builds only)
+**Default: disabled** (legacy builds only)
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_xr_bridge.so` | New file (Galaxy XR OpenXR runtime bridge) |
@@ -38,7 +38,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Galaxy XR Native Telemetry (`nativeGxrpTelemetryPatch`)
-**Default: disabled** (native 5002318/5002322 only)
+**Default: enabled** (native 5002318/5002322 only)
 
 | Artifact | Edit |
 |---|---|
@@ -51,7 +51,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### XR Device Config Baseline (`xrDeviceConfigBaselinePatch`)
-**Default: enabled** (legacy builds only) — depends on `xrCoreRuntimePatch`
+**Default: disabled** (legacy builds only) — depends on `xrCoreRuntimePatch`
 | Artifact | Edit |
 |---|---|
 | `assets/config/hmd_config.json` | Full replace — Galaxy XR HMD identity (sSerialNumber=VRLINKHMDGALAXYXR, sManufacturerName=Samsung, sModelNumber=Galaxy XR, sControllerType=galaxy_xr_hmd, requestedExtensions=[XR_EXT_eye_gaze_interaction]) |
@@ -62,7 +62,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### XR Manifest Capability Pack (`xrManifestCapabilityPackPatch`)
-**Default: enabled** (legacy builds only) — depends on `xrCoreRuntimePatch`
+**Default: disabled** (legacy builds only) — depends on `xrCoreRuntimePatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-sdk@android:minSdkVersion` | Set to `29` |
@@ -83,7 +83,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### XR Launcher Bootstrap (`xrLauncherBootstrapPatch`)
-**Default: enabled** (legacy builds only) — depends on `xrManifestCapabilityPackPatch`
+**Default: disabled** (legacy builds only) — depends on `xrManifestCapabilityPackPatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `application/activity@android:name` | Adds `com.valvesoftware.steamlink.GalaxyXRPermissionActivity` (exported=true, MAIN/LAUNCHER, 1280×800px layout) |
@@ -96,7 +96,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### XR Input Routing Config (`xrInputRoutingConfigPatch`)
-**Default: enabled** (legacy builds only) — depends on `xrLauncherBootstrapPatch`
+**Default: disabled** (legacy builds only) — depends on `xrLauncherBootstrapPatch`
 | Artifact | Edit |
 |---|---|
 | `assets/config/ui_config.json` | Full replace — XR pointer aim/select bindings for touch_controller and hand_interaction_ext; haptic bindings |
@@ -120,7 +120,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### GXR Face Bridge (`gxrFacebridgePatch`)
-**Default: enabled** — no dependencies on other XR patches
+**Default: disabled** — no dependencies on other XR patches
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_face_bridge.so` | New file (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) |
@@ -130,7 +130,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Appear On Top (`appearOnTopPatch`)
-**Default: enabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
+**Default: disabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
@@ -141,7 +141,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Unrestricted Battery Usage (`unrestrictedBatteryUsagePatch`)
-**Default: enabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
+**Default: disabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
@@ -198,7 +198,7 @@ Same edits as `appearOnTopPatch`. Mutually exclusive with `noOverlayNoPermission
 ---
 
 ### Native XR Compatibility Gates
-**Default: enabled** (legacy builds only)
+**Default: disabled** (legacy builds only)
 | Patch | 5002244 target(s) | 5002313 target(s) |
 |---|---|---|
 | Android XR native permission names | Pattern-locates Oculus face/eye strings | Pattern-locates the relocated face/eye strings |
