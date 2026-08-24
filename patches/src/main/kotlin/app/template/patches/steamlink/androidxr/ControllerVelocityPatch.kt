@@ -6,6 +6,7 @@ import app.morphe.patcher.patch.intSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -14,6 +15,12 @@ import java.nio.ByteOrder
 private val CONFIG_MAGIC = "GXRVELCFG0000001".encodeToByteArray()
 // Total config block size: 16B magic + 4B version + 12B padding + 8B maxDeltaNs + 4B maxLinear + 4B maxAngular + 4B smoothing = 56
 private const val CONFIG_SIZE = 56
+
+internal const val CONTROLLER_VELOCITY_IDS_XML_FALLBACK =
+    """<?xml version="1.0" encoding="utf-8"?><resources/>"""
+
+internal fun isControllerVelocityPatchNoOpBuild(versionCode: String): Boolean =
+    isNativeXrSteamLinkBuild(versionCode)
 
 private fun velocityResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
@@ -121,6 +128,8 @@ val controllerVelocityPatch = rawResourcePatch(
     )
 
     execute {
+        if (isControllerVelocityPatchNoOpBuild(packageMetadata.versionCode)) return@execute
+
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
         val sceneBytes = sceneFile.readBytes()
         val cadenceBytes = patchControllerPoseCadence(sceneBytes, poseSendCadence!!)
@@ -148,7 +157,7 @@ val controllerVelocityPatch = rawResourcePatch(
         val idsFile = get("res/values/ids.xml")
         if (!idsFile.exists()) {
             idsFile.parentFile!!.mkdirs()
-            idsFile.writeText("""<?xml version=\"1.0\" encoding=\"utf-8\"?><resources/>""")
+            idsFile.writeText(CONTROLLER_VELOCITY_IDS_XML_FALLBACK)
         }
     }
 }

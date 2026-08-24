@@ -1,10 +1,30 @@
 package app.template.patches.steamlink.androidxr
 
+import java.io.ByteArrayInputStream
+import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ControllerPoseCadenceTest {
+    @Test
+    fun `controller velocity ids fallback is valid XML`() {
+        val document = DocumentBuilderFactory.newInstance()
+            .newDocumentBuilder()
+            .parse(ByteArrayInputStream(CONTROLLER_VELOCITY_IDS_XML_FALLBACK.toByteArray()))
+
+        assertEquals("resources", document.documentElement.tagName)
+    }
+
+    @Test
+    fun `controller velocity patch skips native XR builds only`() {
+        assertTrue(isControllerVelocityPatchNoOpBuild("5002318"))
+        assertTrue(isControllerVelocityPatchNoOpBuild("5002322"))
+        assertFalse(isControllerVelocityPatchNoOpBuild("5002313"))
+    }
+
     @Test
     fun `all cadence modes leave an unknown native layout untouched`() {
         val input = ByteArray(128) { it.toByte() }
