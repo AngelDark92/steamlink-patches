@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.0-dev.14](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.14)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
+> **[v1.10.0-dev.15](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.15)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;20 patches</summary>
 <br>
@@ -41,7 +41,7 @@ To download it:
 | [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 | [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged. | 5001712, 5002172, 5002206, 5002244, 5002313 |  |
 | [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT). | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
-| [Galaxy XR native telemetry](#galaxy-xr-native-telemetry) | Installs the GXRP OpenXR telemetry layer for a private, single-user native Android-XR APK. Ports use the automatic 29981/29982 defaults, and the final APK can enroll its exact hashes with the one-command host setup tool. The pairing token remains extractable, so never distribute that APK. | 5002318, 5002322 | • PC listen IPv4<br>• GXRP pairing token |
+| [Galaxy XR native telemetry](#galaxy-xr-native-telemetry) | Installs the GXRP OpenXR telemetry layer for a private, single-user native Android-XR APK. GXRP ports use the automatic 29981/29982 defaults, and the final APK can enroll its exact hashes with the one-command host setup tool. The pairing token remains extractable, so never distribute that APK. | 5002318, 5002322 | • PC listen IPv4<br>• GXRP pairing token |
 | [Microphone input preset](#microphone-input-preset) | Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication. | 5001712, 5002172, 5002206, 5002244, 5002313 | • Microphone mode |
 | [OLED color calibration](#oled-color-calibration) | Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244, 5002313, 5002318, and 5002322. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 | • Calibration profile<br>• Gamma<br>• Saturation<br>• Video output precision |
 | [Unrestricted battery usage](#unrestricted-battery-usage) | Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |

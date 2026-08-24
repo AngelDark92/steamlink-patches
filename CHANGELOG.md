@@ -1,3 +1,9 @@
+## [1.10.0-dev.15](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.14...v1.10.0-dev.15) (2026-08-24)
+
+### 🐛 Bug Fixes
+
+* telemetry fix and defaults changed ([caa5ed3](https://github.com/AngelDark92/steamlink-patches/commit/caa5ed3e599c00b044bbf40ef60cc8482662f23a))
+
 ## [1.10.0-dev.14](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.13...v1.10.0-dev.14) (2026-08-21)
 
 ### 🐛 Bug Fixes
