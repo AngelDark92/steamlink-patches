@@ -1,3 +1,9 @@
+## [1.10.0-dev.17](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.16...v1.10.0-dev.17) (2026-08-24)
+
+### 🐛 Bug Fixes
+
+* controllervelocity patch xml now parses correctly ([914e0eb](https://github.com/AngelDark92/steamlink-patches/commit/914e0eb4b3ba3327199d1aec8b2bcab1a9f4768b))
+
 ## [1.10.0-dev.16](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.15...v1.10.0-dev.16) (2026-08-24)
 
 ### 🐛 Bug Fixes
