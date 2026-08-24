@@ -1,3 +1,9 @@
+## [1.10.0-dev.16](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.15...v1.10.0-dev.16) (2026-08-24)
+
+### 🐛 Bug Fixes
+
+* delete telemetry patch ([ea3fcf8](https://github.com/AngelDark92/steamlink-patches/commit/ea3fcf8654134aec375a1012001c5779ed1ef8d7))
+
 ## [1.10.0-dev.15](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.14...v1.10.0-dev.15) (2026-08-24)
 
 ### 🐛 Bug Fixes
