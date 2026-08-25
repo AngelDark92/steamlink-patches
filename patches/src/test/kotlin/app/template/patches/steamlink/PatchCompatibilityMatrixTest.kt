@@ -33,13 +33,17 @@ import kotlin.test.assertTrue
 class PatchCompatibilityMatrixTest {
     @Test
     fun `native builds expose only the supported stable and experimental patches`() {
-        listOf(5002318, 5002322).forEach { versionCode ->
-            allowedNativeXr.forEach { patch ->
-                assertTrue(patch.supports(versionCode), "${patch.name} on $versionCode")
-            }
-            excludedNativeXr.forEach { patch ->
-                assertFalse(patch.supports(versionCode), "${patch.name} on $versionCode")
-            }
+        allowedNativeXr.forEach { patch ->
+            assertTrue(patch.supports(5002318), "${patch.name} on 5002318")
+        }
+        excludedNativeXr.forEach { patch ->
+            assertFalse(patch.supports(5002318), "${patch.name} on 5002318")
+        }
+        latestCompatible.forEach { patch ->
+            assertTrue(patch.supports(5002322), "${patch.name} on 5002322")
+        }
+        latestExcluded.forEach { patch ->
+            assertFalse(patch.supports(5002322), "${patch.name} on 5002322")
         }
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
@@ -55,6 +59,26 @@ class PatchCompatibilityMatrixTest {
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertTrue(patch.supports(5002313), patch.name)
         }
+    }
+
+    @Test
+    fun `latest build recommends exactly the requested six patches`() {
+        val recommended = (latestCompatible + latestExcluded)
+            .filter { patch -> patch.default && patch.supports(5002322) }
+            .mapNotNullTo(mutableSetOf()) { it.name }
+
+        assertEquals(
+            setOf(
+                "Appear on top",
+                "GXR face bridge",
+                "Microphone input preset",
+                "Unrestricted battery usage",
+                "Video dither",
+                "Visual Delay Fix",
+            ),
+            recommended,
+        )
+        assertTrue(oledCalibrationPatch in videoDitherPatch.dependencyClosure())
     }
 
     @Test
@@ -117,6 +141,16 @@ class PatchCompatibilityMatrixTest {
             xrManifestCapabilityPackPatch,
             xrLauncherBootstrapPatch,
             xrInputRoutingConfigPatch,
+        )
+
+        val latestCompatible = allowedNativeXr - listOf(
+            deviceIdentityPatch,
+            oledCalibrationPatch,
+        )
+
+        val latestExcluded = excludedNativeXr + listOf(
+            deviceIdentityPatch,
+            oledCalibrationPatch,
         )
 
         val recommendedDefaults = setOf(

@@ -3,7 +3,7 @@ package app.template.patches.steamlink.identity
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
 import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 
@@ -160,7 +160,7 @@ val deviceIdentityPatch = rawResourcePatch(
         "complete transport identity while preserving stock controller/hand routing and extensions.",
     default = true,
 ) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST.toTypedArray())
     // Morphe executes dependencies without checking their compatibility. The legacy foundation is
     // therefore build-aware and becomes a mutation no-op on native builds, while older builds retain the
     // same automatic XR baseline that Device identity historically installed.

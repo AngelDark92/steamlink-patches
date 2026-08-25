@@ -3,17 +3,20 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
-Steam Link 2.0.22 builds 5002318 and 5002322 expose only Device identity, Microphone input preset, OLED color calibration,
+Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset, OLED color calibration,
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
-and the three experimental XR projection patches. Their shared legacy dependency chain branches
+and the three experimental XR projection patches. Build 5002322 recommends only Appear on top,
+GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix;
+the experimental XR projection patches remain optional. Their shared legacy dependency chain branches
 on versionCode: older builds retain the historical provisioning, while every legacy mutation is a
 no-op on both native-XR builds so Valve's hand/controller routing stays intact.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
-still display incompatible patches by design. Device identity, Microphone input preset, OLED color
-calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and
-Video dither are recommended by default. Experimental and legacy-only patches default off.
+still display incompatible patches by design. Morphe has only a global patch `default` flag, so exact
+compatibility filtering excludes Device identity and the standalone OLED patch from 5002322 while
+preserving their historical recommendation on older builds. Video dither still executes its coupled
+OLED calibration dependency. Experimental and legacy-only patches default off.
 
 ---
 
@@ -213,7 +216,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 ---
 
 ### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
-**Default: enabled**
+**Default: enabled through build 5002318; not independently compatible with 5002322**
 > ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5002244, 5002313, 5002318, and 5002322.
 
 | Artifact | Edit |
@@ -262,7 +265,7 @@ Static tests validate GLSL structure, fixed size, and binary placement but do no
 ## identity group
 
 ### Device Identity (`deviceIdentityPatch`)
-**Default: enabled** — retains the legacy XR Core/device-config dependency, whose mutations are guarded off on native-XR builds
+**Default: enabled through build 5002318; not compatible with 5002322** — retains the legacy XR Core/device-config dependency, whose mutations are guarded off on native-XR builds
 
 | Artifact | Edit |
 |---|---|

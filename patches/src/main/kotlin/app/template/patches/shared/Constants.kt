@@ -42,15 +42,31 @@ object Constants {
         NATIVE_XR_STEAM_LINK_BUILDS.map { versionCode ->
             steamLinkBuildCompatibility(
                 versionCode = versionCode,
-                description = "Build $versionCode supports only Device identity, Microphone input preset, OLED color " +
-                    "calibration, Appear on top, GXR face bridge, Visual Delay Fix, " +
-                    "Unrestricted battery usage, Video dither, and the experimental XR " +
-                    "projection patches.",
+                description = if (versionCode == 5002322) {
+                    "Build 5002322 recommends only Appear on top, GXR face bridge, " +
+                        "Microphone input preset, Unrestricted battery usage, Video dither, " +
+                        "and Visual Delay Fix. Experimental XR projection patches remain optional."
+                } else {
+                    "Build $versionCode supports Device identity, Microphone input preset, OLED color " +
+                        "calibration, Appear on top, GXR face bridge, Visual Delay Fix, " +
+                        "Unrestricted battery usage, Video dither, and the experimental XR " +
+                        "projection patches."
+                },
             )
         }
 
     val COMPATIBILITIES_STEAM_LINK =
         COMPATIBILITIES_STEAM_LINK_LEGACY + COMPATIBILITIES_STEAM_LINK_NATIVE_XR
+
+    // Morphe's Patch.default is global, not per AppTarget. Excluding the latest exact build from
+    // a globally recommended patch is the only unambiguous way to keep older recommendations
+    // while preventing that patch from being recommended for 5002322.
+    val COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST =
+        COMPATIBILITIES_STEAM_LINK.filterNot { compatibility ->
+            compatibility.targets.any { target ->
+                target.versionCodes?.values?.contains(5002322) == true
+            }
+        }
 
     val COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL =
         (LEGACY_STEAM_LINK_BUILDS + NATIVE_XR_STEAM_LINK_BUILDS).map { versionCode ->
