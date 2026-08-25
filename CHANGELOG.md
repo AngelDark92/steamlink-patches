@@ -1,3 +1,9 @@
+## [1.10.0-dev.18](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.17...v1.10.0-dev.18) (2026-08-25)
+
+### ✨ New Features
+
+* patches now targeting the latest 2.0.22-5002322 build with fixes from valve ([1548aec](https://github.com/AngelDark92/steamlink-patches/commit/1548aec8f7a1ab8e58fd5346dcf41f16165c5f3f))
+
 ## [1.10.0-dev.17](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.16...v1.10.0-dev.17) (2026-08-24)
 
 ### 🐛 Bug Fixes
