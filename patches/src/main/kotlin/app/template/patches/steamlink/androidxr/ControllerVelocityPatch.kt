@@ -1,10 +1,12 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.floatOption
-import app.morphe.patcher.patch.longOption
+import app.morphe.patcher.patch.floatSliderOption
+import app.morphe.patcher.patch.intSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
+import app.morphe.patcher.patch.stringOption
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -13,6 +15,12 @@ import java.nio.ByteOrder
 private val CONFIG_MAGIC = "GXRVELCFG0000001".encodeToByteArray()
 // Total config block size: 16B magic + 4B version + 12B padding + 8B maxDeltaNs + 4B maxLinear + 4B maxAngular + 4B smoothing = 56
 private const val CONFIG_SIZE = 56
+
+internal const val CONTROLLER_VELOCITY_IDS_XML_FALLBACK =
+    """<?xml version="1.0" encoding="utf-8"?><resources/>"""
+
+internal fun isControllerVelocityPatchNoOpBuild(versionCode: String): Boolean =
+    isNativeXrSteamLinkBuild(versionCode)
 
 private fun velocityResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
@@ -60,53 +68,80 @@ private fun configuredVelocityLibrary(
 @Suppress("unused")
 val controllerVelocityPatch = rawResourcePatch(
     name = "Controller velocity fix",
-    description = "Derives current controller linear and angular velocity from grip/aim pose history, avoiding delayed runtime velocity during throws.",
+    description = "Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame.",
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
     dependsOn(xrCoreRuntimePatch)
 
-    val maxDeltaMs by longOption(
+    val maxDeltaMs = intSliderOption(
         key = "maxDeltaMs",
-        default = 50L,
+        min = 5,
+        max = 100,
+        default = 50,
+        step = 1,
         title = "Maximum sample gap (ms)",
         description = "libgxr_controller_velocity.so config+32 (int64 ns = value×1e6). Falls back to runtime velocity when pose samples are farther apart. Allowed range: 5 to 100 ms.",
         required = true,
-        validator = { value -> value != null && value in 5L..100L },
     )
-    val smoothing by floatOption(
+    val poseSendCadence by stringOption(
+        key = "poseSendCadence",
+        default = "stock-4x",
+        values = mapOf(
+            "Stock (4x display rate)" to "stock-4x",
+            "Half (2x display rate)" to "half-2x",
+            "Display rate (1x)" to "display-1x",
+        ),
+        title = "Controller pose-send cadence",
+        description = "libvrlink_scene.so QSVLClient::OnTopOfFrame: selects four, two, or one evenly phased controller pose sends per display frame. Actual send Hz equals display Hz multiplied by 4, 2, or 1. Stock preserves Valve behavior.",
+        required = true,
+    )
+    val smoothing = floatSliderOption(
         key = "smoothing",
-        default = 0.0f,
+        min = 0f,
+        max = 0.9f,
+        default = 0f,
+        step = 0.05f,
         title = "Derived velocity smoothing",
         description = "libgxr_controller_velocity.so config+48 (float32 EMA weight). 0 = no smoothing, minimum lag; higher values reduce jitter. Allowed range: 0.0 to 0.9.",
         required = true,
-        validator = { value -> value != null && value in 0.0f..0.9f },
     )
-    val maxLinearSpeed by floatOption(
+    val maxLinearSpeed = floatSliderOption(
         key = "maxLinearSpeed",
-        default = 20.0f,
+        min = 1f,
+        max = 50f,
+        default = 20f,
+        step = 1f,
         title = "Maximum linear speed (m/s)",
         description = "libgxr_controller_velocity.so config+40 (float32 m/s). Falls back to runtime velocity above this derived linear speed. Allowed range: 1 to 50 m/s.",
         required = true,
-        validator = { value -> value != null && value in 1.0f..50.0f },
     )
-    val maxAngularSpeed by floatOption(
+    val maxAngularSpeed = floatSliderOption(
         key = "maxAngularSpeed",
-        default = 50.0f,
+        min = 1f,
+        max = 100f,
+        default = 50f,
+        step = 1f,
         title = "Maximum angular speed (rad/s)",
         description = "libgxr_controller_velocity.so config+44 (float32 rad/s). Falls back to runtime velocity above this derived angular speed. Allowed range: 1 to 100 rad/s.",
         required = true,
-        validator = { value -> value != null && value in 1.0f..100.0f },
     )
 
     execute {
-        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
+        if (isControllerVelocityPatchNoOpBuild(packageMetadata.versionCode)) return@execute
+
+        val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
+        val sceneBytes = sceneFile.readBytes()
+        val cadenceBytes = patchControllerPoseCadence(sceneBytes, poseSendCadence!!)
+        if (!sceneBytes.contentEquals(cadenceBytes)) sceneFile.writeBytes(cadenceBytes)
+
+        val libDir = sceneFile.parentFile!!
         File(libDir, "libgxr_controller_velocity.so").writeBytes(
             configuredVelocityLibrary(
-                maxDeltaMs!!,
-                smoothing!!,
-                maxLinearSpeed!!,
-                maxAngularSpeed!!,
+                maxDeltaMs.value!!.toLong(),
+                smoothing.value!!,
+                maxLinearSpeed.value!!,
+                maxAngularSpeed.value!!,
             )
         )
 
@@ -122,7 +157,7 @@ val controllerVelocityPatch = rawResourcePatch(
         val idsFile = get("res/values/ids.xml")
         if (!idsFile.exists()) {
             idsFile.parentFile!!.mkdirs()
-            idsFile.writeText("""<?xml version=\"1.0\" encoding=\"utf-8\"?><resources/>""")
+            idsFile.writeText(CONTROLLER_VELOCITY_IDS_XML_FALLBACK)
         }
     }
 }

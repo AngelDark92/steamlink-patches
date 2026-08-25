@@ -1,3 +1,136 @@
+## [1.10.0-dev.18](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.17...v1.10.0-dev.18) (2026-08-25)
+
+### ✨ New Features
+
+* patches now targeting the latest 2.0.22-5002322 build with fixes from valve ([1548aec](https://github.com/AngelDark92/steamlink-patches/commit/1548aec8f7a1ab8e58fd5346dcf41f16165c5f3f))
+
+## [1.10.0-dev.17](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.16...v1.10.0-dev.17) (2026-08-24)
+
+### 🐛 Bug Fixes
+
+* controllervelocity patch xml now parses correctly ([914e0eb](https://github.com/AngelDark92/steamlink-patches/commit/914e0eb4b3ba3327199d1aec8b2bcab1a9f4768b))
+
+## [1.10.0-dev.16](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.15...v1.10.0-dev.16) (2026-08-24)
+
+### 🐛 Bug Fixes
+
+* delete telemetry patch ([ea3fcf8](https://github.com/AngelDark92/steamlink-patches/commit/ea3fcf8654134aec375a1012001c5779ed1ef8d7))
+
+## [1.10.0-dev.15](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.14...v1.10.0-dev.15) (2026-08-24)
+
+### 🐛 Bug Fixes
+
+* telemetry fix and defaults changed ([caa5ed3](https://github.com/AngelDark92/steamlink-patches/commit/caa5ed3e599c00b044bbf40ef60cc8482662f23a))
+
+## [1.10.0-dev.14](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.13...v1.10.0-dev.14) (2026-08-21)
+
+### 🐛 Bug Fixes
+
+* patches now compatible with 5002322 ([d0d14e8](https://github.com/AngelDark92/steamlink-patches/commit/d0d14e805c1543f238dda53f1896d3092af2aabb))
+
+## [1.10.0-dev.13](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.12...v1.10.0-dev.13) (2026-08-16)
+
+### ✨ New Features
+
+* add sliders to patches ([cc5fe22](https://github.com/AngelDark92/steamlink-patches/commit/cc5fe22de1d238c737101bcc43311b3fb2238465))
+
+## [1.10.0-dev.12](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.11...v1.10.0-dev.12) (2026-08-15)
+
+### 🐛 Bug Fixes
+
+* patches are now still default true for older builds ([1bb0e36](https://github.com/AngelDark92/steamlink-patches/commit/1bb0e368cbcbf4b437ffb32d40465bb2a44e9681))
+
+## [1.10.0-dev.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.10...v1.10.0-dev.11) (2026-08-15)
+
+### 🐛 Bug Fixes
+
+* removed unneeded patches ([0940942](https://github.com/AngelDark92/steamlink-patches/commit/0940942a20bcf8b2cbdea17371d343bb13d757a9))
+
+## [1.10.0-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.9...v1.10.0-dev.10) (2026-08-15)
+
+### ✨ New Features
+
+* add compatibility for 2.0.22 build 5002318 ([b99cdbf](https://github.com/AngelDark92/steamlink-patches/commit/b99cdbf927c72a85a05a4b29f5cd959d6cdbf888))
+
+## [1.10.0-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.8...v1.10.0-dev.9) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* bundle direct Galaxy XR tongue bridge ([#39](https://github.com/AngelDark92/steamlink-patches/issues/39)) ([cfae7c9](https://github.com/AngelDark92/steamlink-patches/commit/cfae7c9c05fbc64d04c1764eb63b6ee406d3a35e))
+
+## [1.10.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.7...v1.10.0-dev.8) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* permission on 5002313 ([4954510](https://github.com/AngelDark92/steamlink-patches/commit/4954510248391236465a9b6dd92ebd271f89390f))
+
+## [1.10.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.6...v1.10.0-dev.7) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* added compatibility with 2.0.22 5002313 ([f78fa02](https://github.com/AngelDark92/steamlink-patches/commit/f78fa02af800f5da0946ab15389e777c548f940c))
+
+## [1.10.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.5...v1.10.0-dev.6) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* unrestricted battery onResume() bug and wrong target versions ([73df9cf](https://github.com/AngelDark92/steamlink-patches/commit/73df9cf25f4f152f4a36075878215f5f70e8f3f3))
+
+## [1.10.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.4...v1.10.0-dev.5) (2026-08-13)
+
+### 🐛 Bug Fixes
+
+* new resolution tests, delete old probes ([9b512f6](https://github.com/AngelDark92/steamlink-patches/commit/9b512f674183913ea25f41a751af785a906637b5))
+
+## [1.10.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.3...v1.10.0-dev.4) (2026-08-12)
+
+### ✨ New Features
+
+* add configurable microphone input preset ([1216773](https://github.com/AngelDark92/steamlink-patches/commit/1216773ddda44803c625cbc9501675ecd9ec566f))
+* Merge pull request [#37](https://github.com/AngelDark92/steamlink-patches/issues/37) from compdoge/agent/microphone-input-preset ([32ccdd0](https://github.com/AngelDark92/steamlink-patches/commit/32ccdd0371076dccaf691256479dc749d1f3cfcc))
+
+## [1.10.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.2...v1.10.0-dev.3) (2026-08-12)
+
+### 🐛 Bug Fixes
+
+* updated tests ([5edf756](https://github.com/AngelDark92/steamlink-patches/commit/5edf75673623a55c737e7d73388088739640fe92))
+
+## [1.10.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0-dev.1...v1.10.0-dev.2) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* resolution experiment updated with new findings ([fcd8ee5](https://github.com/AngelDark92/steamlink-patches/commit/fcd8ee5b36ec06c42257df4c7b88055ef69923c7))
+
+## [1.10.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.4...v1.10.0-dev.1) (2026-08-11)
+
+### ✨ New Features
+
+* added resolution probe and experiment instructions ([22ff902](https://github.com/AngelDark92/steamlink-patches/commit/22ff9028b195ef06fea7fba1ace7e30ac6188065))
+
+## [1.9.2-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.3...v1.9.2-dev.4) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* possibly better dithering ([ac5cda0](https://github.com/AngelDark92/steamlink-patches/commit/ac5cda0d2a6169d2847714390d92b73e74e70816))
+
+## [1.9.2-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.2...v1.9.2-dev.3) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* no banding patch through glsl dither and experimental rgb10 ([cbf47e9](https://github.com/AngelDark92/steamlink-patches/commit/cbf47e9a74cba646938af0e38843e00040415e22))
+
+## [1.9.2-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.2-dev.1...v1.9.2-dev.2) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* added resources and installation helpers ([3649c86](https://github.com/AngelDark92/steamlink-patches/commit/3649c86e6c2ccaa1fe833641861c3cbe728b53ef))
+
+## [1.9.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1...v1.9.2-dev.1) (2026-08-11)
+
+### 🐛 Bug Fixes
+
+* added controller cadence with options ([6cac547](https://github.com/AngelDark92/steamlink-patches/commit/6cac5476098af88af5470ba62b2f3ee6a3be1298))
+
 ## [1.9.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.0...v1.9.1) (2026-08-10)
 
 ### 🐛 Bug Fixes

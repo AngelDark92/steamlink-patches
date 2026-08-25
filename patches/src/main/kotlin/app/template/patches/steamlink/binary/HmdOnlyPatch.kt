@@ -1,15 +1,12 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.longOption
+import app.morphe.patcher.patch.intSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.steamlink.util.BinaryPatchHelper.vaddrToFileOffset
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.security.MessageDigest
 
 // Injects an AArch64 trampoline that adds a configurable offset to the HMD pose query time
 // and zeroes the six HMD velocity fields exported to SteamVR.
@@ -82,6 +79,45 @@ private val HMD_LAYOUTS = listOf(
             VelocityPatch(0x000FED5CL, 40),
             VelocityPatch(0x000FED60L, 44),
             VelocityPatch(0x000FED6CL, 48),
+        ),
+    ),
+    HmdLayout(
+        versionCode = 5002313,
+        fileSize = 2_276_872,
+        hookVaddr = 0x00100B8CL,
+        velocityPatches = listOf(
+            VelocityPatch(0x00100E00L, 28),
+            VelocityPatch(0x00100E04L, 32),
+            VelocityPatch(0x00100E08L, 36),
+            VelocityPatch(0x00100E14L, 40),
+            VelocityPatch(0x00100E18L, 44),
+            VelocityPatch(0x00100E24L, 48),
+        ),
+    ),
+    HmdLayout(
+        versionCode = 5002318,
+        fileSize = 2_277_488,
+        hookVaddr = 0x00100B0CL,
+        velocityPatches = listOf(
+            VelocityPatch(0x00100D80L, 28),
+            VelocityPatch(0x00100D84L, 32),
+            VelocityPatch(0x00100D88L, 36),
+            VelocityPatch(0x00100D94L, 40),
+            VelocityPatch(0x00100D98L, 44),
+            VelocityPatch(0x00100DA4L, 48),
+        ),
+    ),
+    HmdLayout(
+        versionCode = 5002322,
+        fileSize = 2_283_400,
+        hookVaddr = 0x00101154L,
+        velocityPatches = listOf(
+            VelocityPatch(0x001013C8L, 28),
+            VelocityPatch(0x001013CCL, 32),
+            VelocityPatch(0x001013D0L, 36),
+            VelocityPatch(0x001013DCL, 40),
+            VelocityPatch(0x001013E0L, 44),
+            VelocityPatch(0x001013ECL, 48),
         ),
     ),
 )
@@ -164,99 +200,94 @@ private fun replacementFor(patch: VelocityPatch): ByteArray =
 private fun isPatchedVelocity(word: Int, patch: VelocityPatch): Boolean =
     word == ByteBuffer.wrap(replacementFor(patch)).order(ByteOrder.LITTLE_ENDIAN).int
 
-private fun ByteArray.sha256(): String =
-    MessageDigest.getInstance("SHA-256").digest(this).toHex()
+internal fun patchVisualDelay(bytes: ByteArray, offsetMs: Long): ByteArray {
+    val mutable = bytes.copyOf()
+    val layout = HMD_LAYOUTS.singleOrNull { it.fileSize == mutable.size } ?: return mutable
+
+    val (caveOff, caveVa) = findPltCave(mutable)
+    val trampoline = ORIG_HOOK + buildTrampolineBody(offsetMs) +
+        buildBranch(caveVa + 16, layout.hookVaddr + 4) + NOP + NOP + NOP
+    val patchedHook = buildBranch(layout.hookVaddr, caveVa)
+    val hookOffset = vaddrToFileOffset(mutable, layout.hookVaddr, ORIG_HOOK.size)
+    val hookActual = mutable.sliceArray(hookOffset until hookOffset + ORIG_HOOK.size)
+    val caveActual = mutable.sliceArray(caveOff until caveOff + trampoline.size)
+    val velocityOffsets = layout.velocityPatches.map { vaddrToFileOffset(mutable, it.vaddr, 4) }
+    val velocityWords = velocityOffsets.map { mutable.readU32LE(it) }
+
+    val alreadyPatched = hookActual.contentEquals(patchedHook) &&
+        caveActual.contentEquals(trampoline) &&
+        velocityWords.indices.all { isPatchedVelocity(velocityWords[it], layout.velocityPatches[it]) }
+    if (alreadyPatched) return mutable
+
+    if (!hookActual.contentEquals(ORIG_HOOK)) {
+        throw PatchException(
+            "Visual Delay hook precondition failed for versionCode ${layout.versionCode}: " +
+                "hook@0x${hookOffset.toString(16)}=${hookActual.toHex()} " +
+                "(expected ${ORIG_HOOK.toHex()})"
+        )
+    }
+
+    val originalCave =
+        caveActual.sliceArray(12 until 16).contentEquals(BR_X17) &&
+            caveActual.sliceArray(28 until 32).contentEquals(BR_X17)
+    if (!originalCave) {
+        throw PatchException(
+            "Visual Delay trampoline cave precondition failed at 0x${caveOff.toString(16)}: " +
+                caveActual.toHex()
+        )
+    }
+
+    for (i in velocityWords.indices) {
+        val patch = layout.velocityPatches[i]
+        val valid = if (patch.paired) {
+            isSturDUnscaled(velocityWords[i], 19, patch.byteOffset)
+        } else {
+            isStrSUnsignedImm(velocityWords[i], 19, patch.byteOffset)
+        }
+        if (!valid) {
+            throw PatchException(
+                "Velocity store precondition failed for versionCode ${layout.versionCode} " +
+                    "at vaddr 0x${patch.vaddr.toString(16)}: " +
+                    "word 0x${velocityWords[i].toUInt().toString(16)}"
+            )
+        }
+    }
+
+    trampoline.copyInto(mutable, caveOff)
+    patchedHook.copyInto(mutable, hookOffset)
+    for (i in velocityOffsets.indices) {
+        replacementFor(layout.velocityPatches[i]).copyInto(mutable, velocityOffsets[i])
+    }
+    return mutable
+}
 
 @Suppress("unused")
 val hmdOnlyPatch = rawResourcePatch(
-    name = "HMD-only pose fix",
+    name = "Visual Delay Fix",
     description = "Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths.",
     default = true,
 ) {
-    compatibleWith(
-        COMPATIBILITY_STEAM_LINK_HMD_ONLY,
-        COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172,
-        COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244,
-    )
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
 
-    val offsetMs by longOption(
+    val offsetMs = intSliderOption(
         key = "offsetMs",
-        default = 60L,
+        min = 0,
+        max = 4000,
+        default = 60,
+        step = 1,
         title = "Pose offset (ms)",
         // 60 ms tested default for Galaxy XR; max 4000 ms (4 s) practical upper bound
         description = "libvrlink_scene.so: AArch64 MOVZ/MOVK at PLT cave adds value×1e6 ns to X2 in QSVLDeviceHmd::GetPose. Tested default: 60 ms. Allowed range: 0 to 4000 ms.",
         required = true,
-        validator = { value -> value != null && value in 0L..4000L },
     )
 
     execute {
         val file = get("lib/arm64-v8a/libvrlink_scene.so")
-        val mutable = file.readBytes().copyOf()
-        val layout = HMD_LAYOUTS.singleOrNull { it.fileSize == mutable.size }
-            ?: throw PatchException(
-                "Unsupported libvrlink_scene.so size=${mutable.size}, sha256=${mutable.sha256()}. " +
-                    "Supported versionCodes: ${HMD_LAYOUTS.joinToString { it.versionCode.toString() }}"
-            )
-
-        // Locate PLT cave at end of first executable segment (version-agnostic).
-        val (caveOff, caveVa) = findPltCave(mutable)
-        val trampoline = ORIG_HOOK + buildTrampolineBody(offsetMs!!) +
-            buildBranch(caveVa + 16, layout.hookVaddr + 4) + NOP + NOP + NOP
-        val patchedHook = buildBranch(layout.hookVaddr, caveVa)
-        val hookOffset = vaddrToFileOffset(mutable, layout.hookVaddr, ORIG_HOOK.size)
-        val hookActual = mutable.sliceArray(hookOffset until hookOffset + ORIG_HOOK.size)
-        val caveActual = mutable.sliceArray(caveOff until caveOff + trampoline.size)
-        val velocityOffsets = layout.velocityPatches.map { vaddrToFileOffset(mutable, it.vaddr, 4) }
-        val velocityWords = velocityOffsets.map { mutable.readU32LE(it) }
-
-        val alreadyPatched = hookActual.contentEquals(patchedHook) &&
-            caveActual.contentEquals(trampoline) &&
-            velocityWords.indices.all { isPatchedVelocity(velocityWords[it], layout.velocityPatches[it]) }
-        if (alreadyPatched) return@execute
-
-        if (!hookActual.contentEquals(ORIG_HOOK)) {
-            throw PatchException(
-                "HMD hook precondition failed for versionCode ${layout.versionCode}: " +
-                "hook@0x${hookOffset.toString(16)}=${hookActual.toHex()} " +
-                "(expected ${ORIG_HOOK.toHex()})"
-            )
-        }
-
-        val originalCave =
-            caveActual.sliceArray(12 until 16).contentEquals(BR_X17) &&
-            caveActual.sliceArray(28 until 32).contentEquals(BR_X17)
-        if (!originalCave) {
-            throw PatchException(
-                "HMD trampoline cave precondition failed at 0x${caveOff.toString(16)}: " +
-                caveActual.toHex()
-            )
-        }
-
-        for (i in velocityWords.indices) {
-            val patch = layout.velocityPatches[i]
-            val valid = if (patch.paired) {
-                isSturDUnscaled(velocityWords[i], 19, patch.byteOffset)
-            } else {
-                isStrSUnsignedImm(velocityWords[i], 19, patch.byteOffset)
-            }
-            if (!valid) {
-                throw PatchException(
-                    "Velocity store precondition failed for versionCode ${layout.versionCode} " +
-                    "at vaddr 0x${patch.vaddr.toString(16)}: " +
-                    "word 0x${velocityWords[i].toUInt().toString(16)}"
-                )
-            }
-        }
-
-        // All checks passed. Commit changes only now.
-        trampoline.copyInto(mutable, caveOff)
-        patchedHook.copyInto(mutable, hookOffset)
-        for (i in velocityOffsets.indices) {
-            val off = velocityOffsets[i]
-            replacementFor(layout.velocityPatches[i]).copyInto(mutable, off)
-        }
-
-        file.writeBytes(mutable)
+        val bytes = file.readBytes()
+        // An unrecognized native layout must not block the rest of an experimental APK patch.
+        // Fixed instruction addresses are unsafe to guess, so leave this one mutation untouched.
+        val patched = patchVisualDelay(bytes, offsetMs.value!!.toLong())
+        if (!patched.contentEquals(bytes)) file.writeBytes(patched)
     }
 }
 

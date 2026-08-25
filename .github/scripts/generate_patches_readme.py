@@ -63,8 +63,11 @@ for patch in data["patches"]:
                 "name":    name,
                 "emoji":   pkg_emoji(pkg),
                 "patches": {},
-                "targets": pkg_entry.get("targets", []),
+                "targets": [],
             }
+        for target in pkg_entry.get("targets", []):
+            if target not in by_pkg[group]["targets"]:
+                by_pkg[group]["targets"].append(target)
         # Deduplicate patches that appear across multiple packages
         if patch["name"] not in by_pkg[group]["patches"]:
             by_pkg[group]["patches"][patch["name"]] = patch
@@ -76,10 +79,10 @@ def anchor(name):
 
 
 def patches_table(patches):
-    """Render a sorted markdown table of patches with name, description, and options."""
+    """Render a sorted markdown table of patches with build codes and options."""
     rows = [
-        "| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |",
-        "|----------|----------------|-----------|",
+        "| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |",
+        "|----------|----------------|----------------|-----------|",
     ]
     for p in sorted(patches, key=lambda x: x["name"]):
         a = anchor(p["name"])
@@ -90,8 +93,15 @@ def patches_table(patches):
             opts_cell = "<br>".join(f"• {t}" for t in parts)
         else:
             opts_cell = ""
+        build_codes = sorted({
+            code
+            for compatibility in p.get("compatiblePackages") or []
+            for target in compatibility.get("targets") or []
+            for code in (target.get("versionCodes") or {}).values()
+        })
+        builds_cell = ", ".join(str(code) for code in build_codes)
         desc = (p.get("description") or "").replace("\n", "<br>")
-        rows.append(f"| [{p['name']}](#{a}) | {desc} | {opts_cell} |")
+        rows.append(f"| [{p['name']}](#{a}) | {desc} | {builds_cell} | {opts_cell} |")
     return "\n".join(rows)
 
 
@@ -108,7 +118,11 @@ def versions_table(targets):
         ver   = t["version"]
         if ver is None:
             continue
-        label = f"🧪&nbsp;{ver}" if t.get("isExperimental") else ver
+        version_codes = sorted(set((t.get("versionCodes") or {}).values()))
+        code_suffix = f" ({version_codes[0]})" if len(version_codes) == 1 else ""
+        label = f"{ver}{code_suffix}"
+        if t.get("isExperimental"):
+            label = f"🧪&nbsp;{label}"
         cells.append(label)
 
     if not cells:

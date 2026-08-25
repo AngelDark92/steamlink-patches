@@ -6,6 +6,10 @@
 
 .field private mOverlayRequestLaunched:Z
 
+.field private mSettingsPauseObserved:Z
+
+.field private mSettingsRequestWaiting:Z
+
 .field private mSteamLinkLaunched:Z
 
 .method public constructor <init>()V
@@ -19,13 +23,55 @@
 .method private continueAfterPermissions()V
     .locals 4
 
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->shouldRequestOverlay(Landroid/content/Context;)Z
+
+    move-result v0
+
+    if-eqz v0, :battery
+
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->isEnabled(Landroid/content/Context;)Z
+
+    move-result v0
+
+    if-eqz v0, :battery
+
+    invoke-static {p0}, Landroid/provider/Settings;->canDrawOverlays(Landroid/content/Context;)Z
+
+    move-result v0
+
+    if-nez v0, :ensure
+
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
+
+    if-nez v0, :battery
+
+    const/4 v0, 0x1
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsRequestWaiting:Z
+
+    const/4 v0, 0x0
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsPauseObserved:Z
+
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->requestPermission(Landroid/app/Activity;)V
+
+    return-void
+
+    :ensure
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->onOverlayPermissionReady(Landroid/content/Context;)Z
+
+    move-result v0
+
+    :battery
     const-string v0, "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
 
     invoke-virtual {p0, v0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->checkSelfPermission(Ljava/lang/String;)I
 
     move-result v0
 
-    if-nez v0, :overlay
+    if-nez v0, :launch
 
     const-string v0, "power"
 
@@ -43,11 +89,11 @@
 
     move-result v0
 
-    if-nez v0, :overlay
+    if-nez v0, :launch
 
     iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mBatteryRequestLaunched:Z
 
-    if-nez v0, :overlay
+    if-nez v0, :launch
 
     const/4 v0, 0x1
 
@@ -97,51 +143,22 @@
 
     move-result-object v2
 
-    if-eqz v2, :overlay
+    if-eqz v2, :launch
 
     :request_battery
+    const/4 v1, 0x1
+
+    iput-boolean v1, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsRequestWaiting:Z
+
+    const/4 v1, 0x0
+
+    iput-boolean v1, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsPauseObserved:Z
+
     const/16 v1, 0x475a
 
     invoke-virtual {p0, v0, v1}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->startActivityForResult(Landroid/content/Intent;I)V
 
     return-void
-
-    :overlay
-
-    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->shouldRequestOverlay(Landroid/content/Context;)Z
-
-    move-result v0
-
-    if-eqz v0, :launch
-
-    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->isEnabled(Landroid/content/Context;)Z
-
-    move-result v0
-
-    if-eqz v0, :launch
-
-    invoke-static {p0}, Landroid/provider/Settings;->canDrawOverlays(Landroid/content/Context;)Z
-
-    move-result v0
-
-    if-nez v0, :ensure
-
-    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
-
-    if-nez v0, :launch
-
-    const/4 v0, 0x1
-
-    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
-
-    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->requestPermission(Landroid/app/Activity;)V
-
-    return-void
-
-    :ensure
-    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
-
-    move-result v0
 
     :launch
     invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->launchSteamLink()V
@@ -190,11 +207,17 @@
 
     if-ne p1, v0, :battery
 
-    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
+    const/4 v0, 0x0
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsRequestWaiting:Z
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsPauseObserved:Z
+
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrResolutionProbe;->onOverlayPermissionReady(Landroid/content/Context;)Z
 
     move-result v0
 
-    invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->launchSteamLink()V
+    invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->continueAfterPermissions()V
 
     return-void
 
@@ -202,6 +225,12 @@
     const/16 v0, 0x475a
 
     if-ne p1, v0, :done
+
+    const/4 v0, 0x0
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsRequestWaiting:Z
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsPauseObserved:Z
 
     invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->continueAfterPermissions()V
 
@@ -314,6 +343,23 @@
     return-void
 .end method
 
+.method protected onPause()V
+    .locals 1
+
+    invoke-super {p0}, Landroid/app/Activity;->onPause()V
+
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsRequestWaiting:Z
+
+    if-eqz v0, :done
+
+    const/4 v0, 0x1
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsPauseObserved:Z
+
+    :done
+    return-void
+.end method
+
 .method public onRequestPermissionsResult(I[Ljava/lang/String;[I)V
     .locals 0
 
@@ -333,15 +379,20 @@
 
     if-nez v0, :done
 
-    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mOverlayRequestLaunched:Z
-
-    if-nez v0, :continue
-
-    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mBatteryRequestLaunched:Z
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsRequestWaiting:Z
 
     if-eqz v0, :done
 
-    :continue
+    iget-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsPauseObserved:Z
+
+    if-eqz v0, :done
+
+    const/4 v0, 0x0
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsRequestWaiting:Z
+
+    iput-boolean v0, p0, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->mSettingsPauseObserved:Z
+
     invoke-direct {p0}, Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;->continueAfterPermissions()V
 
     :done

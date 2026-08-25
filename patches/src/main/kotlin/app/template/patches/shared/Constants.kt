@@ -6,64 +6,74 @@ import app.morphe.patcher.patch.Compatibility
 import app.morphe.patcher.patch.SupportedAbi
 
 object Constants {
-    val COMPATIBILITY_STEAM_LINK = Compatibility(
-        name = "Steam Link",
-        packageName = "com.valvesoftware.steamlinkvr",
-        apkFileType = ApkFileType.APK,
-        appIconColor = 0x1B2838,
-        targets = listOf(
-            AppTarget(version = "2.0.22"),
-        )
-    )
+    const val EXPERIMENTAL_COMPATIBILITY_NAME = "Steam Link Experimental"
 
-    val COMPATIBILITY_STEAM_LINK_EXPERIMENTAL = Compatibility(
-        name = "Steam Link Experimental",
-        packageName = "com.valvesoftware.steamlinkvr",
-        apkFileType = ApkFileType.APK,
-        appIconColor = 0x1B2838,
-        targets = listOf(
-            AppTarget(version = "2.0.22", isExperimental = true),
-        )
-    )
+    private const val STEAM_LINK_PACKAGE = "com.valvesoftware.steamlinkvr"
+    private const val STEAM_LINK_VERSION = "2.0.22"
+    private val LEGACY_STEAM_LINK_BUILDS =
+        intArrayOf(5001712, 5002172, 5002206, 5002244, 5002313)
+    private val NATIVE_XR_STEAM_LINK_BUILDS = intArrayOf(5002318, 5002322)
 
-    val COMPATIBILITY_STEAM_LINK_HMD_ONLY = Compatibility(
-        name = "Steam Link",
-        packageName = "com.valvesoftware.steamlinkvr",
+    fun isNativeXrSteamLinkBuild(versionCode: String): Boolean =
+        NATIVE_XR_STEAM_LINK_BUILDS.any { it.toString() == versionCode }
+
+    private fun steamLinkBuildCompatibility(
+        versionCode: Int,
+        name: String = "Steam Link",
+        description: String = "Verified Steam Link 2.0.22 build $versionCode.",
+    ) = Compatibility(
+        name = name,
+        packageName = STEAM_LINK_PACKAGE,
         apkFileType = ApkFileType.APK,
         appIconColor = 0x1B2838,
         targets = listOf(
             AppTarget(
-                version = "2.0.22",
-                description = "HMD-only pose fix layouts verified for versionCodes 5001712, 5002206, and 5002244.",
-            )
-        )
+                version = STEAM_LINK_VERSION,
+                versionCodes = SupportedAbi.entries.associateWith { versionCode },
+                description = description,
+            ),
+        ),
     )
 
-    val COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002172 = Compatibility(
-        name = "Steam Link",
-        packageName = "com.valvesoftware.steamlinkvr",
-        apkFileType = ApkFileType.APK,
-        appIconColor = 0x1B2838,
-        targets = listOf(
-            AppTarget(
-                version = "2.0.22",
-                versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5002172),
-                description = "HMD-only pose fix layout verified for build 5002172.",
-            )
-        )
-    )
+    val COMPATIBILITIES_STEAM_LINK_LEGACY =
+        LEGACY_STEAM_LINK_BUILDS.map(::steamLinkBuildCompatibility)
 
-    val COMPATIBILITY_STEAM_LINK_HMD_ONLY_5002244 = Compatibility(
-        name = "Steam Link",
-        packageName = "com.valvesoftware.steamlinkvr",
-        apkFileType = ApkFileType.APK,
-        appIconColor = 0x1B2838,
-        targets = listOf(
-            AppTarget(
-                version = "2.0.22",
-                versionCodes = mapOf(SupportedAbi.ARM64_V8A to 5002244),
-                description = "HMD-only pose fix layout verified for build 5002244.",
+    val COMPATIBILITIES_STEAM_LINK_NATIVE_XR =
+        NATIVE_XR_STEAM_LINK_BUILDS.map { versionCode ->
+            steamLinkBuildCompatibility(
+                versionCode = versionCode,
+                description = if (versionCode == 5002322) {
+                    "Build 5002322 recommends only Appear on top, GXR face bridge, " +
+                        "Microphone input preset, Unrestricted battery usage, Video dither, " +
+                        "and Visual Delay Fix. Experimental XR projection patches remain optional."
+                } else {
+                    "Build $versionCode supports Device identity, Microphone input preset, OLED color " +
+                        "calibration, Appear on top, GXR face bridge, Visual Delay Fix, " +
+                        "Unrestricted battery usage, Video dither, and the experimental XR " +
+                        "projection patches."
+                },
             )
-        )
-    )
+        }
+
+    val COMPATIBILITIES_STEAM_LINK =
+        COMPATIBILITIES_STEAM_LINK_LEGACY + COMPATIBILITIES_STEAM_LINK_NATIVE_XR
+
+    // Morphe's Patch.default is global, not per AppTarget. Excluding the latest exact build from
+    // a globally recommended patch is the only unambiguous way to keep older recommendations
+    // while preventing that patch from being recommended for 5002322.
+    val COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST =
+        COMPATIBILITIES_STEAM_LINK.filterNot { compatibility ->
+            compatibility.targets.any { target ->
+                target.versionCodes?.values?.contains(5002322) == true
+            }
+        }
+
+    val COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL =
+        (LEGACY_STEAM_LINK_BUILDS + NATIVE_XR_STEAM_LINK_BUILDS).map { versionCode ->
+            steamLinkBuildCompatibility(
+                versionCode = versionCode,
+                name = EXPERIMENTAL_COMPATIBILITY_NAME,
+                description = "Experimental XR projection patches for Steam Link 2.0.22 build $versionCode.",
+            )
+        }
 }

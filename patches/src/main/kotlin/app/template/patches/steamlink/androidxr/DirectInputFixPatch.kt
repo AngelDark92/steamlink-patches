@@ -3,8 +3,8 @@ package app.template.patches.steamlink.androidxr
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.BuilderInstruction
@@ -61,6 +61,10 @@ internal val xrDirectInputFixPatch = bytecodePatch {
     dependsOn(androidXrUiExtensionPatch)
 
     execute {
+        // Dependencies execute even when their own compatibility excludes this build. Valve's
+        // Native-XR SDL/controller paths already support hands, so leave them byte-for-byte.
+        if (isNativeXrSteamLinkBuild(packageMetadata.versionCode)) return@execute
+
         val surfaceChanged = mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
             .first { it.name == "surfaceChanged" && it.parameterTypes.size == 4 }
         val displayMetricsClass = "Landroid/util/DisplayMetrics;"
@@ -119,6 +123,15 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                 )
             }
 
+    }
+}
+
+/**
+ * Overlay/resolution activation hook shared by legacy and native-XR launchers.
+ * It changes only SteamLink lifecycle methods and intentionally avoids every SDL/controller class.
+ */
+internal val xrResolutionProbePatch = bytecodePatch {
+    execute {
         val steamLinkClass = mutableClassDefBy("Lcom/valvesoftware/steamlink/SteamLink;")
         val runResolutionProbe = { method: MutableMethod, index: Int, probeMethod: String ->
             method.addInstruction(

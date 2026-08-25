@@ -1,11 +1,13 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK
-import app.template.patches.shared.Constants.COMPATIBILITY_STEAM_LINK_EXPERIMENTAL
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL
 import org.w3c.dom.Element
+import java.io.File
 
 private val unrestrictedBatteryManifestPatch = resourcePatch {
     finalize {
@@ -29,11 +31,16 @@ private val unrestrictedBatteryManifestPatch = resourcePatch {
 @Suppress("unused")
 val unrestrictedBatteryUsagePatch = bytecodePatch(
     name = "Unrestricted battery usage",
-    description = "Recommended. Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
+    description = "Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(xrLauncherBootstrapPatch, unrestrictedBatteryManifestPatch)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
+    // Restore the legacy automatic foundation while its native-build guards make it a no-op.
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        unrestrictedBatteryManifestPatch,
+    )
 }
 
 private val appearOnTopManifestPatch = resourcePatch {
@@ -59,37 +66,74 @@ private val appearOnTopManifestPatch = resourcePatch {
 @Suppress("unused")
 val appearOnTopPatch = bytecodePatch(
     name = "Appear on top",
-    description = "Recommended. Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
+    description = "Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
     default = true,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK)
-    dependsOn(xrLauncherBootstrapPatch, appearOnTopManifestPatch)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        appearOnTopManifestPatch,
+    )
 }
 
-@Suppress("unused")
-val xrResolutionPermissionExperimentPatch = resourcePatch(
-    name = "XR resolution permission experiment",
-    description = "Experimental window/permission A/B probe. Turn off Appear on top and do not combine with older resolution test APK modifications.",
+private fun resolutionTraceResource(name: String): ByteArray =
+    (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
+        ?: throw PatchException("Missing bundled resolution trace resource: $name"))
+        .use { it.readBytes() }
+
+private fun projectionDiagnosticLayerPatch(mode: String) = rawResourcePatch {
+    execute {
+        val libraryName = "libgxr_$mode.so"
+        val manifestName = "XR_APILAYER_local_GalaxyXR_$mode.json"
+        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
+        val layerDir = get("assets/openxr/1/api_layers/implicit.d/$manifestName").parentFile!!
+        val otherProjectionLayers = layerDir.listFiles()
+            ?.filter {
+                it.name.startsWith("XR_APILAYER_local_GalaxyXR_projection_") &&
+                    it.name != manifestName
+            }
+            .orEmpty()
+        if (otherProjectionLayers.isNotEmpty()) {
+            throw PatchException(
+                "Select exactly one XR projection diagnostic patch; already present: " +
+                    otherProjectionLayers.joinToString { it.name },
+            )
+        }
+        File(libDir, libraryName).writeBytes(resolutionTraceResource(libraryName))
+
+        val layerManifest = File(layerDir, manifestName)
+        layerManifest.parentFile!!.mkdirs()
+        layerManifest.writeBytes(resolutionTraceResource(manifestName))
+    }
+}
+
+private val projectionTraceControlLayerPatch =
+    projectionDiagnosticLayerPatch("projection_trace_control")
+private val projectionSettingsQualityLayerPatch =
+    projectionDiagnosticLayerPatch("projection_settings_quality")
+private val projectionSettingsStrippedLayerPatch =
+    projectionDiagnosticLayerPatch("projection_settings_stripped")
+
+private fun projectionExperimentPatch(
+    name: String,
+    description: String,
+    mode: String,
+) = resourcePatch(
+    name = name,
+    description = description,
     default = false,
 ) {
-    compatibleWith(COMPATIBILITY_STEAM_LINK_EXPERIMENTAL)
-    dependsOn(xrLauncherBootstrapPatch, androidXrUiExtensionPatch)
-
-    val mode by stringOption(
-        key = "mode",
-        default = "no_window_control",
-        values = mapOf(
-            "No window control" to "no_window_control",
-            "Granted overlay control" to "overlay_granted_control",
-            "Denied overlay enforcement probe" to "overlay_denied_probe",
-            "Activity-owned application window" to "application_window",
-            "SteamLink decor view" to "decor_view",
-            "Application window immediately before VR" to "application_window_direct_vr",
-        ),
-        title = "Experiment mode",
-        description = "Select exactly one complete test state. Only Granted overlay control requests Appear on top.",
-        required = true,
-    )
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.toTypedArray())
+    // Legacy builds retain their complete launcher foundation. Every legacy mutation is guarded
+    // off on native-XR builds, where only the minimal permission/probe bootstrap remains active.
+    dependsOn(xrLauncherBootstrapPatch, xrPermissionSettingsBootstrapPatch)
+    when (mode) {
+        "projection_trace_control" -> dependsOn(projectionTraceControlLayerPatch)
+        "projection_settings_quality" -> dependsOn(projectionSettingsQualityLayerPatch)
+        "projection_settings_stripped" -> dependsOn(projectionSettingsStrippedLayerPatch)
+        else -> throw PatchException("Unknown XR projection experiment mode: $mode")
+    }
 
     finalize {
         document("AndroidManifest.xml").use { document ->
@@ -101,15 +145,7 @@ val xrResolutionPermissionExperimentPatch = resourcePatch(
                 .mapNotNull { permissionNodes.item(it) as? Element }
                 .filter { it.getAttribute("android:name") == permissionName }
 
-            if (mode == "overlay_granted_control" || mode == "overlay_denied_probe") {
-                if (matchingPermissions.isEmpty()) {
-                    val permission = document.createElement("uses-permission")
-                    permission.setAttribute("android:name", permissionName)
-                    manifest.insertBefore(permission, app)
-                }
-            } else {
-                matchingPermissions.forEach { manifest.removeChild(it) }
-            }
+            matchingPermissions.forEach { manifest.removeChild(it) }
 
             val metadataName = "com.valvesoftware.steamlink.GXR_RESOLUTION_MODE"
             val existingMetadata = app.getElementsByTagName("meta-data").let { nodes ->
@@ -119,7 +155,28 @@ val xrResolutionPermissionExperimentPatch = resourcePatch(
             }
             val metadata = existingMetadata ?: document.createElement("meta-data").also(app::appendChild)
             metadata.setAttribute("android:name", metadataName)
-            metadata.setAttribute("android:value", mode!!)
+            metadata.setAttribute("android:value", mode)
         }
     }
 }
+
+@Suppress("unused")
+val xrProjectionTraceControlPatch = projectionExperimentPatch(
+    name = "XR projection trace control",
+    description = "Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition.",
+    mode = "projection_trace_control",
+)
+
+@Suppress("unused")
+val xrProjectionSettingsQualityPatch = projectionExperimentPatch(
+    name = "XR projection quality settings",
+    description = "Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it.",
+    mode = "projection_settings_quality",
+)
+
+@Suppress("unused")
+val xrProjectionSettingsStrippedPatch = projectionExperimentPatch(
+    name = "XR projection settings stripped",
+    description = "Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe.",
+    mode = "projection_settings_stripped",
+)
