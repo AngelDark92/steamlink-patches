@@ -140,7 +140,16 @@ Steam_Link-v2.0.22-patches-v1.9.0-dev.8/
 SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/
 .github/agents
 XR_RESOLUTION_EXPERIMENT_LOGS/
+!XR_RESOLUTION_EXPERIMENT_LOGS/
+XR_RESOLUTION_EXPERIMENT_LOGS/*
+!XR_RESOLUTION_EXPERIMENT_LOGS/XR_RESOLUTION_EXPERIMENT.md
 SteamLink-Resolution-AB/
 decoded-apk**/
 images.jpg
 Resources/
+!patches/src/main/resources/
+!patches/src/main/resources/steamlink/
+!patches/src/main/resources/steamlink/androidxr/
+!patches/src/main/resources/steamlink/androidxr/XR_APILAYER_local_GalaxyXR_vrlink_unmanaged_full_space.json
+!patches/src/main/resources/steamlink/androidxr/libgxr_vrlink_unmanaged_full_space.so
+extensions/resolution-trace-layer/build-android-new/

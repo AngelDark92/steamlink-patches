@@ -318,6 +318,26 @@ val xrManifestCapabilityPackPatch = resourcePatch(
     }
 }
 
+internal fun upsertVrLinkUnmanagedFullSpace(doc: Document, app: Element): Boolean {
+    val propertyName = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
+    val vrLink = app.getElementsByTagName("activity").asSequence()
+        .filterIsInstance<Element>()
+        .firstOrNull { it.getAttribute("android:name") == "com.valvesoftware.steamlink.VRLink" }
+        ?: return false
+    removeDirectApplicationProperty(app, propertyName)
+    val matches = vrLink.childNodes.asSequence()
+        .filterIsInstance<Element>()
+        .filter { it.tagName == "property" && it.getAttribute("android:name") == propertyName }
+        .toList()
+    val property = matches.firstOrNull() ?: doc.createElement("property").also {
+        vrLink.insertBefore(it, vrLink.firstChild)
+    }
+    property.setAttribute("android:name", propertyName)
+    property.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED")
+    matches.drop(1).forEach { duplicate -> vrLink.removeChild(duplicate) }
+    return true
+}
+
 /**
  * Minimal permission/settings launcher used by patches that remain valid on native-XR builds.
  *
@@ -413,9 +433,9 @@ val xrLauncherBootstrapPatch = resourcePatch(
             val app = doc.documentElement.getElementsByTagName("application").item(0) as Element
             val xrStartMode = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
 
-            // Build 5002313 declares this at application scope. Remove only the direct
-            // application child so the activity-specific managed/unmanaged modes below win.
-            removeDirectApplicationProperty(app, xrStartMode)
+            // Build 5002313 declares this at application scope. Replace it with the direct
+            // activity property required by the OpenXR VRLink activity.
+            upsertVrLinkUnmanagedFullSpace(doc, app)
 
             val gxrActivityName = "com.valvesoftware.steamlink.GalaxyXRPermissionActivity"
             val hasGxrActivity = app.getElementsByTagName("activity").let { al ->
@@ -454,22 +474,6 @@ val xrLauncherBootstrapPatch = resourcePatch(
                 .filterIsInstance<Element>()
                 .firstOrNull { it.getAttribute("android:name") == vrLinkName }
                 ?.let { vrLink ->
-                    val existingMode = vrLink.getElementsByTagName("property").asSequence()
-                        .filterIsInstance<Element>()
-                        .firstOrNull { it.getAttribute("android:name") == xrStartMode }
-                    if (existingMode != null) {
-                        existingMode.setAttribute(
-                            "android:value",
-                            "XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED",
-                        )
-                    } else {
-                        val prop = doc.createElement("property")
-                        prop.setAttribute("android:name", xrStartMode)
-                        // XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED: VRLink owns the full XR frame, no spatial OS chrome
-                        prop.setAttribute("android:value", "XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED")
-                        vrLink.insertBefore(prop, vrLink.firstChild)
-                    }
-
                     val immersiveHmd = "org.khronos.openxr.intent.category.IMMERSIVE_HMD"
                     val hasImmersiveHmd = vrLink.getElementsByTagName("category").let { cl ->
                         (0 until cl.length).any {

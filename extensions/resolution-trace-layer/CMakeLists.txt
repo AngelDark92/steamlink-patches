@@ -51,3 +51,9 @@ add_gxr_projection_mode(
     2
     XR_APILAYER_local_GalaxyXR_projection_settings_stripped
 )
+add_gxr_projection_mode(
+    gxr_vrlink_unmanaged_full_space
+    gxr_vrlink_unmanaged_full_space
+    3
+    XR_APILAYER_local_GalaxyXR_vrlink_unmanaged_full_space
+)

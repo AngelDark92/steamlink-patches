@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.0-dev.18](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.18)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;22 patches total
+> **[v1.10.0-dev.18](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.0-dev.18)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -55,20 +55,21 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
+| 2.0.22 (5002322) | 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Experimental XR projection patches for Steam Link 2.0.22 build 5001712. | Experimental XR projection patches for Steam Link 2.0.22 build 5002172. | Experimental XR projection patches for Steam Link 2.0.22 build 5002206. | Experimental XR projection patches for Steam Link 2.0.22 build 5002244. | Experimental XR projection patches for Steam Link 2.0.22 build 5002313. | Experimental XR projection patches for Steam Link 2.0.22 build 5002318. | Experimental XR projection patches for Steam Link 2.0.22 build 5002322. |
+| Experimental XR projection patches for Steam Link 2.0.22 build 5002322. | Experimental XR projection patches for Steam Link 2.0.22 build 5001712. | Experimental XR projection patches for Steam Link 2.0.22 build 5002172. | Experimental XR projection patches for Steam Link 2.0.22 build 5002206. | Experimental XR projection patches for Steam Link 2.0.22 build 5002244. | Experimental XR projection patches for Steam Link 2.0.22 build 5002313. | Experimental XR projection patches for Steam Link 2.0.22 build 5002318. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [XR projection quality settings](#xr-projection-quality-settings) | Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
-| [XR projection settings stripped](#xr-projection-settings-stripped) | Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
-| [XR projection trace control](#xr-projection-trace-control) | Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
+| [Experimental VRLink unmanaged full space](#experimental-vrlink-unmanaged-full-space) | 5002322-only permission-free A/B. Adds Android XR's required unmanaged Full Space property directly to VRLink while forwarding OpenXR frames unchanged. | 5002322 |  |
+| [Experimental XR projection quality settings](#experimental-xr-projection-quality-settings) | Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
+| [Experimental XR projection settings stripped](#experimental-xr-projection-settings-stripped) | Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
+| [Experimental XR projection trace control](#experimental-xr-projection-trace-control) | Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
 
 </details>
 

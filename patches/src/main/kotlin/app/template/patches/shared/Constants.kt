@@ -76,4 +76,11 @@ object Constants {
                 description = "Experimental XR projection patches for Steam Link 2.0.22 build $versionCode.",
             )
         }
+
+    val COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL =
+        COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.filter { compatibility ->
+            compatibility.targets.any { target ->
+                target.versionCodes?.values?.contains(5002322) == true
+            }
+        }
 }

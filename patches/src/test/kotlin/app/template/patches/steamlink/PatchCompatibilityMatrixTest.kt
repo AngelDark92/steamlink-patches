@@ -15,6 +15,7 @@ import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
 import app.template.patches.steamlink.androidxr.xrProjectionSettingsQualityPatch
 import app.template.patches.steamlink.androidxr.xrProjectionSettingsStrippedPatch
 import app.template.patches.steamlink.androidxr.xrProjectionTraceControlPatch
+import app.template.patches.steamlink.androidxr.vrLinkUnmanagedFullSpacePatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -45,6 +46,10 @@ class PatchCompatibilityMatrixTest {
         latestExcluded.forEach { patch ->
             assertFalse(patch.supports(5002322), "${patch.name} on 5002322")
         }
+        assertTrue(vrLinkUnmanagedFullSpacePatch.supports(5002322))
+        assertFalse(vrLinkUnmanagedFullSpacePatch.supports(5002318))
+        assertFalse(vrLinkUnmanagedFullSpacePatch.supports(5002244))
+        assertFalse(vrLinkUnmanagedFullSpacePatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -95,6 +100,7 @@ class PatchCompatibilityMatrixTest {
             xrProjectionTraceControlPatch,
             xrProjectionSettingsQualityPatch,
             xrProjectionSettingsStrippedPatch,
+            vrLinkUnmanagedFullSpacePatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }

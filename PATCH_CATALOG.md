@@ -7,7 +7,7 @@ Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither,
 and the three experimental XR projection patches. Build 5002322 recommends only Appear on top,
 GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix;
-the experimental XR projection patches remain optional. Their shared legacy dependency chain branches
+the three projection patches plus the 5002322-only Experimental VRLink unmanaged full space patch remain optional. Their shared legacy dependency chain branches
 on versionCode: older builds retain the historical provisioning, while every legacy mutation is a
 no-op on both native-XR builds so Valve's hand/controller routing stays intact.
 
@@ -136,6 +136,20 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
 | `GalaxyXRPermissionActivity` | Opens the app-specific Battery usage page at startup when not unrestricted; falls back to the direct exemption prompt, then app details |
+
+---
+
+### Experimental permission-free resolution matrix
+**Default: disabled** — select exactly one mode; all remove `SYSTEM_ALERT_WINDOW` and install one mutually exclusive trace layer
+
+| Morphe patch | Compatibility | Exact edits |
+|---|---|---|
+| `Experimental XR projection trace control` | verified Steam Link 2.0.22 builds | Adds `libgxr_projection_trace_control.so`, its implicit-layer manifest, and `GXR_RESOLUTION_MODE=projection_trace_control`; forwards the caller's `xrEndFrame` pointer unchanged |
+| `Experimental XR projection quality settings` | verified Steam Link 2.0.22 builds | Adds `libgxr_projection_settings_quality.so`, its implicit-layer manifest, and `GXR_RESOLUTION_MODE=projection_settings_quality`; conditionally requests the guarded FB quality flags |
+| `Experimental XR projection settings stripped` | verified Steam Link 2.0.22 builds | Adds `libgxr_projection_settings_stripped.so`, its implicit-layer manifest, and `GXR_RESOLUTION_MODE=projection_settings_stripped`; removes only safely identified leading FB settings nodes |
+| `Experimental VRLink unmanaged full space` | **5002322 only** | Adds `libgxr_vrlink_unmanaged_full_space.so`, its implicit-layer manifest, and `GXR_RESOLUTION_MODE=vrlink_unmanaged_full_space`; removes any direct application-scope start mode and adds exactly one direct `VRLink` `PROPERTY_XR_ACTIVITY_START_MODE=XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED`; forwards `xrEndFrame` unchanged |
+
+Legacy launcher builds, including the earlier 5002244 experiment base, already received the direct unmanaged Full Space property through `xrLauncherBootstrapPatch` above. The new patch does not claim that historical configuration worked: it isolates the declaration on stock native-XR build 5002322, where the decoded manifest has no start-mode property. Do not mark it as a successful/production fix until the eight-run headset matrix passes.
 
 ---
 
@@ -308,7 +322,8 @@ This intentionally preserves the native builds' requested extensions and vendor 
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `changePackageNamePatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, four experimental permission-free resolution modes, `changePackageNamePatch` |
+| `lib/arm64-v8a/libgxr_*.so` + `assets/openxr/1/api_layers/implicit.d/*.json` | Four mutually exclusive experimental permission-free resolution modes |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

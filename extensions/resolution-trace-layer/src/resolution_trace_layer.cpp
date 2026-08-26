@@ -28,8 +28,8 @@
 
 namespace {
 
-static_assert(GXR_PROJECTION_MODE >= 0 && GXR_PROJECTION_MODE <= 2,
-              "GXR_PROJECTION_MODE must be control, quality, or stripped");
+static_assert(GXR_PROJECTION_MODE >= 0 && GXR_PROJECTION_MODE <= 3,
+              "GXR_PROJECTION_MODE must be control, quality, stripped, or unmanaged full space");
 
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
@@ -40,6 +40,7 @@ constexpr XrCompositionLayerSettingsFlagsFB kQualityFlags =
 const char* modeName() {
     if constexpr (GXR_PROJECTION_MODE == 1) return "projection_settings_quality";
     if constexpr (GXR_PROJECTION_MODE == 2) return "projection_settings_stripped";
+    if constexpr (GXR_PROJECTION_MODE == 3) return "vrlink_unmanaged_full_space";
     return "projection_trace_control";
 }
 
@@ -358,7 +359,7 @@ ModifiedFrame makeModifiedFrame(const XrFrameEndInfo* source) {
     modified.projections.reserve(source->layerCount);
     modified.settings.reserve(source->layerCount);
 
-    if constexpr (GXR_PROJECTION_MODE == 0) return modified;
+    if constexpr (GXR_PROJECTION_MODE == 0 || GXR_PROJECTION_MODE == 3) return modified;
     if constexpr (GXR_PROJECTION_MODE == 1) {
         if (!g_compositionSettingsEnabled) return modified;
     }
@@ -478,7 +479,7 @@ std::string describeFrame(uint64_t frame, const XrFrameEndInfo* frameEndInfo,
 
 XrResult XRAPI_PTR traceEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) {
     const uint64_t frame = ++g_frameCount;
-    if constexpr (GXR_PROJECTION_MODE == 0) {
+    if constexpr (GXR_PROJECTION_MODE == 0 || GXR_PROJECTION_MODE == 3) {
         const bool sampled = shouldSampleFrame(frame);
         if (sampled) emit("end_frame_submit", describeFrame(frame, frameEndInfo, false));
         const XrResult result = g_dispatch.endFrame(session, frameEndInfo);

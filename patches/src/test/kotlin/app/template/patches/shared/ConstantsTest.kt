@@ -23,6 +23,10 @@ class ConstantsTest {
             listOf(5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322),
             Constants.COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.versionCodes(),
         )
+        assertEquals(
+            listOf(5002322),
+            Constants.COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.versionCodes(),
+        )
     }
 
     private fun List<app.morphe.patcher.patch.Compatibility>.versionCodes() = map { compatibility ->
