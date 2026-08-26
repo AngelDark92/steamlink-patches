@@ -1,3 +1,9 @@
+## [1.10.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0...v1.10.1-dev.1) (2026-08-26)
+
+### 🐛 Bug Fixes
+
+* more experiments with resolution ([c7f5401](https://github.com/AngelDark92/steamlink-patches/commit/c7f5401d297eb7025fdcf5e2937db0afe141fea3))
+
 ## [1.10.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.9.1...v1.10.0) (2026-08-25)
 
 ### 🐛 Bug Fixes
