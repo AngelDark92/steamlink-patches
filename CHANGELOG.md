@@ -1,3 +1,9 @@
+## [1.10.1-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.1...v1.10.1-dev.2) (2026-08-27)
+
+### 🐛 Bug Fixes
+
+* experiments not successful, new experiment based on VD ([d81643d](https://github.com/AngelDark92/steamlink-patches/commit/d81643de871caf9ad4b8542cf3c6decbae67e7ae))
+
 ## [1.10.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.0...v1.10.1-dev.1) (2026-08-26)
 
 ### 🐛 Bug Fixes
