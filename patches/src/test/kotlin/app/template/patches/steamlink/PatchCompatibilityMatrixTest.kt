@@ -12,10 +12,7 @@ import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
-import app.template.patches.steamlink.androidxr.xrProjectionSettingsQualityPatch
-import app.template.patches.steamlink.androidxr.xrProjectionSettingsStrippedPatch
-import app.template.patches.steamlink.androidxr.xrProjectionTraceControlPatch
-import app.template.patches.steamlink.androidxr.vrLinkUnmanagedFullSpacePatch
+import app.template.patches.steamlink.androidxr.xrProjectionMetadataCompatibilityPatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -46,10 +43,10 @@ class PatchCompatibilityMatrixTest {
         latestExcluded.forEach { patch ->
             assertFalse(patch.supports(5002322), "${patch.name} on 5002322")
         }
-        assertTrue(vrLinkUnmanagedFullSpacePatch.supports(5002322))
-        assertFalse(vrLinkUnmanagedFullSpacePatch.supports(5002318))
-        assertFalse(vrLinkUnmanagedFullSpacePatch.supports(5002244))
-        assertFalse(vrLinkUnmanagedFullSpacePatch.default)
+        assertTrue(xrProjectionMetadataCompatibilityPatch.supports(5002322))
+        assertFalse(xrProjectionMetadataCompatibilityPatch.supports(5002318))
+        assertFalse(xrProjectionMetadataCompatibilityPatch.supports(5002244))
+        assertFalse(xrProjectionMetadataCompatibilityPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -97,10 +94,7 @@ class PatchCompatibilityMatrixTest {
         listOf(
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
-            xrProjectionTraceControlPatch,
-            xrProjectionSettingsQualityPatch,
-            xrProjectionSettingsStrippedPatch,
-            vrLinkUnmanagedFullSpacePatch,
+            xrProjectionMetadataCompatibilityPatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -130,9 +124,6 @@ class PatchCompatibilityMatrixTest {
             hmdOnlyPatch,
             unrestrictedBatteryUsagePatch,
             videoDitherPatch,
-            xrProjectionTraceControlPatch,
-            xrProjectionSettingsQualityPatch,
-            xrProjectionSettingsStrippedPatch,
         )
 
         val excludedNativeXr = listOf(
@@ -152,7 +143,7 @@ class PatchCompatibilityMatrixTest {
         val latestCompatible = allowedNativeXr - listOf(
             deviceIdentityPatch,
             oledCalibrationPatch,
-        )
+        ) + xrProjectionMetadataCompatibilityPatch
 
         val latestExcluded = excludedNativeXr + listOf(
             deviceIdentityPatch,

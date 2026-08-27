@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(gxr_projection_diagnostics LANGUAGES CXX)
+project(gxr_projection_metadata_compat LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -16,44 +16,18 @@ if(NOT EXISTS "${OPENXR_SDK_SOURCE_DIR}/include/openxr/openxr.h")
     message(FATAL_ERROR "Set OPENXR_SDK_SOURCE_DIR to the bundled OpenXR-SDK 1.1.61 checkout")
 endif()
 
-function(add_gxr_projection_mode target output mode layer_name)
-    add_library(${target} SHARED src/resolution_trace_layer.cpp)
-    target_include_directories(${target} PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
-    target_compile_definitions(${target} PRIVATE
-        XR_USE_PLATFORM_ANDROID
-        XR_USE_GRAPHICS_API_OPENGL_ES
-        GXR_PROJECTION_MODE=${mode}
-        GXR_LAYER_NAME="${layer_name}"
-    )
-    target_link_libraries(${target} PRIVATE log EGL)
-    set_target_properties(${target} PROPERTIES
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN YES
-        OUTPUT_NAME ${output}
-    )
-endfunction()
-
-add_gxr_projection_mode(
-    gxr_projection_trace_control
-    gxr_projection_trace_control
-    0
-    XR_APILAYER_local_GalaxyXR_projection_trace_control
+add_library(gxr_projection_metadata_compat_v2 SHARED src/resolution_trace_layer.cpp)
+target_include_directories(gxr_projection_metadata_compat_v2 PRIVATE
+    "${OPENXR_SDK_SOURCE_DIR}/include"
 )
-add_gxr_projection_mode(
-    gxr_projection_settings_quality
-    gxr_projection_settings_quality
-    1
-    XR_APILAYER_local_GalaxyXR_projection_settings_quality
+target_compile_definitions(gxr_projection_metadata_compat_v2 PRIVATE
+    XR_USE_PLATFORM_ANDROID
+    XR_USE_GRAPHICS_API_OPENGL_ES
+    GXR_LAYER_NAME="XR_APILAYER_local_GalaxyXR_projection_metadata_compat_v2"
 )
-add_gxr_projection_mode(
-    gxr_projection_settings_stripped
-    gxr_projection_settings_stripped
-    2
-    XR_APILAYER_local_GalaxyXR_projection_settings_stripped
-)
-add_gxr_projection_mode(
-    gxr_vrlink_unmanaged_full_space
-    gxr_vrlink_unmanaged_full_space
-    3
-    XR_APILAYER_local_GalaxyXR_vrlink_unmanaged_full_space
+target_link_libraries(gxr_projection_metadata_compat_v2 PRIVATE log EGL)
+set_target_properties(gxr_projection_metadata_compat_v2 PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+    OUTPUT_NAME gxr_projection_metadata_compat_v2
 )

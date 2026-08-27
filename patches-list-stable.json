@@ -260,7 +260,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         },
@@ -282,7 +282,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Experimental XR projection patches remain optional."
+              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
             }
           ]
         }
@@ -727,7 +727,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         }
@@ -1244,7 +1244,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         },
@@ -1266,7 +1266,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Experimental XR projection patches remain optional."
+              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
             }
           ]
         }
@@ -1407,7 +1407,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         },
@@ -1429,7 +1429,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Experimental XR projection patches remain optional."
+              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
             }
           ]
         }
@@ -1585,7 +1585,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         }
@@ -1774,7 +1774,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         },
@@ -1796,7 +1796,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Experimental XR projection patches remain optional."
+              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
             }
           ]
         }
@@ -1939,7 +1939,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         },
@@ -1961,7 +1961,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Experimental XR projection patches remain optional."
+              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
             }
           ]
         }
@@ -2112,7 +2112,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches."
+              "description": "Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither."
             }
           ]
         },
@@ -2134,7 +2134,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Experimental XR projection patches remain optional."
+              "description": "Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
             }
           ]
         }

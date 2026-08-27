@@ -45,12 +45,11 @@ object Constants {
                 description = if (versionCode == 5002322) {
                     "Build 5002322 recommends only Appear on top, GXR face bridge, " +
                         "Microphone input preset, Unrestricted battery usage, Video dither, " +
-                        "and Visual Delay Fix. Experimental XR projection patches remain optional."
+                        "and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
                 } else {
                     "Build $versionCode supports Device identity, Microphone input preset, OLED color " +
                         "calibration, Appear on top, GXR face bridge, Visual Delay Fix, " +
-                        "Unrestricted battery usage, Video dither, and the experimental XR " +
-                        "projection patches."
+                        "Unrestricted battery usage, and Video dither."
                 },
             )
         }
@@ -73,7 +72,7 @@ object Constants {
             steamLinkBuildCompatibility(
                 versionCode = versionCode,
                 name = EXPERIMENTAL_COMPATIBILITY_NAME,
-                description = "Experimental XR projection patches for Steam Link 2.0.22 build $versionCode.",
+                description = "Experimental patches for Steam Link 2.0.22 build $versionCode.",
             )
         }
 

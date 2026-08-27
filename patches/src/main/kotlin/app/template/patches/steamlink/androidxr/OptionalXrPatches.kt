@@ -5,7 +5,6 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL
 import org.w3c.dom.Element
 import java.io.File
@@ -78,79 +77,56 @@ val appearOnTopPatch = bytecodePatch(
     )
 }
 
-private fun resolutionTraceResource(name: String): ByteArray =
+private const val PROJECTION_COMPAT_MODE = "projection_metadata_compat_v2"
+private const val PROJECTION_COMPAT_LIBRARY = "libgxr_projection_metadata_compat_v2.so"
+private const val PROJECTION_COMPAT_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_projection_metadata_compat_v2.json"
+
+private val retiredProjectionModes = setOf(
+    "projection_trace_control",
+    "projection_settings_quality",
+    "projection_settings_stripped",
+    "vrlink_unmanaged_full_space",
+)
+
+private fun projectionCompatResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
-        ?: throw PatchException("Missing bundled resolution trace resource: $name"))
+        ?: throw PatchException("Missing bundled projection compatibility resource: $name"))
         .use { it.readBytes() }
 
-private fun projectionDiagnosticLayerPatch(mode: String) = rawResourcePatch {
+private val projectionMetadataCompatLayerPatch = rawResourcePatch {
     execute {
-        val libraryName = "libgxr_$mode.so"
-        val manifestName = "XR_APILAYER_local_GalaxyXR_$mode.json"
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
-        val layerDir = get("assets/openxr/1/api_layers/implicit.d/$manifestName").parentFile!!
-        val diagnosticPrefix = "XR_APILAYER_local_GalaxyXR_"
-        val diagnosticModes = setOf(
-            "projection_trace_control",
-            "projection_settings_quality",
-            "projection_settings_stripped",
-            "vrlink_unmanaged_full_space",
-        )
-        val otherProjectionLayers = layerDir.listFiles()
-            ?.filter {
-                diagnosticModes.any { candidate ->
-                    it.name == "$diagnosticPrefix$candidate.json"
-                } &&
-                    it.name != manifestName
-            }
-            .orEmpty()
-        if (otherProjectionLayers.isNotEmpty()) {
-            throw PatchException(
-                "Select exactly one XR projection diagnostic patch; already present: " +
-                    otherProjectionLayers.joinToString { it.name },
-            )
-        }
-        File(libDir, libraryName).writeBytes(resolutionTraceResource(libraryName))
+        val layerDir = get(
+            "assets/openxr/1/api_layers/implicit.d/$PROJECTION_COMPAT_MANIFEST",
+        ).parentFile!!
 
-        val layerManifest = File(layerDir, manifestName)
+        retiredProjectionModes.forEach { mode ->
+            File(libDir, "libgxr_$mode.so").delete()
+            File(layerDir, "XR_APILAYER_local_GalaxyXR_$mode.json").delete()
+        }
+
+        File(libDir, PROJECTION_COMPAT_LIBRARY).writeBytes(
+            projectionCompatResource(PROJECTION_COMPAT_LIBRARY),
+        )
+        val layerManifest = File(layerDir, PROJECTION_COMPAT_MANIFEST)
         layerManifest.parentFile!!.mkdirs()
-        layerManifest.writeBytes(resolutionTraceResource(manifestName))
+        layerManifest.writeBytes(projectionCompatResource(PROJECTION_COMPAT_MANIFEST))
     }
 }
 
-private val projectionTraceControlLayerPatch =
-    projectionDiagnosticLayerPatch("projection_trace_control")
-private val projectionSettingsQualityLayerPatch =
-    projectionDiagnosticLayerPatch("projection_settings_quality")
-private val projectionSettingsStrippedLayerPatch =
-    projectionDiagnosticLayerPatch("projection_settings_stripped")
-private val vrLinkUnmanagedFullSpaceLayerPatch =
-    projectionDiagnosticLayerPatch("vrlink_unmanaged_full_space")
-
-private fun projectionExperimentPatch(
-    name: String,
-    description: String,
-    mode: String,
-    native5002322Only: Boolean = false,
-) = resourcePatch(
-    name = name,
-    description = description,
+@Suppress("unused")
+val xrProjectionMetadataCompatibilityPatch = resourcePatch(
+    name = "Experimental Android XR projection compatibility",
+    description = "5002322-only permission-free fix. Removes invalid zero-flag FB settings from Steam Link's three projection layers while preserving their dimensions, order, and gaze-driven FOV.",
     default = false,
 ) {
-    compatibleWith(*(
-        if (native5002322Only) COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL
-        else COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL
-    ).toTypedArray())
-    // Legacy builds retain their complete launcher foundation. Every legacy mutation is guarded
-    // off on native-XR builds, where only the minimal permission/probe bootstrap remains active.
-    dependsOn(xrLauncherBootstrapPatch, xrPermissionSettingsBootstrapPatch)
-    when (mode) {
-        "projection_trace_control" -> dependsOn(projectionTraceControlLayerPatch)
-        "projection_settings_quality" -> dependsOn(projectionSettingsQualityLayerPatch)
-        "projection_settings_stripped" -> dependsOn(projectionSettingsStrippedLayerPatch)
-        "vrlink_unmanaged_full_space" -> dependsOn(vrLinkUnmanagedFullSpaceLayerPatch)
-        else -> throw PatchException("Unknown XR projection experiment mode: $mode")
-    }
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        projectionMetadataCompatLayerPatch,
+    )
 
     finalize {
         document("AndroidManifest.xml").use { document ->
@@ -164,9 +140,7 @@ private fun projectionExperimentPatch(
 
             matchingPermissions.forEach { manifest.removeChild(it) }
 
-            if (mode == "vrlink_unmanaged_full_space" &&
-                !upsertVrLinkUnmanagedFullSpace(document, app)
-            ) {
+            if (!upsertVrLinkUnmanagedFullSpace(document, app)) {
                 throw PatchException("Steam Link 5002322 VRLink activity was not found")
             }
 
@@ -178,36 +152,7 @@ private fun projectionExperimentPatch(
             }
             val metadata = existingMetadata ?: document.createElement("meta-data").also(app::appendChild)
             metadata.setAttribute("android:name", metadataName)
-            metadata.setAttribute("android:value", mode)
+            metadata.setAttribute("android:value", PROJECTION_COMPAT_MODE)
         }
     }
 }
-
-@Suppress("unused")
-val xrProjectionTraceControlPatch = projectionExperimentPatch(
-    name = "Experimental XR projection trace control",
-    description = "Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition.",
-    mode = "projection_trace_control",
-)
-
-@Suppress("unused")
-val xrProjectionSettingsQualityPatch = projectionExperimentPatch(
-    name = "Experimental XR projection quality settings",
-    description = "Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it.",
-    mode = "projection_settings_quality",
-)
-
-@Suppress("unused")
-val xrProjectionSettingsStrippedPatch = projectionExperimentPatch(
-    name = "Experimental XR projection settings stripped",
-    description = "Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe.",
-    mode = "projection_settings_stripped",
-)
-
-@Suppress("unused")
-val vrLinkUnmanagedFullSpacePatch = projectionExperimentPatch(
-    name = "Experimental VRLink unmanaged full space",
-    description = "5002322-only permission-free A/B. Adds Android XR's required unmanaged Full Space property directly to VRLink while forwarding OpenXR frames unchanged.",
-    mode = "vrlink_unmanaged_full_space",
-    native5002322Only = true,
-)

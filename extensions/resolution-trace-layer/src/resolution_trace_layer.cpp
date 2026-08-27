@@ -19,30 +19,16 @@
 
 #define GXR_EXPORT extern "C" __attribute__((visibility("default")))
 
-#ifndef GXR_PROJECTION_MODE
-#define GXR_PROJECTION_MODE 0
-#endif
 #ifndef GXR_LAYER_NAME
-#define GXR_LAYER_NAME "XR_APILAYER_local_GalaxyXR_projection_trace_control"
+#define GXR_LAYER_NAME "XR_APILAYER_local_GalaxyXR_projection_metadata_compat_v2"
 #endif
 
 namespace {
 
-static_assert(GXR_PROJECTION_MODE >= 0 && GXR_PROJECTION_MODE <= 3,
-              "GXR_PROJECTION_MODE must be control, quality, stripped, or unmanaged full space");
-
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
-constexpr XrCompositionLayerSettingsFlagsFB kQualityFlags =
-    XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB |
-    XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB;
-
-const char* modeName() {
-    if constexpr (GXR_PROJECTION_MODE == 1) return "projection_settings_quality";
-    if constexpr (GXR_PROJECTION_MODE == 2) return "projection_settings_stripped";
-    if constexpr (GXR_PROJECTION_MODE == 3) return "vrlink_unmanaged_full_space";
-    return "projection_trace_control";
-}
+constexpr char kModeName[] = "projection_metadata_compat_v2";
+constexpr char kBuildId[] = "projection-metadata-compat-v2-20260828";
 
 struct Dispatch {
     XrInstance instance{XR_NULL_HANDLE};
@@ -115,7 +101,8 @@ uint64_t handleValue(Handle handle) {
 void emit(const char* event, const std::string& fields = {}) {
     std::ostringstream out;
     out << "{\"schema\":2,\"runId\":\"" << runId()
-        << "\",\"source\":\"openxr\",\"mode\":\"" << modeName()
+        << "\",\"source\":\"openxr\",\"mode\":\"" << kModeName
+        << "\",\"buildId\":\"" << kBuildId
         << "\",\"elapsedMs\":" << elapsedMs()
         << ",\"event\":\"" << event << "\"";
     if (!fields.empty()) out << ',' << fields;
@@ -347,8 +334,11 @@ struct ModifiedFrame {
     XrFrameEndInfo info{};
     std::vector<const XrCompositionLayerBaseHeader*> layers;
     std::vector<XrCompositionLayerProjection> projections;
-    std::vector<XrCompositionLayerSettingsFB> settings;
     bool changed{false};
+    uint32_t projectionCount{0};
+    uint32_t settingsSeen{0};
+    uint32_t settingsRemoved{0};
+    uint32_t unsafeLayerCount{0};
 };
 
 ModifiedFrame makeModifiedFrame(const XrFrameEndInfo* source) {
@@ -357,66 +347,73 @@ ModifiedFrame makeModifiedFrame(const XrFrameEndInfo* source) {
     modified.info = *source;
     modified.layers.assign(source->layers, source->layers + source->layerCount);
     modified.projections.reserve(source->layerCount);
-    modified.settings.reserve(source->layerCount);
-
-    if constexpr (GXR_PROJECTION_MODE == 0 || GXR_PROJECTION_MODE == 3) return modified;
-    if constexpr (GXR_PROJECTION_MODE == 1) {
-        if (!g_compositionSettingsEnabled) return modified;
-    }
 
     for (uint32_t i = 0; i < source->layerCount; ++i) {
         const auto* base = source->layers[i];
         if (!base || base->type != XR_TYPE_COMPOSITION_LAYER_PROJECTION) continue;
+        ++modified.projectionCount;
         const auto* projection = reinterpret_cast<const XrCompositionLayerProjection*>(base);
         const SettingsScan scan = scanSettings(projection->next);
+        modified.settingsSeen += scan.count;
+        if (g_compositionSettingsEnabled) {
+            if (scan.first) ++modified.unsafeLayerCount;
+            continue;
+        }
         if (scan.truncated) {
+            ++modified.unsafeLayerCount;
             if (shouldSampleFrame()) emit("settings_transform_skipped", "\"layer\":" +
                  std::to_string(i) + ",\"reason\":\"chain_truncated\"");
             continue;
         }
-
-        if constexpr (GXR_PROJECTION_MODE == 1) {
-            if (scan.count > 1 || (scan.first && !scan.firstAtHead)) {
-                if (shouldSampleFrame()) emit("settings_transform_skipped", "\"layer\":" +
-                     std::to_string(i) + ",\"reason\":\"unsafe_chain\"");
-                continue;
-            }
-            XrCompositionLayerSettingsFB replacement{XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB};
-            replacement.next = scan.first ? scan.first->next : projection->next;
-            replacement.layerFlags = kQualityFlags;
-            modified.settings.push_back(replacement);
-            modified.projections.push_back(*projection);
-            modified.projections.back().next = &modified.settings.back();
-        } else {
-            if (!scan.first) continue;
-            if (!scan.firstAtHead) {
-                if (shouldSampleFrame()) emit("settings_transform_skipped", "\"layer\":" +
-                     std::to_string(i) + ",\"reason\":\"unsafe_chain\"");
-                continue;
-            }
-            const void* next = projection->next;
-            while (next && static_cast<const ChainHeader*>(next)->type ==
-                               XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB) {
-                next = static_cast<const ChainHeader*>(next)->next;
-            }
-            if (scan.count > 1) {
-                const SettingsScan remaining = scanSettings(next);
-                if (remaining.first) {
-                    if (shouldSampleFrame()) emit("settings_transform_skipped", "\"layer\":" +
-                         std::to_string(i) + ",\"reason\":\"unsafe_chain\"");
-                    continue;
-                }
-            }
-            modified.projections.push_back(*projection);
-            modified.projections.back().next = next;
+        if (!scan.first) continue;
+        if (!scan.firstAtHead) {
+            ++modified.unsafeLayerCount;
+            if (shouldSampleFrame()) emit("settings_transform_skipped", "\"layer\":" +
+                 std::to_string(i) + ",\"reason\":\"settings_not_at_head\"");
+            continue;
         }
+        const void* next = projection->next;
+        uint32_t removed = 0;
+        bool nonzeroFlags = false;
+        while (next && static_cast<const ChainHeader*>(next)->type ==
+                           XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB) {
+            const auto* settings =
+                reinterpret_cast<const XrCompositionLayerSettingsFB*>(next);
+            nonzeroFlags = nonzeroFlags || settings->layerFlags != 0;
+            next = static_cast<const ChainHeader*>(next)->next;
+            ++removed;
+        }
+        if (nonzeroFlags) {
+            ++modified.unsafeLayerCount;
+            if (shouldSampleFrame()) emit("settings_transform_skipped", "\"layer\":" +
+                 std::to_string(i) + ",\"reason\":\"nonzero_flags\"");
+            continue;
+        }
+        if (scanSettings(next).first) {
+            ++modified.unsafeLayerCount;
+            if (shouldSampleFrame()) emit("settings_transform_skipped", "\"layer\":" +
+                 std::to_string(i) + ",\"reason\":\"noncontiguous_settings\"");
+            continue;
+        }
+        modified.projections.push_back(*projection);
+        modified.projections.back().next = next;
         modified.layers[i] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(
             &modified.projections.back());
+        modified.settingsRemoved += removed;
         modified.changed = true;
     }
 
-    if (modified.changed) {
+    const bool exactSteamLinkFingerprint =
+        modified.projectionCount == 3 && modified.settingsSeen == 3 &&
+        modified.settingsRemoved == 3 && modified.unsafeLayerCount == 0 &&
+        modified.projections.size() == 3;
+    if (exactSteamLinkFingerprint) {
         modified.info.layers = modified.layers.data();
+    } else {
+        modified.changed = false;
+        modified.settingsRemoved = 0;
+        modified.projections.clear();
+        modified.layers.clear();
     }
     return modified;
 }
@@ -479,19 +476,24 @@ std::string describeFrame(uint64_t frame, const XrFrameEndInfo* frameEndInfo,
 
 XrResult XRAPI_PTR traceEndFrame(XrSession session, const XrFrameEndInfo* frameEndInfo) {
     const uint64_t frame = ++g_frameCount;
-    if constexpr (GXR_PROJECTION_MODE == 0 || GXR_PROJECTION_MODE == 3) {
-        const bool sampled = shouldSampleFrame(frame);
-        if (sampled) emit("end_frame_submit", describeFrame(frame, frameEndInfo, false));
-        const XrResult result = g_dispatch.endFrame(session, frameEndInfo);
-        if (sampled) emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
-             ",\"result\":" + std::to_string(result));
-        return result;
-    }
-
     ModifiedFrame modified = makeModifiedFrame(frameEndInfo);
     const XrFrameEndInfo* submitted = modified.changed ? &modified.info : frameEndInfo;
     const bool sampled = shouldSampleFrame(frame);
-    if (sampled) emit("end_frame_submit", describeFrame(frame, submitted, modified.changed));
+    if (sampled) {
+        std::ostringstream transform;
+        transform << "\"frame\":" << frame
+                  << ",\"sourceLayerCount\":" << (frameEndInfo ? frameEndInfo->layerCount : 0)
+                  << ",\"forwardedLayerCount\":" << (submitted ? submitted->layerCount : 0)
+                  << ",\"projectionCount\":" << modified.projectionCount
+                  << ",\"settingsSeen\":" << modified.settingsSeen
+                  << ",\"settingsRemoved\":" << modified.settingsRemoved
+                  << ",\"unsafeLayerCount\":" << modified.unsafeLayerCount
+                  << ",\"changed\":" << (modified.changed ? "true" : "false")
+                  << ",\"extensionEnabled\":"
+                  << (g_compositionSettingsEnabled ? "true" : "false");
+        emit("projection_compat_transform", transform.str());
+        emit("end_frame_submit", describeFrame(frame, submitted, modified.changed));
+    }
     const XrResult result = g_dispatch.endFrame(session, submitted);
     if (sampled) emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
          ",\"result\":" + std::to_string(result));
@@ -575,6 +577,7 @@ XrResult XRAPI_PTR traceCreateApiLayerInstance(
     }
     extensions << ']';
     emit("layer_initialized", "\"layerName\":" + jsonString(kLayerName) +
+         ",\"compatBuildId\":" + jsonString(kBuildId) +
          ",\"enabledExtensions\":" + extensions.str() +
          ",\"compositionSettingsEnabled\":" +
          (g_compositionSettingsEnabled ? std::string("true") : std::string("false")));

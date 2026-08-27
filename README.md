@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.1-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
+> **[v1.10.1-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;20 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -28,7 +28,7 @@ To download it:
 
 | 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches. | Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Experimental XR projection patches remain optional. |
+| Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. | Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
@@ -55,21 +55,18 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 2.0.22 (5002322) | 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Experimental XR projection patches for Steam Link 2.0.22 build 5002322. | Experimental XR projection patches for Steam Link 2.0.22 build 5001712. | Experimental XR projection patches for Steam Link 2.0.22 build 5002172. | Experimental XR projection patches for Steam Link 2.0.22 build 5002206. | Experimental XR projection patches for Steam Link 2.0.22 build 5002244. | Experimental XR projection patches for Steam Link 2.0.22 build 5002313. | Experimental XR projection patches for Steam Link 2.0.22 build 5002318. |
+| 2.0.22 (5002322) |
+| :---: |
+| Experimental patches for Steam Link 2.0.22 build 5002322. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [Experimental VRLink unmanaged full space](#experimental-vrlink-unmanaged-full-space) | 5002322-only permission-free A/B. Adds Android XR's required unmanaged Full Space property directly to VRLink while forwarding OpenXR frames unchanged. | 5002322 |  |
-| [Experimental XR projection quality settings](#experimental-xr-projection-quality-settings) | Permission-free A/B. Requests quality supersampling and sharpening on Steam Link projection layers when the enabled runtime extension supports it. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
-| [Experimental XR projection settings stripped](#experimental-xr-projection-settings-stripped) | Permission-free A/B. Removes only known FB projection-settings nodes while preserving all other layer metadata and failing open when unsafe. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
-| [Experimental XR projection trace control](#experimental-xr-projection-trace-control) | Read-only permission-free control. Forwards Steam Link frames unchanged while tracing its foveated projection composition. | 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
+| [Experimental Android XR projection compatibility](#experimental-android-xr-projection-compatibility) | 5002322-only permission-free fix. Removes invalid zero-flag FB settings from Steam Link's three projection layers while preserving their dimensions, order, and gaze-driven FOV. | 5002322 |  |
 
 </details>
 
