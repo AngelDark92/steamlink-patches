@@ -6,7 +6,7 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
-Target APK: `com.valvesoftware.steamlinkvr` v2.0.22. Exact supported versionCodes are 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, Video dither, and the experimental XR projection patches. Build 5002322 exposes the requested six recommended patches plus the optional experimental XR projection patches.
+Target APK: `com.valvesoftware.steamlinkvr` v2.0.22. Exact supported versionCodes are 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. Build 5002322 exposes the requested six recommended patches plus optional **Experimental Single Projection Reconstruction**.
 
 Use Morphe Manager 1.22 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Older builds retain their historical recommended defaults. Experimental and legacy-only patches default off.
 
@@ -28,7 +28,7 @@ To download it:
 
 | 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. | Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The Android XR projection compatibility fix remains experimental. |
+| Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. | Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Single-projection reconstruction remains experimental. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
@@ -66,7 +66,7 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [Experimental Android XR projection compatibility](#experimental-android-xr-projection-compatibility) | 5002322-only permission-free fix. Removes invalid zero-flag FB settings from Steam Link's three projection layers while preserving their dimensions, order, and gaze-driven FOV. | 5002322 |  |
+| [Experimental Single Projection Reconstruction](#experimental-single-projection-reconstruction) | 5002322-only permission-free experiment. Reconstructs Steam Link's opaque full-FOV underside and alpha-foveated inset into one stereo projection before submission. | 5002322 |  |
 
 </details>
 

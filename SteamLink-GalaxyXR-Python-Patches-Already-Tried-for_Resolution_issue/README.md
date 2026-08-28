@@ -10,8 +10,9 @@ This directory is the historical record for approaches that did not produce perm
 | Projection quality settings | Same UI-dependent result. The transform remained inactive because `XR_FB_composition_layer_settings` was not enabled. |
 | VRLink unmanaged Full Space | Manifest change was proven installed, but the UI-dependent low/high/low behavior remained. Keep unmanaged Full Space only as required Android XR configuration, not as the resolution fix. |
 | Projection settings stripped | Attempt invalid: the captures requested stripped mode but loaded `projection_settings_quality`. It was not a valid test and must not be cited as a failure of settings removal. |
+| Projection metadata compatibility v2 | Corrected removal was proven active on 75 sampled frames across two intact runs. Resolution remained low without SystemUI, high only while SystemUI was visible, then low again. The hypothesis is conclusively rejected. |
 
-The corrected replacement is the single Morphe patch **Experimental Android XR projection compatibility**, mode `projection_metadata_compat_v2`.
+The only active successor is **Experimental Single Projection Reconstruction**, mode `single_projection_reconstruction_v1`. It does not adjust metadata: it reconstructs Steam Link's underside and foveated images into one stereo projection before Android XR composition.
 
 ## Retired permission and window probes
 
@@ -33,6 +34,7 @@ Permission-free application windows did not reproduce the Android XR SystemUI ef
 - VRLink activity-layer proxy;
 - persistent toast and HWC proxy variants;
 - read-only resolution trace variants.
+- projection metadata compatibility v2 (`projection_metadata_compat_v2`).
 
 The Python files beside this README preserve those historical builders when present locally. Git history preserves retired Morphe/C++ implementations.
 

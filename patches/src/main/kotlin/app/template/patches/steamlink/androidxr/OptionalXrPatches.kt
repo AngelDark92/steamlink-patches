@@ -77,28 +77,29 @@ val appearOnTopPatch = bytecodePatch(
     )
 }
 
-private const val PROJECTION_COMPAT_MODE = "projection_metadata_compat_v2"
-private const val PROJECTION_COMPAT_LIBRARY = "libgxr_projection_metadata_compat_v2.so"
-private const val PROJECTION_COMPAT_MANIFEST =
-    "XR_APILAYER_local_GalaxyXR_projection_metadata_compat_v2.json"
+private const val SINGLE_PROJECTION_MODE = "single_projection_reconstruction_v1"
+private const val SINGLE_PROJECTION_LIBRARY = "libgxr_single_projection_reconstruction_v1.so"
+private const val SINGLE_PROJECTION_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1.json"
 
 private val retiredProjectionModes = setOf(
     "projection_trace_control",
     "projection_settings_quality",
     "projection_settings_stripped",
     "vrlink_unmanaged_full_space",
+    "projection_metadata_compat_v2",
 )
 
-private fun projectionCompatResource(name: String): ByteArray =
+private fun singleProjectionResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
-        ?: throw PatchException("Missing bundled projection compatibility resource: $name"))
+        ?: throw PatchException("Missing bundled single-projection reconstruction resource: $name"))
         .use { it.readBytes() }
 
-private val projectionMetadataCompatLayerPatch = rawResourcePatch {
+private val singleProjectionReconstructionLayerPatch = rawResourcePatch {
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         val layerDir = get(
-            "assets/openxr/1/api_layers/implicit.d/$PROJECTION_COMPAT_MANIFEST",
+            "assets/openxr/1/api_layers/implicit.d/$SINGLE_PROJECTION_MANIFEST",
         ).parentFile!!
 
         retiredProjectionModes.forEach { mode ->
@@ -106,26 +107,26 @@ private val projectionMetadataCompatLayerPatch = rawResourcePatch {
             File(layerDir, "XR_APILAYER_local_GalaxyXR_$mode.json").delete()
         }
 
-        File(libDir, PROJECTION_COMPAT_LIBRARY).writeBytes(
-            projectionCompatResource(PROJECTION_COMPAT_LIBRARY),
+        File(libDir, SINGLE_PROJECTION_LIBRARY).writeBytes(
+            singleProjectionResource(SINGLE_PROJECTION_LIBRARY),
         )
-        val layerManifest = File(layerDir, PROJECTION_COMPAT_MANIFEST)
+        val layerManifest = File(layerDir, SINGLE_PROJECTION_MANIFEST)
         layerManifest.parentFile!!.mkdirs()
-        layerManifest.writeBytes(projectionCompatResource(PROJECTION_COMPAT_MANIFEST))
+        layerManifest.writeBytes(singleProjectionResource(SINGLE_PROJECTION_MANIFEST))
     }
 }
 
 @Suppress("unused")
-val xrProjectionMetadataCompatibilityPatch = resourcePatch(
-    name = "Experimental Android XR projection compatibility",
-    description = "5002322-only permission-free fix. Removes invalid zero-flag FB settings from Steam Link's three projection layers while preserving their dimensions, order, and gaze-driven FOV.",
+val xrSingleProjectionReconstructionPatch = resourcePatch(
+    name = "Experimental Single Projection Reconstruction",
+    description = "5002322-only permission-free experiment. Reconstructs Steam Link's opaque full-FOV underside and alpha-foveated inset into one stereo projection before submission.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
-        projectionMetadataCompatLayerPatch,
+        singleProjectionReconstructionLayerPatch,
     )
 
     finalize {
@@ -152,7 +153,7 @@ val xrProjectionMetadataCompatibilityPatch = resourcePatch(
             }
             val metadata = existingMetadata ?: document.createElement("meta-data").also(app::appendChild)
             metadata.setAttribute("android:name", metadataName)
-            metadata.setAttribute("android:value", PROJECTION_COMPAT_MODE)
+            metadata.setAttribute("android:value", SINGLE_PROJECTION_MODE)
         }
     }
 }

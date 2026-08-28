@@ -7,7 +7,7 @@ Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither.
 Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset,
 Unrestricted battery usage, Video dither, and Visual Delay Fix. One 5002322-only Android XR
-projection compatibility patch remains optional and experimental.
+single-projection reconstruction patch remains optional and experimental.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
@@ -137,16 +137,16 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 
 ---
 
-### Experimental Android XR projection compatibility
+### Experimental Single Projection Reconstruction
 **Default: disabled; 5002322 only** — do not combine with `Appear on top`
 
 | Artifact | Edit |
 |---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=projection_metadata_compat_v2` |
-| `lib/arm64-v8a/libgxr_projection_metadata_compat_v2.so` | Adds the source-built implicit layer; removes safely recognized leading zero-flag `XrCompositionLayerSettingsFB` nodes while preserving all other submission data |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_projection_metadata_compat_v2.json` | Registers the compatibility layer with a unique v2 identity |
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_v1` |
+| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` | Adds the source-built implicit layer; recognizes Steam Link's exact three-projection stream, resolves the opaque full-FOV underside and alpha-foveated GLES images, and submits one opaque stereo projection. The earlier base is intentionally not sampled because the later same-pose full-FOV underside is opaque and compositionally covers it; unfamiliar or incomplete frames fail open. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1.json` | Registers the reconstruction layer with a unique v1 identity |
 
-The layer fails open for runtime safety when a chain is truncated or settings metadata is not safely removable. Its trace marks that run invalid. The retired modes and outcomes are recorded under `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md`.
+The layer fails open for runtime safety when the exact Steam Link topology, image ownership, EGL context, FBO, or synchronization contract is unavailable. Its trace identifies every reconstructed or forwarded frame. Retired modes and outcomes are recorded under `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md`.
 
 ---
 
@@ -304,8 +304,8 @@ This intentionally preserves the native builds' requested extensions and vendor 
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrProjectionMetadataCompatibilityPatch`, `changePackageNamePatch` |
-| `lib/arm64-v8a/libgxr_projection_metadata_compat_v2.so` + matching implicit-layer JSON | `xrProjectionMetadataCompatibilityPatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrSingleProjectionReconstructionPatch`, `changePackageNamePatch` |
+| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` + matching implicit-layer JSON | `xrSingleProjectionReconstructionPatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

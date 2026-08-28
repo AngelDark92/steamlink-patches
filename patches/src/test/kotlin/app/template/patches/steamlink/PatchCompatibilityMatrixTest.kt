@@ -12,7 +12,7 @@ import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
-import app.template.patches.steamlink.androidxr.xrProjectionMetadataCompatibilityPatch
+import app.template.patches.steamlink.androidxr.xrSingleProjectionReconstructionPatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -43,10 +43,10 @@ class PatchCompatibilityMatrixTest {
         latestExcluded.forEach { patch ->
             assertFalse(patch.supports(5002322), "${patch.name} on 5002322")
         }
-        assertTrue(xrProjectionMetadataCompatibilityPatch.supports(5002322))
-        assertFalse(xrProjectionMetadataCompatibilityPatch.supports(5002318))
-        assertFalse(xrProjectionMetadataCompatibilityPatch.supports(5002244))
-        assertFalse(xrProjectionMetadataCompatibilityPatch.default)
+        assertTrue(xrSingleProjectionReconstructionPatch.supports(5002322))
+        assertFalse(xrSingleProjectionReconstructionPatch.supports(5002318))
+        assertFalse(xrSingleProjectionReconstructionPatch.supports(5002244))
+        assertFalse(xrSingleProjectionReconstructionPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -94,7 +94,7 @@ class PatchCompatibilityMatrixTest {
         listOf(
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
-            xrProjectionMetadataCompatibilityPatch,
+            xrSingleProjectionReconstructionPatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -143,7 +143,7 @@ class PatchCompatibilityMatrixTest {
         val latestCompatible = allowedNativeXr - listOf(
             deviceIdentityPatch,
             oledCalibrationPatch,
-        ) + xrProjectionMetadataCompatibilityPatch
+        ) + xrSingleProjectionReconstructionPatch
 
         val latestExcluded = excludedNativeXr + listOf(
             deviceIdentityPatch,

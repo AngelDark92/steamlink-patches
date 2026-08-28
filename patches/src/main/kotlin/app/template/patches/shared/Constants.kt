@@ -45,7 +45,7 @@ object Constants {
                 description = if (versionCode == 5002322) {
                     "Build 5002322 recommends only Appear on top, GXR face bridge, " +
                         "Microphone input preset, Unrestricted battery usage, Video dither, " +
-                        "and Visual Delay Fix. The Android XR projection compatibility fix remains experimental."
+                        "and Visual Delay Fix. Single-projection reconstruction remains experimental."
                 } else {
                     "Build $versionCode supports Device identity, Microphone input preset, OLED color " +
                         "calibration, Appear on top, GXR face bridge, Visual Delay Fix, " +

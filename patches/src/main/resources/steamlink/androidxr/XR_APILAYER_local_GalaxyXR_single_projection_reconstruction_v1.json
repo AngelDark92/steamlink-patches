@@ -1,0 +1,11 @@
+{
+  "file_format_version": "1.0.0",
+  "api_layer": {
+    "name": "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1",
+    "library_path": "libgxr_single_projection_reconstruction_v1.so",
+    "api_version": "1.0",
+    "implementation_version": "1",
+    "description": "Galaxy XR Steam Link three-to-one GLES projection reconstruction",
+    "disable_environment": "GXR_DISABLE_SINGLE_PROJECTION_RECONSTRUCTION"
+  }
+}
