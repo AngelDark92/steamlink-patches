@@ -1,3 +1,9 @@
+## [1.10.1-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.2...v1.10.1-dev.3) (2026-08-28)
+
+### 🐛 Bug Fixes
+
+* try with single projection reconstruction ([df8de0f](https://github.com/AngelDark92/steamlink-patches/commit/df8de0f2e721d2bd76ab883b49e1b60aee936347))
+
 ## [1.10.1-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.1...v1.10.1-dev.2) (2026-08-27)
 
 ### 🐛 Bug Fixes
