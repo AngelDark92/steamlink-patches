@@ -1,3 +1,9 @@
+## [1.10.1-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.5...v1.10.1-dev.6) (2026-08-29)
+
+### 🐛 Bug Fixes
+
+* fix for three projection run ([011290c](https://github.com/AngelDark92/steamlink-patches/commit/011290cdd524de49a9c141cf018f0727fc8dc55d))
+
 ## [1.10.1-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.4...v1.10.1-dev.5) (2026-08-29)
 
 ### 🐛 Bug Fixes
