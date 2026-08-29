@@ -1,3 +1,9 @@
+## [1.10.1-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.6...v1.10.1-dev.7) (2026-08-29)
+
+### 🐛 Bug Fixes
+
+* three projection sampler 3rd try ([fb0df3b](https://github.com/AngelDark92/steamlink-patches/commit/fb0df3b37b719824c5e54c29ecd431138052c39f))
+
 ## [1.10.1-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.5...v1.10.1-dev.6) (2026-08-29)
 
 ### 🐛 Bug Fixes

@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-08-29T12:30:51",
-  "description": "## [1.10.1-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.5...v1.10.1-dev.6) (2026-08-29)\n\n### 🐛 Bug Fixes\n\n* fix for three projection run ([011290c](https://github.com/AngelDark92/steamlink-patches/commit/011290cdd524de49a9c141cf018f0727fc8dc55d))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.10.1-dev.6/patches-1.10.1-dev.6.mpp",
+  "created_at": "2026-08-29T13:15:51",
+  "description": "## [1.10.1-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.6...v1.10.1-dev.7) (2026-08-29)\n\n### 🐛 Bug Fixes\n\n* three projection sampler 3rd try ([fb0df3b](https://github.com/AngelDark92/steamlink-patches/commit/fb0df3b37b719824c5e54c29ecd431138052c39f))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.10.1-dev.7/patches-1.10.1-dev.7.mpp",
   "signature_download_url": "",
-  "version": "1.10.1-dev.6"
+  "version": "1.10.1-dev.7"
 }
