@@ -62,3 +62,18 @@ set_target_properties(gxr_three_projection_sampler_proxy_v1 PROPERTIES
     VISIBILITY_INLINES_HIDDEN YES
     OUTPUT_NAME gxr_three_projection_sampler_proxy_v1
 )
+
+add_library(gxr_single_projection_fovea_quads_v1 SHARED src/single_projection_fovea_quads_layer.cpp)
+target_include_directories(gxr_single_projection_fovea_quads_v1 PRIVATE
+    "${OPENXR_SDK_SOURCE_DIR}/include"
+)
+target_compile_definitions(gxr_single_projection_fovea_quads_v1 PRIVATE
+    XR_USE_PLATFORM_ANDROID
+    GXR_LAYER_NAME="XR_APILAYER_local_GalaxyXR_single_projection_fovea_quads_v1"
+)
+target_link_libraries(gxr_single_projection_fovea_quads_v1 PRIVATE log)
+set_target_properties(gxr_single_projection_fovea_quads_v1 PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+    OUTPUT_NAME gxr_single_projection_fovea_quads_v1
+)

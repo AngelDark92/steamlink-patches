@@ -143,15 +143,28 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_v1` |
-| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` | Adds the source-built implicit layer; recognizes Steam Link's exact three-projection stream, resolves the opaque full-FOV underside and alpha-foveated GLES images, and submits one opaque stereo projection. The earlier base is intentionally not sampled because the later same-pose full-FOV underside is opaque and compositionally covers it. v1.2 uses four subpixel samples when reducing the foveal inset and enables the advertised `XR_FB_composition_layer_settings` extension to request quality supersampling on the output. Repeated-image frames reuse the last released private output only while the projection space and full/foveal FOV mapping match; unfamiliar or incomplete frames fail open with reason telemetry. |
+| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` | Adds the source-built implicit layer; recognizes Steam Link's exact three-projection stream, resolves the opaque full-FOV underside and alpha-foveated GLES images, and submits one opaque stereo projection. The earlier base is intentionally not sampled because the later same-pose full-FOV underside is opaque and compositionally covers it. v1.2 uses four subpixel samples when reducing the foveal inset and requests quality supersampling only when `XR_FB_composition_layer_settings` is advertised; the captured Galaxy XR runtime did not advertise it. Repeated-image frames reuse the last released private output only while the projection space and full/foveal FOV mapping match; unfamiliar or incomplete frames fail open with reason telemetry. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1.json` | Registers the reconstruction layer with a unique v1 identity |
 
 The layer fails open for runtime safety when the exact Steam Link topology, image ownership, EGL context, FBO, or synchronization contract is unavailable. Its trace identifies every reconstructed or forwarded frame. Retired modes and outcomes are recorded under `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md`.
 
 ---
 
+### Experimental Single Projection Fovea Quads
+**Default: disabled; 5002322 only** — mutually exclusive with every other projection transform and `Appear on top`
+
+| Artifact | Edit |
+|---|---|
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_fovea_quads_v1` |
+| `lib/arm64-v8a/libgxr_single_projection_fovea_quads_v1.so` | Recognizes the exact three-projection/six-view stream, drops the redundant first opaque projection, forwards the second opaque projection unchanged, and converts the final per-eye alpha-foveal views to eye-isolated far-plane quads derived from their original pose and FOV. It preserves original swapchain handles, rectangles, array indices, projection space, and alpha flags; it creates no swapchain, performs no GL operation, and does not intercept source-image lifetime. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_fovea_quads_v1.json` | Registers the hybrid layer with a unique v1 identity |
+
+The output is exactly one projection plus two quads. This preserves the original foveal texel density while testing whether Galaxy XR's low-quality path is selected by multiple projection layers or by any alpha-foveated multilayer topology. Quad alignment and runtime quality remain headset-test questions.
+
+---
+
 ### Experimental Two Projection Drop Base
-**Default: disabled; 5002322 only** — mutually exclusive with Single Projection Reconstruction and `Appear on top`
+**Default: disabled; 5002322 only** — mutually exclusive with every other projection transform and `Appear on top`
 
 | Artifact | Edit |
 |---|---|

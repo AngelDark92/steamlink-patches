@@ -2,23 +2,23 @@
 
 ## Current conclusion
 
-The 2026-08-28 build-5002322 captures prove that single-projection reconstruction improves the permission-free result:
+The valid 2026-08-29 build-5002322 captures now isolate the projection-topology boundary.
 
 `HIGH without Android XR UI → HIGH while UI is visible → HIGH after UI disappears`
 
-The APK did not request `SYSTEM_ALERT_WINDOW`, AppOps remained `default`, and repeat 1 recorded `HIGH0`. Repeat 2 recorded `HIGH0`, `HIGH`, and `HIGH1`; its OpenXR trace hit the collector size cap before those markers, so the subjective result is valid but frame-level correlation across the palm interval is incomplete.
+Single-projection reconstruction v1.2 produced 5772 successful 3-to-1 transformations and stayed `HIGH0 -> HIGH -> HIGH1` without `SYSTEM_ALERT_WINDOW`, but remained softer than the granted-overlay control. Its six 1536x1536 MSAA2 sources required a 3745x4048 merged target to preserve foveal angular density; the runtime capped that target at 3152x3682. The captured runtime reported `qualityExtensionAdvertised=false`, so `XR_FB_composition_layer_settings` could not legally be attached.
 
-The v1 implementation is not production-ready. Run 1 reconstructed 7,274 of 7,557 eligible frames and forwarded the original three projections on 283 frames; run 2 reconstructed 359 of 370 captured eligible frames and forwarded 11. Every forwarded frame had zero new source-image releases, while every reconstructed frame had all six. This is repeated-image reuse, not a recorded OpenXR failure. The 1-to-3-to-1 topology switching is the strongest explanation for the visible instability.
+Two-projection drop-base v1.1 produced 3967 successful 3-to-2 transformations and stayed `LOW0 -> HIGH -> LOW1`. It forwarded the original opaque underside and alpha-foveal projections unchanged, with no private swapchain, resampling, disable, or failed `xrEndFrame`. The redundant base and an exact count of three projections are therefore ruled out. The remaining classifier is more than one projection, or the broader alpha-foveated multilayer topology.
 
-Each reconstructed frame also left one `GL_INVALID_ENUM`, later consumed by Steam Link's `CheckGL`. The layer used an invalid indexed sampler-binding query and therefore restored zero-valued sampler state. The v1.1 source fixes that query, reuses the last released private output only when the full/foveal FOV mapping and space still match, records pose changes separately, reports fallback reasons/readiness masks, and samples release-success telemetry to avoid another log-cap failure. The v1.1 build is statically compiled but has not been installed or tested on the headset.
+The valid three-projection sampler-proxy v1.2 run independently produced 4811 successful unchanged 3-projection/6-view submissions and stayed `LOW0 -> HIGH -> LOW1`. Replacing all six original MSAA2 swapchains with 1:1 single-sample proxies did not escape the low path, ruling out original swapchain identity and MSAA as sufficient triggers.
 
-The 2026-08-29 v1.1 captures confirm that single projection stays `HIGH0 -> HIGH -> HIGH1`, but visible pixels shimmer on text and edges and remain below the granted-overlay control. The layer requested 3745x4048 to retain the 1536 foveal inset's native angular density; Android XR capped it at 3152x3682, leaving about 1293x1397 pixels for that inset. The source remains MSAA2 and is resolved 1:1; adding MSAA to the full-screen textured output would only antialias projection geometry coverage, not text or edges already inside the sampled texture. v1.2 therefore keeps the legal 1:1 MSAA resolve, replaces the single bilinear minification sample with a derivative-safe four-sample subpixel box filter, enables the advertised `XR_FB_composition_layer_settings` extension, and requests quality supersampling. This can reduce spatial aliasing but cannot recreate detail beyond the runtime maximum.
+DynamicPolicyManager logs exposed `PanelSuperSampling=1`, `RecommendedResolution=1`, `openxr.currentApp.FRS=1`, and `openxr.sysUi.FRS=1` throughout the palm cycle. SystemUI show/hide events coincide with the visual switch, but those app-visible values do not change. The switch is therefore below the exposed policy surface, in the Galaxy XR compositor/runtime implementation.
 
-The valid v1.2 three-proxy capture is now decisive for the downstream switch: 4811 successful unchanged 3-projection/6-view proxy submissions went `LOW0 -> HIGH -> LOW1` only with the palm SystemUI cycle. New sample-count-1 swapchains did not change the low state, ruling out original swapchain identity and MSAA as sufficient triggers. This strongly implicates Android XR compositor policy, while the exact classifier remains projection count versus the alpha-foveated multi-layer topology. The first two-projection capture is invalid for that distinction: it transformed one frame, then the old layer disabled on an auxiliary frame. Two-projection v1.1 fixes that state machine and must be rerun before citing a two-layer result.
+Public OpenXR/Android XR APIs provide no control that forces the SystemUI-selected internal quality state. `XR_ANDROID_recommended_resolution` is a change notification followed by re-enumeration, not an application setter, and composition-layer supersampling is an optional compositor hint that is unavailable when the extension is not advertised. Multiple projections remain legal and every captured `xrEndFrame` succeeded, so this is not a core OpenXR projection limit.
 
 ## Available experimental patches
 
-Select exactly one of **Experimental Single Projection Reconstruction**, **Experimental Two Projection Drop Base**, or **Experimental Three Projection Sampler Proxy** in Morphe for Steam Link 2.0.22 build 5002322. Patch generation fails if modes are combined.
+Select exactly one projection experiment in Morphe for Steam Link 2.0.22 build 5002322. The next test is **Experimental Single Projection Fovea Quads**; patch generation fails if it is combined with any other projection mode.
 
 Do not select **Appear on top** or any retired resolution experiment.
 
@@ -33,7 +33,7 @@ The patch:
 - reuses the last released private output on repeated-image frames only while the source handles, projection space, and full/foveal FOV mapping remain compatible;
 - forwards the original frame after safely releasing every held image when any topology, EGL, GL, or synchronization prerequisite is missing.
 
-For the next test, prefer **Experimental Two Projection Drop Base**. Mode `two_projection_drop_base_v1`:
+The completed two-projection discriminator, mode `two_projection_drop_base_v1`:
 
 - recognizes the same exact three-projection, six-swapchain 5002322 topology;
 - removes only projection 0 after proving it has the same pose/FOV as the later opaque full-FOV underside;
@@ -48,19 +48,25 @@ Mode `three_projection_sampler_proxy_v1` answers whether three projections can r
 - applies explicit linear/clamp application texture-object state and records it without claiming it crosses into the compositor process;
 - reuses released proxy contents only on zero-update frames and rejects partial updates, source-identity changes, unsafe topology, GL errors, and post-activation passthrough.
 
+Mode `single_projection_fovea_quads_v1` is the next practical discriminator:
+
+- forwards one original opaque projection unchanged;
+- converts the two original per-eye alpha-foveal images to eye-isolated far-plane quads;
+- preserves source handles, rectangles, array indices, alpha flags, and FOV-derived geometry;
+- performs no allocation, GL operation, resolve, or resampling.
+
 ## Capture commands
 
 ```powershell
 $tool = 'C:\Users\Angelo\Desktop\SteamLink-GalaxyXR-Windows-Toolkit-FULL\GalaxyXR-APK\diagnostics\steamlink-resolution-ab'
 $common = @{
     Label = 'overlay-off'
-    Mode = 'single_projection_reconstruction_v1'
-    ExperimentId = 'single-projection-reconstruction-v1'
+    Mode = 'single_projection_fovea_quads_v1'
+    ExperimentId = 'single-projection-fovea-quads-v1'
     SceneId = 'SteamVR Home - fixed viewpoint'
     NetworkProfile = 'same PC, access point, band, and headset position'
 }
 
-& "$tool\Capture-SteamLinkResolutionRun.ps1" @common -Repeat 1
 & "$tool\Capture-SteamLinkResolutionRun.ps1" @common -Repeat 2
 ```
 
@@ -84,11 +90,6 @@ During each run it temporarily streams all Android logcat buffers so unknown XR 
 
 ## Number choices in VR
 
-Repeat 1:
-
-- Resolution: `1` low, `2` high.
-- Did Android XR UI appear: `1` no, `2` yes.
-
 Repeat 2:
 
 - Before showing the square: `1` low, `2` high.
@@ -101,9 +102,8 @@ The script records the visible/after answers as post-event annotations rather th
 
 ## Acceptance
 
-Success requires two matching cold runs with:
+Success requires one provenance-valid Repeat 2 run with:
 
-- high resolution without SystemUI in repeat 1;
 - high resolution before, during, and after SystemUI in repeat 2;
 - no overlay permission and no Steam Link-owned type-2038 window;
 - trace build ID `single-projection-reconstruction-v1.2-20260829`;
