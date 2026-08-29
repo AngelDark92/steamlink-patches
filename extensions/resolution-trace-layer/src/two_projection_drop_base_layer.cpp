@@ -4,6 +4,7 @@
 #include <openxr/openxr_loader_negotiation.h>
 #include <openxr/openxr_platform.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -25,7 +26,7 @@ namespace {
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
 constexpr char kModeName[] = "two_projection_drop_base_v1";
-constexpr char kBuildId[] = "two-projection-drop-base-v1-20260829";
+constexpr char kBuildId[] = "two-projection-drop-base-v1.1-20260829";
 constexpr uint32_t kSourceExtent = 1536;
 constexpr int64_t kSourceFormat = 35907; // GL_SRGB8_ALPHA8
 constexpr XrCompositionLayerFlags kFoveaFlags =
@@ -49,7 +50,7 @@ struct SwapchainState {
 };
 
 struct SessionState {
-    bool transformed{};
+    bool everActivated{};
     bool disabled{};
 };
 
@@ -64,6 +65,11 @@ Dispatch g;
 std::map<XrSwapchain, SwapchainState> swapchains;
 std::map<XrSession, SessionState> sessions;
 std::atomic<uint64_t> frameCounter{0};
+
+template <typename H>
+uint64_t hv(H handle) {
+    return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(handle));
+}
 
 uint64_t elapsedMs() {
     timespec t{};
@@ -106,7 +112,6 @@ void load(const char* name, T& fn) {
     }
 }
 
-bool sample(uint64_t frame) { return frame <= 3 || frame % 90 == 0; }
 bool close(float a, float b) { return std::fabs(a - b) <= 0.0001f; }
 
 bool samePose(const XrPosef& a, const XrPosef& b) {
@@ -160,7 +165,19 @@ bool safeProjectionNext(const void* next) {
 
 Fingerprint inspect(const XrFrameEndInfo* info) {
     Fingerprint result;
-    if (!info || info->layerCount != 3 || !info->layers) {
+    if (!info) {
+        result.reason = "null_info";
+        return result;
+    }
+    if (info->type != XR_TYPE_FRAME_END_INFO) {
+        result.reason = "frame_end_type";
+        return result;
+    }
+    if (info->next) {
+        result.reason = "frame_end_next";
+        return result;
+    }
+    if (info->layerCount != 3 || !info->layers) {
         result.reason = "layer_count";
         return result;
     }
@@ -258,7 +275,10 @@ XrResult XRAPI_PTR layerCreateSession(
     const XrSessionCreateInfo* createInfo,
     XrSession* session) {
     const XrResult result = g.createSession(instance, createInfo, session);
-    if (XR_SUCCEEDED(result) && session) sessions[*session] = {};
+    if (XR_SUCCEEDED(result) && session) {
+        sessions[*session] = {};
+        emit("session_created", "\"session\":" + std::to_string(hv(*session)));
+    }
     return result;
 }
 
@@ -301,25 +321,34 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
         const std::string reason = sessionState == sessions.end() ? "unknown_session" :
             sessionState->second.disabled ? "session_disabled" :
             !fingerprint.valid ? fingerprint.reason : "owner_mismatch";
-        if (sessionState != sessions.end() && sessionState->second.transformed &&
-            !sessionState->second.disabled) {
-            sessionState->second.disabled = true;
-            emit("two_projection_drop_base_disabled", "\"frame\":" + std::to_string(frame) +
-                ",\"reason\":" + quote(reason));
+        const uint32_t layerCount = info && info->type == XR_TYPE_FRAME_END_INFO ?
+            info->layerCount : 0;
+        std::ostringstream layerTypes;
+        layerTypes << '[';
+        if (info && info->type == XR_TYPE_FRAME_END_INFO && info->layers) {
+            const uint32_t count = std::min(layerCount, 3u);
+            for (uint32_t i = 0; i < count; ++i) {
+                if (i) layerTypes << ',';
+                layerTypes << (info->layers[i] ?
+                    static_cast<int64_t>(info->layers[i]->type) : 0);
+            }
         }
-        if (sample(frame)) {
-            emit("two_projection_drop_base_passthrough", "\"frame\":" +
-                std::to_string(frame) + ",\"reason\":" + quote(reason));
-        }
+        layerTypes << ']';
+        emit("two_projection_drop_base_auxiliary", "\"frame\":" +
+            std::to_string(frame) + ",\"session\":" + std::to_string(hv(session)) +
+            ",\"layerCount\":" + std::to_string(layerCount) +
+            ",\"layerTypes\":" + layerTypes.str() +
+            ",\"everActivated\":" +
+                (sessionState != sessions.end() && sessionState->second.everActivated ?
+                    "true" : "false") +
+            ",\"reason\":" + quote(reason));
         const XrResult result = g.endFrame(session, info);
-        if (sample(frame)) {
-            emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
-                ",\"result\":" + std::to_string(result));
-        }
+        emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
+            ",\"auxiliary\":true,\"result\":" + std::to_string(result));
         return result;
     }
 
-    sessionState->second.transformed = true;
     const std::array<const XrCompositionLayerBaseHeader*, 2> forwarded = {
         info->layers[1],
         info->layers[2],
@@ -329,6 +358,7 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     output.layers = forwarded.data();
 
     emit("two_projection_drop_base_transform", "\"frame\":" + std::to_string(frame) +
+        ",\"session\":" + std::to_string(hv(session)) +
         ",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":2," 
         "\"outputProjectionCount\":2,\"sourceViewCount\":6,\"outputViewCount\":4," 
         "\"droppedBaseProjectionCount\":1,\"droppedLayerIndex\":0," 
@@ -336,12 +366,14 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
         "\"preservedSourceStructures\":true,\"changed\":true");
     const XrResult result = g.endFrame(session, &output);
     emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
-        ",\"result\":" + std::to_string(result));
+        ",\"session\":" + std::to_string(hv(session)) +
+        ",\"transformed\":true,\"result\":" + std::to_string(result));
     if (XR_FAILED(result)) {
         sessionState->second.disabled = true;
         emit("two_projection_drop_base_disabled", "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
             ",\"reason\":\"end_frame_failed\",\"result\":" + std::to_string(result));
-    }
+    } else sessionState->second.everActivated = true;
     return result;
 }
 

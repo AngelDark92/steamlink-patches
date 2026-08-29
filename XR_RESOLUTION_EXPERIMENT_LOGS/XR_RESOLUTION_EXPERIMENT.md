@@ -12,9 +12,9 @@ The v1 implementation is not production-ready. Run 1 reconstructed 7,274 of 7,55
 
 Each reconstructed frame also left one `GL_INVALID_ENUM`, later consumed by Steam Link's `CheckGL`. The layer used an invalid indexed sampler-binding query and therefore restored zero-valued sampler state. The v1.1 source fixes that query, reuses the last released private output only when the full/foveal FOV mapping and space still match, records pose changes separately, reports fallback reasons/readiness masks, and samples release-success telemetry to avoid another log-cap failure. The v1.1 build is statically compiled but has not been installed or tested on the headset.
 
-The reported single-projection softness is plausible without implying that one projection is the high-resolution trigger. Reconstruction resolves the original 1536x1536 MSAA2 images into new sampleCount-1 swapchains, linearly resamples the foveal inset, and was capped by the runtime's 3152x3682 maximum. That extra image path can reduce visible detail even if the resulting topology selects a better compositor policy. The two-projection mode removes all of those reconstruction variables.
+The 2026-08-29 v1.1 captures confirm that single projection stays `HIGH0 -> HIGH -> HIGH1`, but visible pixels shimmer on text and edges and remain below the granted-overlay control. The layer requested 3745x4048 to retain the 1536 foveal inset's native angular density; Android XR capped it at 3152x3682, leaving about 1293x1397 pixels for that inset. The source remains MSAA2 and is resolved 1:1; adding MSAA to the full-screen textured output would only antialias projection geometry coverage, not text or edges already inside the sampled texture. v1.2 therefore keeps the legal 1:1 MSAA resolve, replaces the single bilinear minification sample with a derivative-safe four-sample subpixel box filter, enables the advertised `XR_FB_composition_layer_settings` extension, and requests quality supersampling. This can reduce spatial aliasing but cannot recreate detail beyond the runtime maximum.
 
-This result does not prove that projection count alone is Android XR's trigger. Reconstruction simultaneously changes layer count, swapchain identity and dimensions, MSAA resolve, alpha handling, and sampling. Two complementary discriminators are now implemented: `two_projection_drop_base_v1` drops only the compositionally hidden base while forwarding the original remaining images, and `three_projection_sampler_proxy_v1` retains all three projections while replacing only the six submitted MSAA swapchains with 1:1 single-sample proxies. Both have passed static build/provenance tests but have not been installed or run on the headset.
+The valid v1.2 three-proxy capture is now decisive for the downstream switch: 4811 successful unchanged 3-projection/6-view proxy submissions went `LOW0 -> HIGH -> LOW1` only with the palm SystemUI cycle. New sample-count-1 swapchains did not change the low state, ruling out original swapchain identity and MSAA as sufficient triggers. This strongly implicates Android XR compositor policy, while the exact classifier remains projection count versus the alpha-foveated multi-layer topology. The first two-projection capture is invalid for that distinction: it transformed one frame, then the old layer disabled on an auxiliary frame. Two-projection v1.1 fixes that state machine and must be rerun before citing a two-layer result.
 
 ## Available experimental patches
 
@@ -106,7 +106,7 @@ Success requires two matching cold runs with:
 - high resolution without SystemUI in repeat 1;
 - high resolution before, during, and after SystemUI in repeat 2;
 - no overlay permission and no Steam Link-owned type-2038 window;
-- trace build ID `single-projection-reconstruction-v1.1-20260829`;
+- trace build ID `single-projection-reconstruction-v1.2-20260829`;
 - sampled frames proving three input projections and six views became one output projection and two views with successful `xrEndFrame`;
 - no post-activation fallback to the original three projections; repeated frames must report `sourceUpdate=cached` and `reusedOutput=true` or a precise fail-open reason;
 - no reconstruction-correlated `GL_INVALID_ENUM` and no targeted-log size-cap failure;
@@ -114,7 +114,7 @@ Success requires two matching cold runs with:
 
 If a trace-proven reconstructed single projection remains UI-dependent, stop APK experiments. The remaining fix boundary is Android XR/SpaceFlinger or Valve's renderer rather than an ordinary permission-free APK.
 
-For `two_projection_drop_base_v1`, require build ID `two-projection-drop-base-v1-20260829`, trace-proven 3-to-2 transforms, matching successful `xrEndFrame` results, and zero disable events. Interpret the result as follows:
+For `two_projection_drop_base_v1`, require build ID `two-projection-drop-base-v1.1-20260829`, one OpenXR session, successful trace-proven 3-to-2 transforms before and during the device-clock-bounded observation, matching successful `xrEndFrame` results, and zero disable or failed-end-frame events through observation. Auxiliary spinner/UI frames are archived but do not disable or validate the transform. Interpret the result as follows:
 
 - high and sharper than reconstruction: single projection is unnecessary; the redundant-base/three-layer topology selects the low-quality path, while reconstruction caused the remaining softness;
 - low while single projection is high: dropping the base is insufficient; either multiple projections/alpha-fovea or another reconstruction property is involved;

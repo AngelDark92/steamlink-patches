@@ -143,7 +143,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_v1` |
-| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` | Adds the source-built implicit layer; recognizes Steam Link's exact three-projection stream, resolves the opaque full-FOV underside and alpha-foveated GLES images, and submits one opaque stereo projection. The earlier base is intentionally not sampled because the later same-pose full-FOV underside is opaque and compositionally covers it. Repeated-image frames reuse the last released private output only while the projection space and full/foveal FOV mapping match; unfamiliar or incomplete frames fail open with reason telemetry. |
+| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` | Adds the source-built implicit layer; recognizes Steam Link's exact three-projection stream, resolves the opaque full-FOV underside and alpha-foveated GLES images, and submits one opaque stereo projection. The earlier base is intentionally not sampled because the later same-pose full-FOV underside is opaque and compositionally covers it. v1.2 uses four subpixel samples when reducing the foveal inset and enables the advertised `XR_FB_composition_layer_settings` extension to request quality supersampling on the output. Repeated-image frames reuse the last released private output only while the projection space and full/foveal FOV mapping match; unfamiliar or incomplete frames fail open with reason telemetry. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1.json` | Registers the reconstruction layer with a unique v1 identity |
 
 The layer fails open for runtime safety when the exact Steam Link topology, image ownership, EGL context, FBO, or synchronization contract is unavailable. Its trace identifies every reconstructed or forwarded frame. Retired modes and outcomes are recorded under `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md`.
@@ -156,10 +156,10 @@ The layer fails open for runtime safety when the exact Steam Link topology, imag
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=two_projection_drop_base_v1` |
-| `lib/arm64-v8a/libgxr_two_projection_drop_base_v1.so` | Recognizes the exact three-projection stream, proves the first and second opaque full-FOV projections share pose/FOV, drops only the first, and forwards the original underside plus alpha-foveated projections unchanged. It creates no swapchains and performs no GL or source-image lifetime operations. |
+| `lib/arm64-v8a/libgxr_two_projection_drop_base_v1.so` | Recognizes the exact three-projection stream, proves the first and second opaque full-FOV projections share pose/FOV, drops only the first, and forwards the original underside plus alpha-foveated projections unchanged. It creates no swapchains and performs no GL or source-image lifetime operations. v1.1 forwards unrelated spinner/UI frames unchanged without disarming the transform. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_two_projection_drop_base_v1.json` | Registers the drop-base layer with a unique v1 identity |
 
-The transform fails open on any fingerprint mismatch. After its first transformed frame, a mismatch or downstream `xrEndFrame` failure disables transformation for that session so evidence cannot silently alternate between two and three projections.
+Exact target frames are always rewritten to two projections; unrelated auxiliary frames are forwarded unchanged and recorded separately. Only a failed rewritten `xrEndFrame` permanently disables the transform. The collector requires successful two-projection frames before and during the device-clock-bounded visual interval, so auxiliary and teardown frames cannot validate or falsely reject the result.
 
 ---
 

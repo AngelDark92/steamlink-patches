@@ -22,9 +22,14 @@ class SingleProjectionReconstructionResourceTest {
             .digest(library)
             .joinToString("") { "%02x".format(it) }
         assertEquals(
-            "584a8d72d5ed563fff3a1a1a22414dbd6533ea6c9ab9611e2e104ae2a07fefd7",
+            "286fe157dc7b814f9eed5204f01f2188cb2ae1608ca91534452cb8f20ebb9257",
             sha256,
         )
+        val nativeStrings = library.toString(Charsets.ISO_8859_1)
+        assertTrue(nativeStrings.contains("single-projection-reconstruction-v1.2-20260829"))
+        assertTrue(nativeStrings.contains("linear_4tap_subpixel_box"))
+        assertTrue(nativeStrings.contains("qualityExtensionAppended"))
+        assertTrue(nativeStrings.contains("outputQualitySettingsAttached"))
 
         val manifest = checkNotNull(
             javaClass.getResourceAsStream(

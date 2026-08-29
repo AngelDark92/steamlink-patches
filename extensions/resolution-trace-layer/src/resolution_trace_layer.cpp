@@ -32,7 +32,7 @@ namespace {
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
 constexpr char kModeName[] = "single_projection_reconstruction_v1";
-constexpr char kBuildId[] = "single-projection-reconstruction-v1.1-20260829";
+constexpr char kBuildId[] = "single-projection-reconstruction-v1.2-20260829";
 constexpr uint32_t kSourceExtent = 1536;
 constexpr int64_t kSourceFormat = GL_SRGB8_ALPHA8;
 constexpr XrCompositionLayerFlags kFoveaFlags =
@@ -101,7 +101,7 @@ struct SessionState {
     std::array<OutputEye, 2> outputs{};
     GlState gl;
     ReconstructionMapping mapping;
-    bool learned{}, active{}, disabled{};
+    bool learned{}, active{}, disabled{}, everActivated{};
 };
 
 Dispatch g;
@@ -113,6 +113,7 @@ std::map<XrSwapchain, SwapchainState> swapchains;
 std::map<XrSession, SessionState> sessions;
 std::array<XrViewConfigurationView, 2> stereoViews{};
 bool haveStereoViews{};
+bool qualitySettingsEnabled{};
 std::atomic<uint64_t> frameCounter{0};
 
 uint64_t elapsedMs() {
@@ -222,12 +223,21 @@ precision highp float;
 in vec2 uv;layout(location=0)out vec4 color;
 uniform sampler2D underTex;uniform sampler2D foveaTex;
 uniform vec4 fullTan;uniform vec4 foveaTan;
+uniform vec2 foveaTexel;
+vec4 sampleFovea(vec2 p,vec2 footprint){
+ vec2 o=footprint*0.25;
+ return 0.25*(texture(foveaTex,clamp(p+vec2(-o.x,-o.y),0.0,1.0))+
+  texture(foveaTex,clamp(p+vec2( o.x,-o.y),0.0,1.0))+
+  texture(foveaTex,clamp(p+vec2(-o.x, o.y),0.0,1.0))+
+  texture(foveaTex,clamp(p+vec2( o.x, o.y),0.0,1.0)));
+}
 void main(){
  vec2 ray=vec2(mix(fullTan.x,fullTan.y,uv.x),mix(fullTan.z,fullTan.w,uv.y));
  vec2 fuv=vec2((ray.x-foveaTan.x)/(foveaTan.y-foveaTan.x),(ray.y-foveaTan.z)/(foveaTan.w-foveaTan.z));
+ vec2 footprint=max(fwidth(fuv),foveaTexel);
  vec4 base=texture(underTex,clamp(uv,vec2(0.0),vec2(1.0)));color=vec4(base.rgb,1.0);
  if(all(greaterThanEqual(fuv,vec2(0.0)))&&all(lessThanEqual(fuv,vec2(1.0)))){
-  vec4 inset=texture(foveaTex,clamp(fuv,vec2(0.0),vec2(1.0)));color.rgb=mix(color.rgb,inset.rgb,inset.a);
+  vec4 inset=sampleFovea(clamp(fuv,vec2(0.0),vec2(1.0)),footprint);color.rgb=mix(color.rgb,inset.rgb,inset.a);
  }
 })";
     std::string error;
@@ -311,12 +321,13 @@ uint32_t deferredMask(const SessionState& s){
 }
 
 bool compose(SessionState& s,const XrCompositionLayerProjection& under,const XrCompositionLayerProjection& fovea){
-    if(eglGetCurrentContext()!=s.context||eglGetCurrentDisplay()!=s.display){emit("reconstruction_passthrough","\"reason\":\"egl_context_mismatch\"");return false;}
+    if(eglGetCurrentContext()!=s.context||eglGetCurrentDisplay()!=s.display){emit("reconstruction_passthrough","\"session\":"+std::to_string(hv(s.session))+",\"everActivated\":"+std::string(s.everActivated?"true":"false")+",\"reason\":\"egl_context_mismatch\"");return false;}
     SavedGl saved=saveGl();
     if(!ensureGl(s)){restoreGl(saved);return false;}bool ok=true;
     glDisable(GL_BLEND);glDisable(GL_DEPTH_TEST);glDisable(GL_STENCIL_TEST);glDisable(GL_CULL_FACE);glDisable(GL_SCISSOR_TEST);
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);glUseProgram(s.gl.program);glBindVertexArray(s.gl.vao);glBindSampler(0,0);glBindSampler(1,0);
     glUniform1i(glGetUniformLocation(s.gl.program,"underTex"),0);glUniform1i(glGetUniformLocation(s.gl.program,"foveaTex"),1);
+    glUniform2f(glGetUniformLocation(s.gl.program,"foveaTexel"),1.0f/kSourceExtent,1.0f/kSourceExtent);
     for(uint32_t eye=0;eye<2&&ok;++eye){
         GLuint u{},f{};ok=sourceTexture(under.views[eye].subImage.swapchain,u)&&sourceTexture(fovea.views[eye].subImage.swapchain,f);
         if(!ok)break;ok=resolve(u,s.gl.resolved[eye][0],s.gl.readFbo,s.gl.drawFbo)&&resolve(f,s.gl.resolved[eye][1],s.gl.readFbo,s.gl.drawFbo);if(!ok)break;
@@ -344,14 +355,14 @@ bool releaseOutputs(SessionState& s){bool ok=true;for(auto& out:s.outputs)if(out
     if(XR_FAILED(r)||sample(frameCounter.load()))emit("output_release","\"result\":"+std::to_string(r));ok&=XR_SUCCEEDED(r);if(XR_SUCCEEDED(r)){out.acquired=false;out.waited=false;}}return ok;}
 bool acquireOutputs(SessionState& s){for(auto& out:s.outputs){XrSwapchainImageAcquireInfo ai{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
     if(XR_FAILED(g.acquireImage(out.handle,&ai,&out.index))){releaseOutputs(s);return false;}out.acquired=true;out.waited=false;
-    XrSwapchainImageWaitInfo wi{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};wi.timeout=XR_INFINITE_DURATION;if(XR_FAILED(g.waitImage(out.handle,&wi))){s.disabled=true;s.active=false;emit("reconstruction_disabled","\"reason\":\"output_wait_failed\"");return false;}out.waited=true;}return true;}
+    XrSwapchainImageWaitInfo wi{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};wi.timeout=XR_INFINITE_DURATION;if(XR_FAILED(g.waitImage(out.handle,&wi))){s.disabled=true;s.active=false;emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+",\"reason\":\"output_wait_failed\"");return false;}out.waited=true;}return true;}
 void destroyOutputs(SessionState& s){s.mapping.valid=false;releaseOutputs(s);for(auto& out:s.outputs){if(out.handle&&g.destroySwapchain&&!out.acquired)g.destroySwapchain(out.handle);out={};}
     if(eglGetCurrentContext()==s.context)destroyGl(s.gl);else s.gl={};}
 
 bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,const XrCompositionLayerProjection& fovea){
     s.mapping.valid=false;
     if(!s.recommendedWidth||!s.recommendedHeight||!s.maxWidth||!s.maxHeight){
-        emit("reconstruction_disabled","\"reason\":\"missing_view_limits\"");return false;
+        emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+",\"reason\":\"missing_view_limits\"");return false;
     }
     float rx=1,ry=1;for(int eye=0;eye<2;++eye){rx=std::max(rx,spanX(full.views[eye].fov)/spanX(fovea.views[eye].fov));ry=std::max(ry,spanY(full.views[eye].fov)/spanY(fovea.views[eye].fov));}
     const uint32_t requestedWidth=std::max(s.recommendedWidth,static_cast<uint32_t>(std::ceil(kSourceExtent*rx)));
@@ -367,7 +378,9 @@ bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,cons
     emit("reconstruction_outputs_created","\"width\":"+std::to_string(s.outputWidth)+",\"height\":"+std::to_string(s.outputHeight)+
         ",\"requestedWidth\":"+std::to_string(requestedWidth)+",\"requestedHeight\":"+std::to_string(requestedHeight)+
         ",\"widthClamped\":"+std::string(s.outputWidth<requestedWidth?"true":"false")+",\"heightClamped\":"+
-        std::string(s.outputHeight<requestedHeight?"true":"false")+",\"sampleCount\":1");return true;
+        std::string(s.outputHeight<requestedHeight?"true":"false")+
+        ",\"sampleCount\":1,\"foveaFilter\":\"linear_4tap_subpixel_box\""+
+        ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false")));return true;
 }
 
 struct Fingerprint{bool valid{};std::string reason;XrSession session{XR_NULL_HANDLE};
@@ -420,13 +433,13 @@ XrResult XRAPI_PTR layerCreateSwapchain(XrSession session,const XrSwapchainCreat
 XrResult XRAPI_PTR layerEnumerateImages(XrSwapchain handle,uint32_t cap,uint32_t* count,XrSwapchainImageBaseHeader* images){
     XrResult r=g.enumerateImages(handle,cap,count,images);auto it=swapchains.find(handle);if(XR_SUCCEEDED(r)&&it!=swapchains.end()&&count&&images&&cap>=*count){it->second.images.resize(*count);
         for(uint32_t i=0;i<*count;++i)it->second.images[i]=*reinterpret_cast<XrSwapchainImageOpenGLESKHR*>(reinterpret_cast<char*>(images)+i*sizeof(XrSwapchainImageOpenGLESKHR));}return r;}
-XrResult XRAPI_PTR layerAcquire(XrSwapchain handle,const XrSwapchainImageAcquireInfo* info,uint32_t* index){auto it=swapchains.find(handle);if(it!=swapchains.end()&&it->second.deferred){auto s=sessions.find(it->second.session);if(s!=sessions.end()){flushSources(s->second);s->second.active=false;s->second.disabled=true;emit("reconstruction_disabled","\"reason\":\"acquire_before_end_frame\"");}}
+XrResult XRAPI_PTR layerAcquire(XrSwapchain handle,const XrSwapchainImageAcquireInfo* info,uint32_t* index){auto it=swapchains.find(handle);if(it!=swapchains.end()&&it->second.deferred){auto s=sessions.find(it->second.session);if(s!=sessions.end()){flushSources(s->second);s->second.active=false;s->second.disabled=true;emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s->second.session))+",\"reason\":\"acquire_before_end_frame\"");}}
     XrResult r=g.acquireImage(handle,info,index);if(XR_SUCCEEDED(r)&&it!=swapchains.end()&&index){it->second.acquired.push_back(*index);it->second.waited=false;}return r;}
 XrResult XRAPI_PTR layerWait(XrSwapchain handle,const XrSwapchainImageWaitInfo* info){XrResult r=g.waitImage(handle,info);auto it=swapchains.find(handle);if(XR_SUCCEEDED(r)&&it!=swapchains.end())it->second.waited=true;return r;}
 XrResult XRAPI_PTR layerRelease(XrSwapchain handle,const XrSwapchainImageReleaseInfo* info){auto it=swapchains.find(handle);if(it!=swapchains.end()&&it->second.role!=Role::Unknown){auto s=sessions.find(it->second.session);
     if(s!=sessions.end()&&s->second.active&&info&&!info->next&&it->second.waited&&it->second.acquired.size()==1&&!it->second.deferred){it->second.deferred=true;
         if(sample(frameCounter.load()+1))emit("source_release_deferred","\"swapchain\":"+std::to_string(hv(handle))+",\"imageIndex\":"+std::to_string(it->second.acquired.front()));return XR_SUCCESS;}
-    if(s!=sessions.end()&&s->second.active){s->second.active=false;s->second.disabled=true;emit("reconstruction_disabled","\"reason\":\"unsupported_release_sequence\"");}}
+    if(s!=sessions.end()&&s->second.active){s->second.active=false;s->second.disabled=true;emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s->second.session))+",\"reason\":\"unsupported_release_sequence\"");}}
     XrResult r=g.releaseImage(handle,info);if(XR_SUCCEEDED(r)&&it!=swapchains.end()){it->second.waited=false;if(!it->second.acquired.empty())it->second.acquired.pop_front();}return r;}
 
 XrResult submitPassthrough(XrSession handle,SessionState* state,const XrFrameEndInfo* info,
@@ -438,20 +451,26 @@ XrResult submitPassthrough(XrSession handle,SessionState* state,const XrFrameEnd
     if(!sourceReleaseSuccess||!outputReleaseSuccess){
         if(state){state->active=false;state->disabled=true;}
         empty=info?*info:XrFrameEndInfo{XR_TYPE_FRAME_END_INFO};empty.layerCount=0;empty.layers=nullptr;submitted=&empty;
-        emit("reconstruction_disabled","\"reason\":\"passthrough_release_failed\",\"sourceReleaseSuccess\":"+
+        emit("reconstruction_disabled","\"session\":"+std::to_string(hv(handle))+
+             ",\"reason\":\"passthrough_release_failed\",\"sourceReleaseSuccess\":"+
              std::string(sourceReleaseSuccess?"true":"false")+",\"outputReleaseSuccess\":"+
              std::string(outputReleaseSuccess?"true":"false"));
     }
-    if(emitTransform)emit("single_projection_reconstruction_transform","\"frame\":"+std::to_string(frame)+
+    if(emitTransform)emit("single_projection_reconstruction_transform","\"session\":"+std::to_string(hv(handle))+
+        ",\"frame\":"+std::to_string(frame)+
         ",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":"+
         std::to_string(submitted&&submitted->layerCount==3?3:0)+
         ",\"outputProjectionCount\":0,\"sourceViewCount\":6,\"outputViewCount\":0,\"unsafeLayerCount\":1,"
         "\"reconstructed\":false,\"changed\":false,\"releaseSuccess\":"+
         std::string(sourceReleaseSuccess&&outputReleaseSuccess?"true":"false")+",\"reason\":"+quote(reason)+
         ",\"deferredMask\":"+std::to_string(mask));
-    else if(sample(frame))emit("reconstruction_passthrough","\"frame\":"+std::to_string(frame)+",\"reason\":"+quote(reason));
+    if((state&&state->everActivated)||sample(frame))emit("reconstruction_passthrough","\"session\":"+
+        std::to_string(hv(handle))+",\"frame\":"+std::to_string(frame)+",\"everActivated\":"+
+        std::string(state&&state->everActivated?"true":"false")+",\"layerCount\":"+
+        std::to_string(info?info->layerCount:0)+",\"reason\":"+quote(reason));
     XrResult result=g.endFrame(handle,submitted);
-    if(sample(frame)||emitTransform)emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(result));
+    if(sample(frame)||emitTransform||(state&&state->everActivated))emit("end_frame_result","\"session\":"+
+        std::to_string(hv(handle))+",\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(result));
     return result;
 }
 
@@ -460,9 +479,13 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
     if(sit==sessions.end()||!f.valid||f.session!=handle)
         return submitPassthrough(handle,sit==sessions.end()?nullptr:&sit->second,info,frame,f.reason,false);
     SessionState& s=sit->second;
-    if(!s.learned||s.sources!=f.handles){flushSources(s);destroyOutputs(s);learn(s,f);XrResult r=g.endFrame(handle,info);
+    if(!s.learned||s.sources!=f.handles){const bool sourceIdentityChanged=s.learned&&s.sources!=f.handles;
+        if(sourceIdentityChanged)emit("reconstruction_passthrough","\"session\":"+std::to_string(hv(handle))+
+            ",\"frame\":"+std::to_string(frame)+",\"everActivated\":"+std::string(s.everActivated?"true":"false")+
+            ",\"layerCount\":"+std::to_string(info?info->layerCount:0)+",\"reason\":\"source_identity_changed\"");
+        flushSources(s);destroyOutputs(s);learn(s,f);XrResult r=g.endFrame(handle,info);
         if(XR_SUCCEEDED(r)&&createOutputs(s,*f.p[1],*f.p[2]))s.active=true;else{s.disabled=true;s.active=false;}
-        emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;}
+        emit("end_frame_result","\"session\":"+std::to_string(hv(handle))+",\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;}
     const uint32_t mask=deferredMask(s);
     const bool reusedOutput=mask==0&&s.active&&!s.disabled&&sameMapping(s,*f.p[1],*f.p[2]);
     const bool poseChanged=reusedOutput&&cachedPoseChanged(s,*f.p[1]);
@@ -477,26 +500,31 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
         const bool sourceReleaseSuccess=flushSources(s);
         const bool outputReleaseSuccess=releaseOutputs(s);
         if(!sourceReleaseSuccess||!outputReleaseSuccess){s.active=false;s.disabled=true;
-            emit("reconstruction_disabled","\"reason\":\"downstream_release_failed\"");
-            emit("single_projection_reconstruction_transform","\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":0,\"outputProjectionCount\":0,\"sourceViewCount\":6,\"outputViewCount\":0,\"unsafeLayerCount\":1,\"reconstructed\":false,\"changed\":false,\"releaseSuccess\":false,\"reason\":\"downstream_release_failed\",\"deferredMask\":"+std::to_string(mask));
+            emit("reconstruction_disabled","\"session\":"+std::to_string(hv(handle))+",\"reason\":\"downstream_release_failed\"");
+            emit("single_projection_reconstruction_transform","\"session\":"+std::to_string(hv(handle))+",\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":0,\"outputProjectionCount\":0,\"sourceViewCount\":6,\"outputViewCount\":0,\"unsafeLayerCount\":1,\"reconstructed\":false,\"changed\":false,\"releaseSuccess\":false,\"reason\":\"downstream_release_failed\",\"deferredMask\":"+std::to_string(mask));
             XrFrameEndInfo empty=*info;empty.layerCount=0;empty.layers=nullptr;XrResult r=g.endFrame(handle,&empty);
-            emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;}
+            emit("end_frame_result","\"session\":"+std::to_string(hv(handle))+",\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;}
     }
     std::array<XrCompositionLayerProjectionView,2> views{};
     for(int eye=0;eye<2;++eye){views[eye]=f.p[1]->views[eye];views[eye].next=nullptr;views[eye].subImage.swapchain=s.outputs[eye].handle;
         views[eye].subImage.imageRect={{0,0},{static_cast<int32_t>(s.outputWidth),static_cast<int32_t>(s.outputHeight)}};views[eye].subImage.imageArrayIndex=0;}
-    XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};projection.space=f.p[1]->space;projection.viewCount=2;projection.views=views.data();
+    XrCompositionLayerSettingsFB qualitySettings{XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB};
+    qualitySettings.layerFlags=XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB;
+    XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};projection.next=qualitySettingsEnabled?&qualitySettings:nullptr;projection.space=f.p[1]->space;projection.viewCount=2;projection.views=views.data();
     const auto* layer=reinterpret_cast<const XrCompositionLayerBaseHeader*>(&projection);XrFrameEndInfo output=*info;output.layerCount=1;output.layers=&layer;
-    emit("single_projection_reconstruction_transform","\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":1,\"outputProjectionCount\":1,\"sourceViewCount\":6,\"outputViewCount\":2,\"unsafeLayerCount\":0,\"reconstructed\":true,\"changed\":true,\"releaseSuccess\":true,\"outputWidth\":"+std::to_string(s.outputWidth)+",\"outputHeight\":"+std::to_string(s.outputHeight)+
+    emit("single_projection_reconstruction_transform","\"session\":"+std::to_string(hv(handle))+",\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":1,\"outputProjectionCount\":1,\"sourceViewCount\":6,\"outputViewCount\":2,\"unsafeLayerCount\":0,\"reconstructed\":true,\"changed\":true,\"releaseSuccess\":true,\"outputWidth\":"+std::to_string(s.outputWidth)+",\"outputHeight\":"+std::to_string(s.outputHeight)+
         ",\"reusedOutput\":"+std::string(reusedOutput?"true":"false")+",\"sourceUpdate\":\""+(reusedOutput?"cached":"fresh")+"\",\"poseChanged\":"+
-        std::string(poseChanged?"true":"false")+",\"deferredMask\":"+std::to_string(mask));
-    XrResult r=g.endFrame(handle,&output);if(!reusedOutput&&XR_SUCCEEDED(r))rememberMapping(s,*f.p[1],*f.p[2]);
-    emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;
+        std::string(poseChanged?"true":"false")+",\"deferredMask\":"+std::to_string(mask)+
+        ",\"foveaFilter\":\"linear_4tap_subpixel_box\",\"outputQualitySettingsAttached\":"+
+        (qualitySettingsEnabled?std::string("true"):std::string("false"))+
+        ",\"outputQualitySettingsFlags\":2");
+    XrResult r=g.endFrame(handle,&output);if(XR_SUCCEEDED(r)){s.everActivated=true;if(!reusedOutput)rememberMapping(s,*f.p[1],*f.p[2]);}
+    emit("end_frame_result","\"session\":"+std::to_string(hv(handle))+",\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;
 }
 
 XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain handle){auto it=swapchains.find(handle);if(it!=swapchains.end()&&it->second.deferred){auto s=sessions.find(it->second.session);if(s!=sessions.end())flushSources(s->second);}swapchains.erase(handle);return g.destroySwapchain(handle);}
 XrResult XRAPI_PTR layerDestroySession(XrSession handle){auto it=sessions.find(handle);if(it!=sessions.end()){flushSources(it->second);destroyOutputs(it->second);sessions.erase(it);}for(auto si=swapchains.begin();si!=swapchains.end();)if(si->second.session==handle)si=swapchains.erase(si);else++si;return g.destroySession(handle);}
-XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance){for(auto& pair:sessions){flushSources(pair.second);destroyOutputs(pair.second);}sessions.clear();swapchains.clear();emit("destroy_instance");XrResult r=g.destroyInstance(instance);g={};return r;}
+XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance){for(auto& pair:sessions){flushSources(pair.second);destroyOutputs(pair.second);}sessions.clear();swapchains.clear();emit("destroy_instance");XrResult r=g.destroyInstance(instance);g={};qualitySettingsEnabled=false;return r;}
 XrResult XRAPI_PTR layerPollEvent(XrInstance instance,XrEventDataBuffer* data){XrResult r=g.pollEvent(instance,data);if(XR_SUCCEEDED(r)&&data&&data->type==XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED){auto* e=reinterpret_cast<XrEventDataSessionStateChanged*>(data);emit("session_state_changed","\"state\":"+std::to_string(static_cast<int>(e->state)));}return r;}
 XrResult XRAPI_PTR layerWaitFrame(XrSession session,const XrFrameWaitInfo* info,XrFrameState* state){XrResult r=g.waitFrame(session,info,state);if(sample(frameCounter.load()))emit("wait_frame","\"result\":"+std::to_string(r)+(state?",\"predictedDisplayPeriod\":"+std::to_string(state->predictedDisplayPeriod):""));return r;}
 
@@ -513,13 +541,45 @@ XrResult XRAPI_PTR layerGetInstanceProcAddr(XrInstance instance,const char* name
     return XR_SUCCESS;
 }
 
+bool runtimeAdvertisesQualitySettings(PFN_xrGetInstanceProcAddr getInstanceProcAddr){
+    PFN_xrVoidFunction address{};
+    if(!getInstanceProcAddr||XR_FAILED(getInstanceProcAddr(XR_NULL_HANDLE,
+        "xrEnumerateInstanceExtensionProperties",&address))||!address)return false;
+    auto enumerate=reinterpret_cast<PFN_xrEnumerateInstanceExtensionProperties>(address);
+    uint32_t count{};
+    if(XR_FAILED(enumerate(nullptr,0,&count,nullptr))||!count)return false;
+    std::vector<XrExtensionProperties> properties(count,{XR_TYPE_EXTENSION_PROPERTIES});
+    if(XR_FAILED(enumerate(nullptr,count,&count,properties.data())))return false;
+    for(const auto& property:properties)if(std::strcmp(property.extensionName,
+        XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME)==0)return true;
+    return false;
+}
+
 XrResult XRAPI_PTR layerCreateApiLayerInstance(const XrInstanceCreateInfo* ci,const XrApiLayerCreateInfo* ai,XrInstance* instance){
-    if(!ai||!ai->nextInfo)return XR_ERROR_INITIALIZATION_FAILED;XrApiLayerCreateInfo next=*ai;next.nextInfo=ai->nextInfo->next;
-    XrResult r=ai->nextInfo->nextCreateApiLayerInstance(ci,&next,instance);if(XR_FAILED(r))return r;g.instance=*instance;g.getInstanceProcAddr=ai->nextInfo->nextGetInstanceProcAddr;
+    if(!ci||!ai||!ai->nextInfo)return XR_ERROR_INITIALIZATION_FAILED;
+    bool appEnabled=false;
+    for(uint32_t i=0;i<ci->enabledExtensionCount;++i)if(std::strcmp(ci->enabledExtensionNames[i],
+        XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME)==0){appEnabled=true;break;}
+    const bool advertised=runtimeAdvertisesQualitySettings(ai->nextInfo->nextGetInstanceProcAddr);
+    std::vector<const char*> extensions;
+    extensions.reserve(ci->enabledExtensionCount+1);
+    for(uint32_t i=0;i<ci->enabledExtensionCount;++i)
+        extensions.push_back(ci->enabledExtensionNames[i]);
+    const bool appended=advertised&&!appEnabled;
+    if(appended)extensions.push_back(XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME);
+    XrInstanceCreateInfo patched=*ci;
+    if(appended){patched.enabledExtensionCount=static_cast<uint32_t>(extensions.size());patched.enabledExtensionNames=extensions.data();}
+    XrApiLayerCreateInfo next=*ai;next.nextInfo=ai->nextInfo->next;
+    XrResult r=ai->nextInfo->nextCreateApiLayerInstance(&patched,&next,instance);if(XR_FAILED(r))return r;
+    qualitySettingsEnabled=appEnabled||appended;g.instance=*instance;g.getInstanceProcAddr=ai->nextInfo->nextGetInstanceProcAddr;
     load("xrDestroyInstance",g.destroyInstance);load("xrEnumerateViewConfigurationViews",g.enumerateViews);load("xrCreateSession",g.createSession);load("xrDestroySession",g.destroySession);
     load("xrCreateSwapchain",g.createSwapchain);load("xrDestroySwapchain",g.destroySwapchain);load("xrEnumerateSwapchainImages",g.enumerateImages);load("xrAcquireSwapchainImage",g.acquireImage);
     load("xrWaitSwapchainImage",g.waitImage);load("xrReleaseSwapchainImage",g.releaseImage);load("xrEndFrame",g.endFrame);load("xrPollEvent",g.pollEvent);load("xrWaitFrame",g.waitFrame);
-    emit("layer_initialized","\"layerName\":"+quote(kLayerName)+",\"reconstructionBuildId\":"+quote(kBuildId));return XR_SUCCESS;
+    emit("layer_initialized","\"layerName\":"+quote(kLayerName)+",\"reconstructionBuildId\":"+quote(kBuildId)+
+        ",\"qualityExtensionAdvertised\":"+(advertised?std::string("true"):std::string("false"))+
+        ",\"qualityExtensionAppEnabled\":"+(appEnabled?std::string("true"):std::string("false"))+
+        ",\"qualityExtensionAppended\":"+(appended?std::string("true"):std::string("false"))+
+        ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false")));return XR_SUCCESS;
 }
 
 } // namespace

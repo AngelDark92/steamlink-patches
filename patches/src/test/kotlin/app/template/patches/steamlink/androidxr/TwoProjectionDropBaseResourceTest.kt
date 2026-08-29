@@ -50,12 +50,13 @@ class TwoProjectionDropBaseResourceTest {
             .digest(library)
             .joinToString("") { "%02x".format(it) }
         assertEquals(
-            "e8bbc837713891ca99ae020c2c02dbddb51246e977476ab40f6125f489d70e21",
+            "dd9611516075f9d1969c59c019f8420ace58dfdab50746bfe1a54f03df204356",
             sha256,
         )
         val nativeStrings = library.toString(Charsets.ISO_8859_1)
-        assertTrue(nativeStrings.contains("two-projection-drop-base-v1-20260829"))
+        assertTrue(nativeStrings.contains("two-projection-drop-base-v1.1-20260829"))
         assertTrue(nativeStrings.contains("two_projection_drop_base_transform"))
+        assertTrue(nativeStrings.contains("two_projection_drop_base_auxiliary"))
 
         val manifest = checkNotNull(
             javaClass.getResourceAsStream(
