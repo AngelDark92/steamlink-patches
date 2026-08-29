@@ -1,3 +1,9 @@
+## [1.10.1-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.3...v1.10.1-dev.4) (2026-08-29)
+
+### 🐛 Bug Fixes
+
+* try wth 2 projections ([8356c75](https://github.com/AngelDark92/steamlink-patches/commit/8356c75c2223eb2ec1c33477d6a30c1fbeab1396))
+
 ## [1.10.1-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.2...v1.10.1-dev.3) (2026-08-28)
 
 ### 🐛 Bug Fixes

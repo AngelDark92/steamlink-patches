@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.1-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
+> **[v1.10.1-dev.4](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.4)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
