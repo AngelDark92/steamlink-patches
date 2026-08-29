@@ -13,6 +13,7 @@ import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
 import app.template.patches.steamlink.androidxr.xrSingleProjectionReconstructionPatch
+import app.template.patches.steamlink.androidxr.xrThreeProjectionSamplerProxyPatch
 import app.template.patches.steamlink.androidxr.xrTwoProjectionDropBasePatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
@@ -52,6 +53,10 @@ class PatchCompatibilityMatrixTest {
         assertFalse(xrTwoProjectionDropBasePatch.supports(5002318))
         assertFalse(xrTwoProjectionDropBasePatch.supports(5002244))
         assertFalse(xrTwoProjectionDropBasePatch.default)
+        assertTrue(xrThreeProjectionSamplerProxyPatch.supports(5002322))
+        assertFalse(xrThreeProjectionSamplerProxyPatch.supports(5002318))
+        assertFalse(xrThreeProjectionSamplerProxyPatch.supports(5002244))
+        assertFalse(xrThreeProjectionSamplerProxyPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -101,6 +106,7 @@ class PatchCompatibilityMatrixTest {
             unrestrictedBatteryUsagePatch,
             xrSingleProjectionReconstructionPatch,
             xrTwoProjectionDropBasePatch,
+            xrThreeProjectionSamplerProxyPatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -152,6 +158,7 @@ class PatchCompatibilityMatrixTest {
         ) + listOf(
             xrSingleProjectionReconstructionPatch,
             xrTwoProjectionDropBasePatch,
+            xrThreeProjectionSamplerProxyPatch,
         )
 
         val latestExcluded = excludedNativeXr + listOf(

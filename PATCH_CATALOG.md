@@ -163,6 +163,19 @@ The transform fails open on any fingerprint mismatch. After its first transforme
 
 ---
 
+### Experimental Three Projection Sampler Proxy
+**Default: disabled; 5002322 only** — mutually exclusive with both projection transforms and `Appear on top`
+
+| Artifact | Edit |
+|---|---|
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=three_projection_sampler_proxy_v1` |
+| `lib/arm64-v8a/libgxr_three_projection_sampler_proxy_v1.so` | Preserves the exact three-projection/six-view submission and all projection metadata, but resolves the six 1536x1536 MSAA2 source images 1:1 with `GL_NEAREST` into private single-sample swapchains and rewrites only the six swapchain handles. Proxy application texture objects use explicit linear/clamp state; this is not evidence of the compositor's sampler state. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_three_projection_sampler_proxy_v1.json` | Registers the sampler-proxy layer with a unique v1 identity |
+
+The layer accepts only the known six-distinct-swapchain topology and rejects partial updates, changed source identity, unsafe metadata, GL failures, and post-activation fallback in capture validation. The useful runtime inference is limited to original swapchain identity and/or sample-count/resource allocation versus three-layer topology; without compositor swapchain-state support, application texture parameters cannot be treated as compositor state.
+
+---
+
 ### TEST — Old Scene requestExit Bridge (`oldSceneRequestExitBridgePatch`)
 **Default: disabled** (experimental adapter; standalone)
 | Artifact | Edit |
@@ -317,9 +330,10 @@ This intentionally preserves the native builds' requested extensions and vendor 
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrSingleProjectionReconstructionPatch`, `xrTwoProjectionDropBasePatch`, `changePackageNamePatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrSingleProjectionReconstructionPatch`, `xrTwoProjectionDropBasePatch`, `xrThreeProjectionSamplerProxyPatch`, `changePackageNamePatch` |
 | `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` + matching implicit-layer JSON | `xrSingleProjectionReconstructionPatch` |
 | `lib/arm64-v8a/libgxr_two_projection_drop_base_v1.so` + matching implicit-layer JSON | `xrTwoProjectionDropBasePatch` |
+| `lib/arm64-v8a/libgxr_three_projection_sampler_proxy_v1.so` + matching implicit-layer JSON | `xrThreeProjectionSamplerProxyPatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

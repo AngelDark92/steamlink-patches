@@ -27,6 +27,12 @@ class TwoProjectionDropBaseResourceTest {
                 "single_projection_reconstruction_v1",
             ),
         )
+        assertTrue(
+            projectionModesConflict(
+                "three_projection_sampler_proxy_v1",
+                "two_projection_drop_base_v1",
+            ),
+        )
     }
 
     @Test

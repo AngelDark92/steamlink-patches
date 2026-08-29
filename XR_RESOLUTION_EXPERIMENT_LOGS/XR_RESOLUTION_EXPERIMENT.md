@@ -14,11 +14,11 @@ Each reconstructed frame also left one `GL_INVALID_ENUM`, later consumed by Stea
 
 The reported single-projection softness is plausible without implying that one projection is the high-resolution trigger. Reconstruction resolves the original 1536x1536 MSAA2 images into new sampleCount-1 swapchains, linearly resamples the foveal inset, and was capped by the runtime's 3152x3682 maximum. That extra image path can reduce visible detail even if the resulting topology selects a better compositor policy. The two-projection mode removes all of those reconstruction variables.
 
-This result does not prove that projection count alone is Android XR's trigger. Reconstruction simultaneously changes layer count, swapchain identity and dimensions, MSAA resolve, alpha handling, and sampling. The clean next discriminator is now implemented as `two_projection_drop_base_v1`: it drops only the compositionally hidden base and forwards the original underside plus foveal projection unchanged. The historical two-layer patch removed the underside instead, so it did not test this hypothesis. The new mode has passed static build/provenance tests but has not been installed or run on the headset.
+This result does not prove that projection count alone is Android XR's trigger. Reconstruction simultaneously changes layer count, swapchain identity and dimensions, MSAA resolve, alpha handling, and sampling. Two complementary discriminators are now implemented: `two_projection_drop_base_v1` drops only the compositionally hidden base while forwarding the original remaining images, and `three_projection_sampler_proxy_v1` retains all three projections while replacing only the six submitted MSAA swapchains with 1:1 single-sample proxies. Both have passed static build/provenance tests but have not been installed or run on the headset.
 
 ## Available experimental patches
 
-Select exactly one of **Experimental Single Projection Reconstruction** or **Experimental Two Projection Drop Base** in Morphe for Steam Link 2.0.22 build 5002322. Patch generation fails if both modes are selected.
+Select exactly one of **Experimental Single Projection Reconstruction**, **Experimental Two Projection Drop Base**, or **Experimental Three Projection Sampler Proxy** in Morphe for Steam Link 2.0.22 build 5002322. Patch generation fails if modes are combined.
 
 Do not select **Appear on top** or any retired resolution experiment.
 
@@ -40,6 +40,13 @@ For the next test, prefer **Experimental Two Projection Drop Base**. Mode `two_p
 - forwards the original underside and alpha-foveated projection structs, swapchains, rectangles, poses, FOVs, flags, and order unchanged;
 - creates no private swapchains and performs no GL resolve, resampling, alpha flattening, or source-image lifetime interception;
 - permanently fails open for the session if the layout changes after activation, preventing mixed 2/3-projection submission.
+
+Mode `three_projection_sampler_proxy_v1` answers whether three projections can remain high quality when their resource path changes:
+
+- preserves the exact 3-projection/6-view layer count, order, poses, FOVs, spaces, flags, rectangles, and projection metadata;
+- resolves six distinct 1536x1536 SRGB8_ALPHA8 MSAA2 sources 1:1 with `GL_NEAREST` into six private 1536x1536 sampleCount-1 swapchains;
+- applies explicit linear/clamp application texture-object state and records it without claiming it crosses into the compositor process;
+- reuses released proxy contents only on zero-update frames and rejects partial updates, source-identity changes, unsafe topology, GL errors, and post-activation passthrough.
 
 ## Capture commands
 
@@ -64,6 +71,13 @@ For the two-projection discriminator, change the common fields to:
 ```powershell
 Mode = 'two_projection_drop_base_v1'
 ExperimentId = 'two-projection-drop-base-v1'
+```
+
+For the three-projection resource discriminator, use:
+
+```powershell
+Mode = 'three_projection_sampler_proxy_v1'
+ExperimentId = 'three-projection-sampler-proxy-v1'
 ```
 
 During each run it temporarily streams all Android logcat buffers so unknown XR tags are not lost, but archives only size-capped XR/SystemUI/OpenXR/Steam Link/compositor lines. It also samples filtered WindowManager, ActivityManager, and SurfaceFlinger layer state around the palm observation window. Cleanup stops the background collectors and runs `adb kill-server`, including when capture fails.
@@ -107,6 +121,8 @@ For `two_projection_drop_base_v1`, require build ID `two-projection-drop-base-v1
 - high but below the overlay control: topology explains the low-to-high transition, but the Android XR overlay changes an additional quality state;
 - any mixed result, disable event, fallback, or `xrEndFrame` error: inconclusive.
 
+For `three_projection_sampler_proxy_v1`, require build ID `three-projection-sampler-proxy-v1-20260829`, one process and one OpenXR session, six texture-role records, at least one fresh six-image resolve, trace-proven unchanged 3-projection/6-view metadata, matching successful `xrEndFrame`, and zero disable or post-activation passthrough events. High and sharp output shows that a one-projection output is not required and implicates original swapchain identity and/or sample-count/resource allocation. Low output that still changes with SystemUI implicates Android XR's global compositor policy for the three-layer topology. Changed host/encoder/decoder/source facts invalidate either inference. Application texture parameters are not compositor-state proof.
+
 ## Retired history
 
 See `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md`. Saved capture archives are evidence and must not be deleted.
@@ -121,5 +137,6 @@ cmake -S extensions\resolution-trace-layer -B extensions\resolution-trace-layer\
 cmake --build extensions\resolution-trace-layer\build-android-new
 Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_single_projection_reconstruction_v1.so patches\src\main\resources\steamlink\androidxr\
 Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_two_projection_drop_base_v1.so patches\src\main\resources\steamlink\androidxr\
+Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_three_projection_sampler_proxy_v1.so patches\src\main\resources\steamlink\androidxr\
 .\gradlew.bat :patches:generatePatchesList -PreleaseChannel=all
 ```

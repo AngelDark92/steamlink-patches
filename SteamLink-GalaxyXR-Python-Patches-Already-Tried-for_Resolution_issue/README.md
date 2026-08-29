@@ -12,7 +12,7 @@ This directory is the historical record for approaches that did not produce perm
 | Projection settings stripped | Attempt invalid: the captures requested stripped mode but loaded `projection_settings_quality`. It was not a valid test and must not be cited as a failure of settings removal. |
 | Projection metadata compatibility v2 | Corrected removal was proven active on 75 sampled frames across two intact runs. Resolution remained low without SystemUI, high only while SystemUI was visible, then low again. The hypothesis is conclusively rejected. |
 
-The active successors are mutually exclusive: **Experimental Single Projection Reconstruction** (`single_projection_reconstruction_v1`) and the narrower **Experimental Two Projection Drop Base** (`two_projection_drop_base_v1`). The second mode is the preferred next test because it forwards Steam Link's original underside/foveated images unchanged.
+The active successors are mutually exclusive: **Experimental Single Projection Reconstruction** (`single_projection_reconstruction_v1`), **Experimental Two Projection Drop Base** (`two_projection_drop_base_v1`), and **Experimental Three Projection Sampler Proxy** (`three_projection_sampler_proxy_v1`). The proxy keeps all three projections while replacing only the six submitted MSAA swapchains, allowing the next run to distinguish projection topology from swapchain/resource classification.
 
 ## Captured single-projection v1 result
 
@@ -21,6 +21,8 @@ The 2026-08-28 captures reached `HIGH0` without overlay permission and `HIGH0 â†
 Build `single-projection-reconstruction-v1.1-20260829` fixes the sampler query, adds guarded last-output reuse for repeated frames, and reduces release-event logging. It is statically built only; headset stability and quality remain unverified.
 
 Build `two-projection-drop-base-v1-20260829` implements the previously untried discriminator: it removes only the redundant first opaque full-FOV projection, leaving the original underside plus foveal projections and image lifetime untouched. It has passed static build/provenance tests but has not been installed or tested on the headset. The historical legacy two-layer experiment removed the underside, so it is not evidence against this test.
+
+Build `three-projection-sampler-proxy-v1-20260829` implements a separate untried discriminator. It preserves all three projection headers, six views, ordering, poses, FOVs, flags, spaces, rectangles, and projection metadata while resolving each 1536x1536 MSAA2 source 1:1 into a private single-sample swapchain. It has passed static build/provenance tests but has not been installed or tested on the headset. It jointly changes swapchain identity and sample-count/resource allocation. Its application texture parameters are recorded, but are not claimed as compositor sampler state.
 
 ## Retired permission and window probes
 
