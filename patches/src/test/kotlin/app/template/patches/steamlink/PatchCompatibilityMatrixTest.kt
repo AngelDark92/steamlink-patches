@@ -13,6 +13,7 @@ import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
 import app.template.patches.steamlink.androidxr.xrSingleProjectionReconstructionPatch
+import app.template.patches.steamlink.androidxr.xrTwoProjectionDropBasePatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -47,6 +48,10 @@ class PatchCompatibilityMatrixTest {
         assertFalse(xrSingleProjectionReconstructionPatch.supports(5002318))
         assertFalse(xrSingleProjectionReconstructionPatch.supports(5002244))
         assertFalse(xrSingleProjectionReconstructionPatch.default)
+        assertTrue(xrTwoProjectionDropBasePatch.supports(5002322))
+        assertFalse(xrTwoProjectionDropBasePatch.supports(5002318))
+        assertFalse(xrTwoProjectionDropBasePatch.supports(5002244))
+        assertFalse(xrTwoProjectionDropBasePatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -95,6 +100,7 @@ class PatchCompatibilityMatrixTest {
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
             xrSingleProjectionReconstructionPatch,
+            xrTwoProjectionDropBasePatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -143,7 +149,10 @@ class PatchCompatibilityMatrixTest {
         val latestCompatible = allowedNativeXr - listOf(
             deviceIdentityPatch,
             oledCalibrationPatch,
-        ) + xrSingleProjectionReconstructionPatch
+        ) + listOf(
+            xrSingleProjectionReconstructionPatch,
+            xrTwoProjectionDropBasePatch,
+        )
 
         val latestExcluded = excludedNativeXr + listOf(
             deviceIdentityPatch,

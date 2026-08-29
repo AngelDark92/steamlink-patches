@@ -32,7 +32,7 @@ namespace {
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
 constexpr char kModeName[] = "single_projection_reconstruction_v1";
-constexpr char kBuildId[] = "single-projection-reconstruction-v1-20260828";
+constexpr char kBuildId[] = "single-projection-reconstruction-v1.1-20260829";
 constexpr uint32_t kSourceExtent = 1536;
 constexpr int64_t kSourceFormat = GL_SRGB8_ALPHA8;
 constexpr XrCompositionLayerFlags kFoveaFlags =
@@ -83,6 +83,14 @@ struct GlState {
     bool ready{};
 };
 
+struct ReconstructionMapping {
+    bool valid{};
+    XrSpace space{XR_NULL_HANDLE};
+    std::array<XrPosef, 2> underPoses{};
+    std::array<XrFovf, 2> underFovs{};
+    std::array<XrFovf, 2> foveaFovs{};
+};
+
 struct SessionState {
     XrSession session{XR_NULL_HANDLE};
     EGLDisplay display{EGL_NO_DISPLAY};
@@ -92,6 +100,7 @@ struct SessionState {
     std::array<XrSwapchain, 6> sources{};
     std::array<OutputEye, 2> outputs{};
     GlState gl;
+    ReconstructionMapping mapping;
     bool learned{}, active{}, disabled{};
 };
 
@@ -157,6 +166,21 @@ bool samePose(const XrPosef& a, const XrPosef& b) {
 bool sameFov(const XrFovf& a, const XrFovf& b) {
     return close(a.angleLeft,b.angleLeft) && close(a.angleRight,b.angleRight) &&
         close(a.angleUp,b.angleUp) && close(a.angleDown,b.angleDown);
+}
+bool sameMapping(const SessionState& s,const XrCompositionLayerProjection& under,const XrCompositionLayerProjection& fovea) {
+    if(!s.mapping.valid||s.mapping.space!=under.space||under.space!=fovea.space)return false;
+    for(int eye=0;eye<2;++eye)if(!sameFov(s.mapping.underFovs[eye],under.views[eye].fov)||
+        !sameFov(s.mapping.foveaFovs[eye],fovea.views[eye].fov))return false;
+    return true;
+}
+bool cachedPoseChanged(const SessionState& s,const XrCompositionLayerProjection& under) {
+    for(int eye=0;eye<2;++eye)if(!samePose(s.mapping.underPoses[eye],under.views[eye].pose))return true;
+    return false;
+}
+void rememberMapping(SessionState& s,const XrCompositionLayerProjection& under,const XrCompositionLayerProjection& fovea) {
+    s.mapping.space=under.space;
+    for(int eye=0;eye<2;++eye){s.mapping.underPoses[eye]=under.views[eye].pose;s.mapping.underFovs[eye]=under.views[eye].fov;s.mapping.foveaFovs[eye]=fovea.views[eye].fov;}
+    s.mapping.valid=true;
 }
 float spanX(const XrFovf& f) { return std::tan(f.angleRight)-std::tan(f.angleLeft); }
 float spanY(const XrFovf& f) { return std::tan(f.angleUp)-std::tan(f.angleDown); }
@@ -245,8 +269,8 @@ struct SavedGl {
 SavedGl saveGl(){
     SavedGl s;glGetIntegerv(GL_CURRENT_PROGRAM,&s.program);glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&s.vao);
     glGetIntegerv(GL_ACTIVE_TEXTURE,&s.active);glActiveTexture(GL_TEXTURE0);glGetIntegerv(GL_TEXTURE_BINDING_2D,&s.tex0);
-    glGetIntegeri_v(GL_SAMPLER_BINDING,0,&s.sampler0);glGetIntegeri_v(GL_SAMPLER_BINDING,1,&s.sampler1);
-    glActiveTexture(GL_TEXTURE1);glGetIntegerv(GL_TEXTURE_BINDING_2D,&s.tex1);glActiveTexture(s.active);
+    glGetIntegerv(GL_SAMPLER_BINDING,&s.sampler0);glActiveTexture(GL_TEXTURE1);glGetIntegerv(GL_TEXTURE_BINDING_2D,&s.tex1);
+    glGetIntegerv(GL_SAMPLER_BINDING,&s.sampler1);glActiveTexture(s.active);
     glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING,&s.readFbo);glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&s.drawFbo);
     glGetIntegerv(GL_VIEWPORT,s.viewport);glGetIntegerv(GL_SCISSOR_BOX,s.scissor);
     s.blend=glIsEnabled(GL_BLEND);s.depth=glIsEnabled(GL_DEPTH_TEST);s.stencil=glIsEnabled(GL_STENCIL_TEST);
@@ -282,6 +306,10 @@ bool sourceTexture(XrSwapchain handle,GLuint& texture){
     texture=it->second.images[index].image;return true;
 }
 
+uint32_t deferredMask(const SessionState& s){
+    uint32_t mask=0;for(size_t i=0;i<s.sources.size();++i){auto it=swapchains.find(s.sources[i]);if(it!=swapchains.end()&&it->second.deferred)mask|=1u<<i;}return mask;
+}
+
 bool compose(SessionState& s,const XrCompositionLayerProjection& under,const XrCompositionLayerProjection& fovea){
     if(eglGetCurrentContext()!=s.context||eglGetCurrentDisplay()!=s.display){emit("reconstruction_passthrough","\"reason\":\"egl_context_mismatch\"");return false;}
     SavedGl saved=saveGl();
@@ -308,24 +336,27 @@ bool flushSources(SessionState& s){
     bool ok=true;for(XrSwapchain handle:s.sources){auto it=swapchains.find(handle);if(it==swapchains.end()||!it->second.deferred)continue;
         XrSwapchainImageReleaseInfo ri{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};XrResult r=g.releaseImage(handle,&ri);ok&=XR_SUCCEEDED(r);
         if(XR_SUCCEEDED(r)){it->second.deferred=false;it->second.waited=false;if(!it->second.acquired.empty())it->second.acquired.pop_front();}
-        emit("source_release_forwarded","\"swapchain\":"+std::to_string(hv(handle))+",\"result\":"+std::to_string(r));}
+        if(XR_FAILED(r)||sample(frameCounter.load()))emit("source_release_forwarded","\"swapchain\":"+std::to_string(hv(handle))+",\"result\":"+std::to_string(r));}
     return ok;
 }
 bool releaseOutputs(SessionState& s){bool ok=true;for(auto& out:s.outputs)if(out.acquired){XrSwapchainImageReleaseInfo ri{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-    if(!out.waited){ok=false;continue;}XrResult r=g.releaseImage(out.handle,&ri);emit("output_release","\"result\":"+std::to_string(r));ok&=XR_SUCCEEDED(r);if(XR_SUCCEEDED(r)){out.acquired=false;out.waited=false;}}return ok;}
+    if(!out.waited){ok=false;emit("output_release","\"result\":"+std::to_string(XR_ERROR_CALL_ORDER_INVALID)+",\"reason\":\"not_waited\"");continue;}XrResult r=g.releaseImage(out.handle,&ri);
+    if(XR_FAILED(r)||sample(frameCounter.load()))emit("output_release","\"result\":"+std::to_string(r));ok&=XR_SUCCEEDED(r);if(XR_SUCCEEDED(r)){out.acquired=false;out.waited=false;}}return ok;}
 bool acquireOutputs(SessionState& s){for(auto& out:s.outputs){XrSwapchainImageAcquireInfo ai{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
     if(XR_FAILED(g.acquireImage(out.handle,&ai,&out.index))){releaseOutputs(s);return false;}out.acquired=true;out.waited=false;
     XrSwapchainImageWaitInfo wi{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};wi.timeout=XR_INFINITE_DURATION;if(XR_FAILED(g.waitImage(out.handle,&wi))){s.disabled=true;s.active=false;emit("reconstruction_disabled","\"reason\":\"output_wait_failed\"");return false;}out.waited=true;}return true;}
-void destroyOutputs(SessionState& s){releaseOutputs(s);for(auto& out:s.outputs){if(out.handle&&g.destroySwapchain&&!out.acquired)g.destroySwapchain(out.handle);out={};}
+void destroyOutputs(SessionState& s){s.mapping.valid=false;releaseOutputs(s);for(auto& out:s.outputs){if(out.handle&&g.destroySwapchain&&!out.acquired)g.destroySwapchain(out.handle);out={};}
     if(eglGetCurrentContext()==s.context)destroyGl(s.gl);else s.gl={};}
 
 bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,const XrCompositionLayerProjection& fovea){
+    s.mapping.valid=false;
     if(!s.recommendedWidth||!s.recommendedHeight||!s.maxWidth||!s.maxHeight){
         emit("reconstruction_disabled","\"reason\":\"missing_view_limits\"");return false;
     }
     float rx=1,ry=1;for(int eye=0;eye<2;++eye){rx=std::max(rx,spanX(full.views[eye].fov)/spanX(fovea.views[eye].fov));ry=std::max(ry,spanY(full.views[eye].fov)/spanY(fovea.views[eye].fov));}
-    s.outputWidth=std::max(s.recommendedWidth,static_cast<uint32_t>(std::ceil(kSourceExtent*rx)));
-    s.outputHeight=std::max(s.recommendedHeight,static_cast<uint32_t>(std::ceil(kSourceExtent*ry)));
+    const uint32_t requestedWidth=std::max(s.recommendedWidth,static_cast<uint32_t>(std::ceil(kSourceExtent*rx)));
+    const uint32_t requestedHeight=std::max(s.recommendedHeight,static_cast<uint32_t>(std::ceil(kSourceExtent*ry)));
+    s.outputWidth=requestedWidth;s.outputHeight=requestedHeight;
     if(s.maxWidth)s.outputWidth=std::min(s.outputWidth,s.maxWidth);if(s.maxHeight)s.outputHeight=std::min(s.outputHeight,s.maxHeight);
     for(auto& out:s.outputs){XrSwapchainCreateInfo ci{XR_TYPE_SWAPCHAIN_CREATE_INFO};ci.usageFlags=XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT|XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
         ci.format=kSourceFormat;ci.sampleCount=1;ci.width=s.outputWidth;ci.height=s.outputHeight;ci.faceCount=1;ci.arraySize=1;ci.mipCount=1;
@@ -333,7 +364,10 @@ bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,cons
         if(XR_FAILED(g.enumerateImages(out.handle,0,&count,nullptr))||!count){destroyOutputs(s);return false;}
         out.images.assign(count,{XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
         if(XR_FAILED(g.enumerateImages(out.handle,count,&count,reinterpret_cast<XrSwapchainImageBaseHeader*>(out.images.data())))){destroyOutputs(s);return false;}}
-    emit("reconstruction_outputs_created","\"width\":"+std::to_string(s.outputWidth)+",\"height\":"+std::to_string(s.outputHeight)+",\"sampleCount\":1");return true;
+    emit("reconstruction_outputs_created","\"width\":"+std::to_string(s.outputWidth)+",\"height\":"+std::to_string(s.outputHeight)+
+        ",\"requestedWidth\":"+std::to_string(requestedWidth)+",\"requestedHeight\":"+std::to_string(requestedHeight)+
+        ",\"widthClamped\":"+std::string(s.outputWidth<requestedWidth?"true":"false")+",\"heightClamped\":"+
+        std::string(s.outputHeight<requestedHeight?"true":"false")+",\"sampleCount\":1");return true;
 }
 
 struct Fingerprint{bool valid{};std::string reason;XrSession session{XR_NULL_HANDLE};
@@ -361,6 +395,7 @@ Fingerprint inspect(const XrFrameEndInfo* info){
 }
 
 void learn(SessionState& s,const Fingerprint& f){
+    s.mapping.valid=false;
     s.sources=f.handles;Role roles[]={Role::BaseL,Role::BaseR,Role::UnderL,Role::UnderR,Role::FoveaL,Role::FoveaR};
     for(size_t i=0;i<6;++i)swapchains[s.sources[i]].role=roles[i];s.learned=true;
     emit("reconstruction_fingerprint_learned","\"sourceProjectionCount\":3,\"sourceViewCount\":6");
@@ -389,12 +424,14 @@ XrResult XRAPI_PTR layerAcquire(XrSwapchain handle,const XrSwapchainImageAcquire
     XrResult r=g.acquireImage(handle,info,index);if(XR_SUCCEEDED(r)&&it!=swapchains.end()&&index){it->second.acquired.push_back(*index);it->second.waited=false;}return r;}
 XrResult XRAPI_PTR layerWait(XrSwapchain handle,const XrSwapchainImageWaitInfo* info){XrResult r=g.waitImage(handle,info);auto it=swapchains.find(handle);if(XR_SUCCEEDED(r)&&it!=swapchains.end())it->second.waited=true;return r;}
 XrResult XRAPI_PTR layerRelease(XrSwapchain handle,const XrSwapchainImageReleaseInfo* info){auto it=swapchains.find(handle);if(it!=swapchains.end()&&it->second.role!=Role::Unknown){auto s=sessions.find(it->second.session);
-    if(s!=sessions.end()&&s->second.active&&info&&!info->next&&it->second.waited&&it->second.acquired.size()==1&&!it->second.deferred){it->second.deferred=true;emit("source_release_deferred","\"swapchain\":"+std::to_string(hv(handle))+",\"imageIndex\":"+std::to_string(it->second.acquired.front()));return XR_SUCCESS;}
+    if(s!=sessions.end()&&s->second.active&&info&&!info->next&&it->second.waited&&it->second.acquired.size()==1&&!it->second.deferred){it->second.deferred=true;
+        if(sample(frameCounter.load()+1))emit("source_release_deferred","\"swapchain\":"+std::to_string(hv(handle))+",\"imageIndex\":"+std::to_string(it->second.acquired.front()));return XR_SUCCESS;}
     if(s!=sessions.end()&&s->second.active){s->second.active=false;s->second.disabled=true;emit("reconstruction_disabled","\"reason\":\"unsupported_release_sequence\"");}}
     XrResult r=g.releaseImage(handle,info);if(XR_SUCCEEDED(r)&&it!=swapchains.end()){it->second.waited=false;if(!it->second.acquired.empty())it->second.acquired.pop_front();}return r;}
 
 XrResult submitPassthrough(XrSession handle,SessionState* state,const XrFrameEndInfo* info,
                            uint64_t frame,const std::string& reason,bool emitTransform){
+    const uint32_t mask=state?deferredMask(*state):0;
     const bool sourceReleaseSuccess=!state||flushSources(*state);
     const bool outputReleaseSuccess=!state||releaseOutputs(*state);
     const XrFrameEndInfo* submitted=info;XrFrameEndInfo empty{};
@@ -410,7 +447,8 @@ XrResult submitPassthrough(XrSession handle,SessionState* state,const XrFrameEnd
         std::to_string(submitted&&submitted->layerCount==3?3:0)+
         ",\"outputProjectionCount\":0,\"sourceViewCount\":6,\"outputViewCount\":0,\"unsafeLayerCount\":1,"
         "\"reconstructed\":false,\"changed\":false,\"releaseSuccess\":"+
-        std::string(sourceReleaseSuccess&&outputReleaseSuccess?"true":"false"));
+        std::string(sourceReleaseSuccess&&outputReleaseSuccess?"true":"false")+",\"reason\":"+quote(reason)+
+        ",\"deferredMask\":"+std::to_string(mask));
     else if(sample(frame))emit("reconstruction_passthrough","\"frame\":"+std::to_string(frame)+",\"reason\":"+quote(reason));
     XrResult result=g.endFrame(handle,submitted);
     if(sample(frame)||emitTransform)emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(result));
@@ -425,24 +463,35 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
     if(!s.learned||s.sources!=f.handles){flushSources(s);destroyOutputs(s);learn(s,f);XrResult r=g.endFrame(handle,info);
         if(XR_SUCCEEDED(r)&&createOutputs(s,*f.p[1],*f.p[2]))s.active=true;else{s.disabled=true;s.active=false;}
         emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;}
-    bool ready=s.active&&!s.disabled;for(auto source:s.sources){auto it=swapchains.find(source);ready=ready&&it!=swapchains.end()&&it->second.deferred;}
-    if(!ready)return submitPassthrough(handle,&s,info,frame,"source_not_ready",true);
-    if(!acquireOutputs(s))return submitPassthrough(handle,&s,info,frame,"output_acquire_failed",true);
-    if(!compose(s,*f.p[1],*f.p[2]))return submitPassthrough(handle,&s,info,frame,"compose_failed",true);
-    const bool sourceReleaseSuccess=flushSources(s);
-    const bool outputReleaseSuccess=releaseOutputs(s);
-    if(!sourceReleaseSuccess||!outputReleaseSuccess){s.active=false;s.disabled=true;
-        emit("reconstruction_disabled","\"reason\":\"downstream_release_failed\"");
-        emit("single_projection_reconstruction_transform","\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":0,\"outputProjectionCount\":0,\"sourceViewCount\":6,\"outputViewCount\":0,\"unsafeLayerCount\":1,\"reconstructed\":false,\"changed\":false,\"releaseSuccess\":false");
-        XrFrameEndInfo empty=*info;empty.layerCount=0;empty.layers=nullptr;XrResult r=g.endFrame(handle,&empty);
-        emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;}
+    const uint32_t mask=deferredMask(s);
+    const bool reusedOutput=mask==0&&s.active&&!s.disabled&&sameMapping(s,*f.p[1],*f.p[2]);
+    const bool poseChanged=reusedOutput&&cachedPoseChanged(s,*f.p[1]);
+    if(mask!=0x3fu&&!reusedOutput){if(mask)s.mapping.valid=false;const std::string reason=mask?"partial_source_update":
+        (!s.active||s.disabled||!s.mapping.valid?"cached_output_unavailable":"cached_mapping_mismatch");
+        return submitPassthrough(handle,&s,info,frame,reason,true);}
+    if(!reusedOutput){
+        if(!s.active||s.disabled)return submitPassthrough(handle,&s,info,frame,"source_not_ready",true);
+        s.mapping.valid=false;
+        if(!acquireOutputs(s))return submitPassthrough(handle,&s,info,frame,"output_acquire_failed",true);
+        if(!compose(s,*f.p[1],*f.p[2]))return submitPassthrough(handle,&s,info,frame,"compose_failed",true);
+        const bool sourceReleaseSuccess=flushSources(s);
+        const bool outputReleaseSuccess=releaseOutputs(s);
+        if(!sourceReleaseSuccess||!outputReleaseSuccess){s.active=false;s.disabled=true;
+            emit("reconstruction_disabled","\"reason\":\"downstream_release_failed\"");
+            emit("single_projection_reconstruction_transform","\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":0,\"outputProjectionCount\":0,\"sourceViewCount\":6,\"outputViewCount\":0,\"unsafeLayerCount\":1,\"reconstructed\":false,\"changed\":false,\"releaseSuccess\":false,\"reason\":\"downstream_release_failed\",\"deferredMask\":"+std::to_string(mask));
+            XrFrameEndInfo empty=*info;empty.layerCount=0;empty.layers=nullptr;XrResult r=g.endFrame(handle,&empty);
+            emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;}
+    }
     std::array<XrCompositionLayerProjectionView,2> views{};
     for(int eye=0;eye<2;++eye){views[eye]=f.p[1]->views[eye];views[eye].next=nullptr;views[eye].subImage.swapchain=s.outputs[eye].handle;
         views[eye].subImage.imageRect={{0,0},{static_cast<int32_t>(s.outputWidth),static_cast<int32_t>(s.outputHeight)}};views[eye].subImage.imageArrayIndex=0;}
     XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};projection.space=f.p[1]->space;projection.viewCount=2;projection.views=views.data();
     const auto* layer=reinterpret_cast<const XrCompositionLayerBaseHeader*>(&projection);XrFrameEndInfo output=*info;output.layerCount=1;output.layers=&layer;
-    emit("single_projection_reconstruction_transform","\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":1,\"outputProjectionCount\":1,\"sourceViewCount\":6,\"outputViewCount\":2,\"unsafeLayerCount\":0,\"reconstructed\":true,\"changed\":true,\"releaseSuccess\":true,\"outputWidth\":"+std::to_string(s.outputWidth)+",\"outputHeight\":"+std::to_string(s.outputHeight));
-    XrResult r=g.endFrame(handle,&output);emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;
+    emit("single_projection_reconstruction_transform","\"frame\":"+std::to_string(frame)+",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":1,\"outputProjectionCount\":1,\"sourceViewCount\":6,\"outputViewCount\":2,\"unsafeLayerCount\":0,\"reconstructed\":true,\"changed\":true,\"releaseSuccess\":true,\"outputWidth\":"+std::to_string(s.outputWidth)+",\"outputHeight\":"+std::to_string(s.outputHeight)+
+        ",\"reusedOutput\":"+std::string(reusedOutput?"true":"false")+",\"sourceUpdate\":\""+(reusedOutput?"cached":"fresh")+"\",\"poseChanged\":"+
+        std::string(poseChanged?"true":"false")+",\"deferredMask\":"+std::to_string(mask));
+    XrResult r=g.endFrame(handle,&output);if(!reusedOutput&&XR_SUCCEEDED(r))rememberMapping(s,*f.p[1],*f.p[2]);
+    emit("end_frame_result","\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));return r;
 }
 
 XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain handle){auto it=swapchains.find(handle);if(it!=swapchains.end()&&it->second.deferred){auto s=sessions.find(it->second.session);if(s!=sessions.end())flushSources(s->second);}swapchains.erase(handle);return g.destroySwapchain(handle);}

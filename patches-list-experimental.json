@@ -785,6 +785,41 @@
       "options": []
     },
     {
+      "name": "Experimental Two Projection Drop Base",
+      "description": "5002322-only permission-free discriminator. Drops only the redundant first opaque full-FOV projection while forwarding Steam Link's original underside and alpha-foveated projections unchanged.",
+      "default": false,
+      "dependencies": [
+        "ResourcePatch",
+        "ResourcePatch",
+        "RawResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002322,
+                "ARMEABI_V7A": 5002322,
+                "X86_64": 5002322,
+                "X86": 5002322
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Experimental patches for Steam Link 2.0.22 build 5002322."
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Force HMD initialization gates",
       "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313.",
       "default": false,

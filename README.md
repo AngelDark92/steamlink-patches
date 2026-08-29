@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.1-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;20 patches total
+> **[v1.10.1-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -55,7 +55,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -67,6 +67,7 @@ To download it:
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
 | [Experimental Single Projection Reconstruction](#experimental-single-projection-reconstruction) | 5002322-only permission-free experiment. Reconstructs Steam Link's opaque full-FOV underside and alpha-foveated inset into one stereo projection before submission. | 5002322 |  |
+| [Experimental Two Projection Drop Base](#experimental-two-projection-drop-base) | 5002322-only permission-free discriminator. Drops only the redundant first opaque full-FOV projection while forwarding Steam Link's original underside and alpha-foveated projections unchanged. | 5002322 |  |
 
 </details>
 

@@ -31,3 +31,18 @@ set_target_properties(gxr_single_projection_reconstruction_v1 PROPERTIES
     VISIBILITY_INLINES_HIDDEN YES
     OUTPUT_NAME gxr_single_projection_reconstruction_v1
 )
+
+add_library(gxr_two_projection_drop_base_v1 SHARED src/two_projection_drop_base_layer.cpp)
+target_include_directories(gxr_two_projection_drop_base_v1 PRIVATE
+    "${OPENXR_SDK_SOURCE_DIR}/include"
+)
+target_compile_definitions(gxr_two_projection_drop_base_v1 PRIVATE
+    XR_USE_PLATFORM_ANDROID
+    GXR_LAYER_NAME="XR_APILAYER_local_GalaxyXR_two_projection_drop_base_v1"
+)
+target_link_libraries(gxr_two_projection_drop_base_v1 PRIVATE log)
+set_target_properties(gxr_two_projection_drop_base_v1 PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VISIBILITY_INLINES_HIDDEN YES
+    OUTPUT_NAME gxr_two_projection_drop_base_v1
+)

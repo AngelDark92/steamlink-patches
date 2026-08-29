@@ -2,19 +2,23 @@
 
 ## Current conclusion
 
-The 2026-08-26/27 build-5002322 captures reproduce the headset behavior:
+The 2026-08-28 build-5002322 captures prove that single-projection reconstruction improves the permission-free result:
 
-`LOW without Android XR UI → HIGH while UI is visible → LOW after UI disappears`
+`HIGH without Android XR UI → HIGH while UI is visible → HIGH after UI disappears`
 
-The transition is reported as immediate. The later typed timestamps are annotation latency: the palm must face the headset to keep the square visible, which prevents normal typing.
+The APK did not request `SYSTEM_ALERT_WINDOW`, AppOps remained `default`, and repeat 1 recorded `HIGH0`. Repeat 2 recorded `HIGH0`, `HIGH`, and `HIGH1`; its OpenXR trace hit the collector size cap before those markers, so the subjective result is valid but frame-level correlation across the palm interval is incomplete.
 
-Across low, high, and low-again intervals, the captures keep the same decoder, swapchains, image rectangles, three projection layers, session focus, refresh policy, and valid moving gaze pose. The corrected metadata-removal layer transformed 75 sampled frames successfully and still did not change the behavior.
+The v1 implementation is not production-ready. Run 1 reconstructed 7,274 of 7,557 eligible frames and forwarded the original three projections on 283 frames; run 2 reconstructed 359 of 370 captured eligible frames and forwarded 11. Every forwarded frame had zero new source-image releases, while every reconstructed frame had all six. This is repeated-image reuse, not a recorded OpenXR failure. The 1-to-3-to-1 topology switching is the strongest explanation for the visible instability.
 
-Static analysis of Virtual Desktop proves the architectural difference that now drives this experiment: Virtual Desktop reconstructs its foveated streams inside the application and submits one stereo projection, while Steam Link exposes its base, underside, and alpha-foveated images as three projections. The remaining APK-side path is to reconstruct Steam Link's images before Android XR composition.
+Each reconstructed frame also left one `GL_INVALID_ENUM`, later consumed by Steam Link's `CheckGL`. The layer used an invalid indexed sampler-binding query and therefore restored zero-valued sampler state. The v1.1 source fixes that query, reuses the last released private output only when the full/foveal FOV mapping and space still match, records pose changes separately, reports fallback reasons/readiness masks, and samples release-success telemetry to avoid another log-cap failure. The v1.1 build is statically compiled but has not been installed or tested on the headset.
 
-## Only active patch
+The reported single-projection softness is plausible without implying that one projection is the high-resolution trigger. Reconstruction resolves the original 1536x1536 MSAA2 images into new sampleCount-1 swapchains, linearly resamples the foveal inset, and was capped by the runtime's 3152x3682 maximum. That extra image path can reduce visible detail even if the resulting topology selects a better compositor policy. The two-projection mode removes all of those reconstruction variables.
 
-Select **Experimental Single Projection Reconstruction** in Morphe for Steam Link 2.0.22 build 5002322.
+This result does not prove that projection count alone is Android XR's trigger. Reconstruction simultaneously changes layer count, swapchain identity and dimensions, MSAA resolve, alpha handling, and sampling. The clean next discriminator is now implemented as `two_projection_drop_base_v1`: it drops only the compositionally hidden base and forwards the original underside plus foveal projection unchanged. The historical two-layer patch removed the underside instead, so it did not test this hypothesis. The new mode has passed static build/provenance tests but has not been installed or run on the headset.
+
+## Available experimental patches
+
+Select exactly one of **Experimental Single Projection Reconstruction** or **Experimental Two Projection Drop Base** in Morphe for Steam Link 2.0.22 build 5002322. Patch generation fails if both modes are selected.
 
 Do not select **Appear on top** or any retired resolution experiment.
 
@@ -26,7 +30,16 @@ The patch:
 - recognizes only the exact six-swapchain Steam Link streaming topology;
 - temporarily retains recognized source images, resolves the multisampled opaque underside and alpha-foveated images, and composites them into two private full-density eye swapchains. The earlier base projection is not sampled because the later same-pose full-FOV underside is opaque and fully covers it under OpenXR ordering;
 - replaces the three source projections with one opaque stereo projection;
+- reuses the last released private output on repeated-image frames only while the source handles, projection space, and full/foveal FOV mapping remain compatible;
 - forwards the original frame after safely releasing every held image when any topology, EGL, GL, or synchronization prerequisite is missing.
+
+For the next test, prefer **Experimental Two Projection Drop Base**. Mode `two_projection_drop_base_v1`:
+
+- recognizes the same exact three-projection, six-swapchain 5002322 topology;
+- removes only projection 0 after proving it has the same pose/FOV as the later opaque full-FOV underside;
+- forwards the original underside and alpha-foveated projection structs, swapchains, rectangles, poses, FOVs, flags, and order unchanged;
+- creates no private swapchains and performs no GL resolve, resampling, alpha flattening, or source-image lifetime interception;
+- permanently fails open for the session if the layout changes after activation, preventing mixed 2/3-projection submission.
 
 ## Capture commands
 
@@ -45,6 +58,13 @@ $common = @{
 ```
 
 The script discovers the installed APK hashes. No pre-known Morphe APK SHA-256 is required.
+
+For the two-projection discriminator, change the common fields to:
+
+```powershell
+Mode = 'two_projection_drop_base_v1'
+ExperimentId = 'two-projection-drop-base-v1'
+```
 
 During each run it temporarily streams all Android logcat buffers so unknown XR tags are not lost, but archives only size-capped XR/SystemUI/OpenXR/Steam Link/compositor lines. It also samples filtered WindowManager, ActivityManager, and SurfaceFlinger layer state around the palm observation window. Cleanup stops the background collectors and runs `adb kill-server`, including when capture fails.
 
@@ -72,11 +92,20 @@ Success requires two matching cold runs with:
 - high resolution without SystemUI in repeat 1;
 - high resolution before, during, and after SystemUI in repeat 2;
 - no overlay permission and no Steam Link-owned type-2038 window;
-- trace build ID `single-projection-reconstruction-v1-20260828`;
+- trace build ID `single-projection-reconstruction-v1.1-20260829`;
 - sampled frames proving three input projections and six views became one output projection and two views with successful `xrEndFrame`;
+- no post-activation fallback to the original three projections; repeated frames must report `sourceUpdate=cached` and `reusedOutput=true` or a precise fail-open reason;
+- no reconstruction-correlated `GL_INVALID_ENUM` and no targeted-log size-cap failure;
 - no new visual, decoder, OpenXR, or SteamVR regression.
 
 If a trace-proven reconstructed single projection remains UI-dependent, stop APK experiments. The remaining fix boundary is Android XR/SpaceFlinger or Valve's renderer rather than an ordinary permission-free APK.
+
+For `two_projection_drop_base_v1`, require build ID `two-projection-drop-base-v1-20260829`, trace-proven 3-to-2 transforms, matching successful `xrEndFrame` results, and zero disable events. Interpret the result as follows:
+
+- high and sharper than reconstruction: single projection is unnecessary; the redundant-base/three-layer topology selects the low-quality path, while reconstruction caused the remaining softness;
+- low while single projection is high: dropping the base is insufficient; either multiple projections/alpha-fovea or another reconstruction property is involved;
+- high but below the overlay control: topology explains the low-to-high transition, but the Android XR overlay changes an additional quality state;
+- any mixed result, disable event, fallback, or `xrEndFrame` error: inconclusive.
 
 ## Retired history
 
@@ -91,5 +120,6 @@ cmake -S extensions\resolution-trace-layer -B extensions\resolution-trace-layer\
   -DOPENXR_SDK_SOURCE_DIR="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/GalaxyXR-APK/tools-galaxyxr-native/OpenXR-SDK-1.1.61"
 cmake --build extensions\resolution-trace-layer\build-android-new
 Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_single_projection_reconstruction_v1.so patches\src\main\resources\steamlink\androidxr\
+Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_two_projection_drop_base_v1.so patches\src\main\resources\steamlink\androidxr\
 .\gradlew.bat :patches:generatePatchesList -PreleaseChannel=all
 ```

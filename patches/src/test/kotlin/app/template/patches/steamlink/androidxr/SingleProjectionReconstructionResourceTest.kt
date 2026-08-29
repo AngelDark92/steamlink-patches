@@ -22,7 +22,7 @@ class SingleProjectionReconstructionResourceTest {
             .digest(library)
             .joinToString("") { "%02x".format(it) }
         assertEquals(
-            "14d615bd5dd095e2407fef94078d32b3e1fcd114680fdd9c05aabafa850e080c",
+            "584a8d72d5ed563fff3a1a1a22414dbd6533ea6c9ab9611e2e104ae2a07fefd7",
             sha256,
         )
 
