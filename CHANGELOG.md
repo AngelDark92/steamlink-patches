@@ -1,3 +1,9 @@
+## [1.10.1-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.7...v1.10.1-dev.8) (2026-08-29)
+
+### 🐛 Bug Fixes
+
+* single projection resolution and double projection recognition ([69f63ef](https://github.com/AngelDark92/steamlink-patches/commit/69f63efad45cd30711ce230147a88f16ba85e054))
+
 ## [1.10.1-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.6...v1.10.1-dev.7) (2026-08-29)
 
 ### 🐛 Bug Fixes
