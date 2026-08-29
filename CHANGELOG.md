@@ -1,3 +1,9 @@
+## [1.10.1-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.4...v1.10.1-dev.5) (2026-08-29)
+
+### 🐛 Bug Fixes
+
+* patch with three projection samples but mods to make it high res ([53fe27d](https://github.com/AngelDark92/steamlink-patches/commit/53fe27dd97dc6d2a110f91eb1e507c8dcba25209))
+
 ## [1.10.1-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.3...v1.10.1-dev.4) (2026-08-29)
 
 ### 🐛 Bug Fixes
