@@ -22,7 +22,7 @@ Build `single-projection-reconstruction-v1.1-20260829` fixes the sampler query, 
 
 Build `two-projection-drop-base-v1-20260829` implements the previously untried discriminator: it removes only the redundant first opaque full-FOV projection, leaving the original underside plus foveal projections and image lifetime untouched. It has passed static build/provenance tests but has not been installed or tested on the headset. The historical legacy two-layer experiment removed the underside, so it is not evidence against this test.
 
-Build `three-projection-sampler-proxy-v1-20260829` implements a separate untried discriminator. It preserves all three projection headers, six views, ordering, poses, FOVs, flags, spaces, rectangles, and projection metadata while resolving each 1536x1536 MSAA2 source 1:1 into a private single-sample swapchain. It has passed static build/provenance tests but has not been installed or tested on the headset. It jointly changes swapchain identity and sample-count/resource allocation. Its application texture parameters are recorded, but are not claimed as compositor sampler state.
+The first live `three-projection-sampler-proxy-v1` capture is invalid as quality evidence: v1 learned the exact topology but disabled on the next zero-layer spinner/idle frame before any proxy transform. The recorded `LOW0` came after original-submission fallback. Build `three-projection-sampler-proxy-v1.1-20260829` now primes all six proxy buffers, tolerates legal zero-layer idle frames without mixing original projections, and marks activation only on its first real transform. It is statically validated but still needs a new headset run.
 
 ## Retired permission and window probes
 

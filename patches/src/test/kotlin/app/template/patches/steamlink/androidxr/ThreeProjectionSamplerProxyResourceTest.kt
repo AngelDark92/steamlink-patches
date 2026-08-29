@@ -43,11 +43,13 @@ class ThreeProjectionSamplerProxyResourceTest {
             .digest(library)
             .joinToString("") { "%02x".format(it) }
         assertEquals(
-            "8c054911ab86f324d49333836e3a7c997fb0f8b6c9a299be3b6c76d393fb19f2",
+            "6d2e2ca53bd07fa2c928cb21542132321682ee6b8d20b737338b3bf48704fa29",
             sha256,
         )
         val nativeStrings = library.toString(Charsets.ISO_8859_1)
-        assertTrue(nativeStrings.contains("three-projection-sampler-proxy-v1-20260829"))
+        assertTrue(nativeStrings.contains("three-projection-sampler-proxy-v1.1-20260829"))
+        assertTrue(nativeStrings.contains("three_projection_sampler_proxy_primed"))
+        assertTrue(nativeStrings.contains("three_projection_sampler_proxy_idle_frame"))
         assertTrue(nativeStrings.contains("three_projection_sampler_proxy_transform"))
         assertTrue(nativeStrings.contains("three_projection_sampler_proxy_texture_state"))
         assertTrue(nativeStrings.contains("three_projection_sampler_proxy_disabled"))

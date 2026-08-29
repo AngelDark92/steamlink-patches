@@ -30,7 +30,7 @@ namespace {
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
 constexpr char kModeName[] = "three_projection_sampler_proxy_v1";
-constexpr char kBuildId[] = "three-projection-sampler-proxy-v1-20260829";
+constexpr char kBuildId[] = "three-projection-sampler-proxy-v1.1-20260829";
 constexpr uint32_t kExtent = 1536;
 constexpr int64_t kFormat = GL_SRGB8_ALPHA8;
 constexpr XrSwapchainUsageFlags kUsage =
@@ -187,9 +187,24 @@ bool safeProjectionNext(const void* next) {
 
 Fingerprint inspect(const XrFrameEndInfo* info) {
     Fingerprint f;
-    if (!info || info->type != XR_TYPE_FRAME_END_INFO || info->next ||
-        info->layerCount != 3 || !info->layers) {
-        f.reason = "frame_end_info";
+    if (!info) {
+        f.reason = "null";
+        return f;
+    }
+    if (info->type != XR_TYPE_FRAME_END_INFO) {
+        f.reason = "type";
+        return f;
+    }
+    if (info->next) {
+        f.reason = "next";
+        return f;
+    }
+    if (info->layerCount == 0) {
+        f.reason = "no_layers";
+        return f;
+    }
+    if (info->layerCount != 3 || !info->layers) {
+        f.reason = "layer_count";
         return f;
     }
     for (size_t layer = 0; layer < 3; ++layer) {
@@ -327,6 +342,8 @@ bool releaseProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
     return ok;
 }
 
+bool primeProxies(SessionState& state, std::unique_lock<std::mutex>& lock);
+
 void destroyProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
     releaseProxies(state, lock);
     for (auto& proxy : state.proxies) {
@@ -387,17 +404,22 @@ bool acquireProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
         XrResult result = callUnlocked(lock,
             [&] { return g.acquireImage(proxy.handle, &acquireInfo, &proxy.index); });
         if (XR_FAILED(result)) {
-            proxy.poisoned = true;
-            emit("proxy_wait_failure", "\"swapchain\":" +
+            emit("proxy_acquire_failure", "\"swapchain\":" +
                 std::to_string(hv(proxy.handle)) + ",\"result\":" + std::to_string(result) +
-                ",\"cleanup\":\"runtime_session_teardown\"");
+                ",\"cleanup\":\"none_required\"");
             return false;
         }
         proxy.acquired = true;
         XrSwapchainImageWaitInfo waitInfo{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
         waitInfo.timeout = XR_INFINITE_DURATION;
         result = callUnlocked(lock, [&] { return g.waitImage(proxy.handle, &waitInfo); });
-        if (XR_FAILED(result)) return false;
+        if (XR_FAILED(result)) {
+            proxy.poisoned = true;
+            emit("proxy_wait_failure", "\"swapchain\":" +
+                std::to_string(hv(proxy.handle)) + ",\"result\":" + std::to_string(result) +
+                ",\"cleanup\":\"runtime_session_teardown\"");
+            return false;
+        }
         proxy.waited = true;
     }
     return true;
@@ -405,6 +427,7 @@ bool acquireProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
 
 struct SavedGl {
     GLint readFbo{}, drawFbo{}, texture2d{}, scissor[4]{};
+    GLboolean colorMask[4]{};
     GLboolean scissorEnabled{};
 };
 SavedGl saveGl() {
@@ -413,6 +436,7 @@ SavedGl saveGl() {
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &saved.drawFbo);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &saved.texture2d);
     glGetIntegerv(GL_SCISSOR_BOX, saved.scissor);
+    glGetBooleanv(GL_COLOR_WRITEMASK, saved.colorMask);
     saved.scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
     return saved;
 }
@@ -422,6 +446,7 @@ void restoreGl(const SavedGl& saved) {
     glBindTexture(GL_TEXTURE_2D, saved.texture2d);
     glScissor(saved.scissor[0], saved.scissor[1], saved.scissor[2], saved.scissor[3]);
     saved.scissorEnabled ? glEnable(GL_SCISSOR_TEST) : glDisable(GL_SCISSOR_TEST);
+    glColorMask(saved.colorMask[0], saved.colorMask[1], saved.colorMask[2], saved.colorMask[3]);
 }
 
 GLenum drainGlErrors() {
@@ -526,12 +551,63 @@ bool resolveSources(SessionState& state) {
             ok = false;
         }
     }
-    if (ok) glFlush();
+    glFlush();
     restoreGl(saved);
     return ok;
 }
 
+bool primeProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
+    if (!acquireProxies(state, lock)) return false;
+    if (eglGetCurrentContext() != state.context || eglGetCurrentDisplay() != state.display) {
+        emit("proxy_gl_failure", "\"reason\":\"prime_egl_context_mismatch\"");
+        releaseProxies(state, lock);
+        return false;
+    }
+    if (!state.drawFbo) glGenFramebuffers(1, &state.drawFbo);
+    if (!state.drawFbo) {
+        releaseProxies(state, lock);
+        return false;
+    }
+    const SavedGl saved = saveGl();
+    drainGlErrors();
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    const GLfloat transparent[] = {0.f, 0.f, 0.f, 0.f};
+    bool ok = true;
+    for (size_t i = 0; i < state.proxies.size() && ok; ++i) {
+        auto& proxy = state.proxies[i];
+        if (!proxy.acquired || proxy.index >= proxy.images.size()) {
+            ok = false;
+            break;
+        }
+        const GLuint texture = proxy.images[proxy.index].image;
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.drawFbo);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+            GL_TEXTURE_2D, texture, 0);
+        const GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+        glDrawBuffers(1, drawBuffers);
+        ok = configureProxyTexture(state, i, texture) &&
+            glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+        if (ok) glClearBufferfv(GL_COLOR, 0, transparent);
+        const GLenum error = drainGlErrors();
+        if (error != GL_NO_ERROR) {
+            emit("proxy_gl_failure", "\"reason\":\"prime_clear_error\",\"proxyIndex\":" +
+                std::to_string(i) + ",\"glError\":" + std::to_string(error));
+            ok = false;
+        }
+    }
+    if (ok) glFlush();
+    restoreGl(saved);
+    const bool releaseOk = releaseProxies(state, lock);
+    emit("three_projection_sampler_proxy_primed",
+        "\"session\":" + std::to_string(hv(state.session)) +
+        ",\"proxySwapchainCount\":6,\"success\":" +
+        (ok && releaseOk ? "true" : "false"));
+    return ok && releaseOk;
+}
+
 void disable(SessionState& state, const std::string& reason) {
+    if (state.disabled) return;
     state.active = false;
     state.disabled = true;
     state.cacheValid = false;
@@ -700,6 +776,26 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     if (sit == sessions.end())
         return passthrough(session, nullptr, info, frame, "unknown_session", false, lock);
     SessionState& state = sit->second;
+    const bool idleFrame = info && info->type == XR_TYPE_FRAME_END_INFO && !info->next &&
+        info->layerCount == 0;
+    if (idleFrame && state.learned && state.active && !state.disabled) {
+        const uint32_t mask = deferredMask(state);
+        emit("three_projection_sampler_proxy_idle_frame", "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
+            ",\"layerCount\":0,\"deferredMask\":" + std::to_string(mask) +
+            ",\"accepted\":" + (mask == 0 ? "true" : "false"));
+        if (mask != 0) {
+            disable(state, "idle_with_deferred_sources");
+            return passthrough(session, &state, info, frame,
+                "idle_with_deferred_sources", true, lock);
+        }
+        XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, info); });
+        if (XR_FAILED(result)) disable(state, "idle_end_frame_failed");
+        emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
+            ",\"idle\":true,\"result\":" + std::to_string(result));
+        return result;
+    }
     if (!fingerprint.valid || fingerprint.session != session) {
         if (state.learned && !state.disabled) disable(state, "unsafe_" + fingerprint.reason);
         return passthrough(session, &state, info, frame, fingerprint.reason, false, lock);
@@ -710,9 +806,8 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
         XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, info); });
         learn(state, fingerprint);
         if (XR_SUCCEEDED(result) && state.context != EGL_NO_CONTEXT &&
-            createProxies(state, lock)) {
+            createProxies(state, lock) && primeProxies(state, lock)) {
             state.active = true;
-            state.everActivated = true;
         }
         else
             disable(state, "initialization_failed");
@@ -760,6 +855,7 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     }
     XrFrameEndInfo output = *info;
     output.layers = layers.data();
+    state.everActivated = true;
     emit("three_projection_sampler_proxy_transform",
         "\"frame\":" + std::to_string(frame) +
         ",\"session\":" + std::to_string(hv(session)) +
