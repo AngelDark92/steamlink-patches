@@ -6,6 +6,7 @@
 #include <openxr/openxr_loader_negotiation.h>
 #include <openxr/openxr_platform.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -30,7 +31,7 @@ namespace {
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
 constexpr char kModeName[] = "three_projection_sampler_proxy_v1";
-constexpr char kBuildId[] = "three-projection-sampler-proxy-v1.1-20260829";
+constexpr char kBuildId[] = "three-projection-sampler-proxy-v1.2-20260829";
 constexpr uint32_t kExtent = 1536;
 constexpr int64_t kFormat = GL_SRGB8_ALPHA8;
 constexpr XrSwapchainUsageFlags kUsage =
@@ -82,6 +83,8 @@ struct SessionState {
     std::array<ProxyState, 6> proxies{};
     GLuint readFbo{}, drawFbo{};
     std::array<bool, 6> textureStateEmitted{};
+    size_t stagedProxyCount{};
+    std::string lastAuxiliarySignature;
     bool learned{}, active{}, everActivated{}, disabled{}, cacheValid{};
 };
 
@@ -342,7 +345,7 @@ bool releaseProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
     return ok;
 }
 
-bool primeProxies(SessionState& state, std::unique_lock<std::mutex>& lock);
+bool primeProxy(SessionState& state, size_t index, std::unique_lock<std::mutex>& lock);
 
 void destroyProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
     releaseProxies(state, lock);
@@ -358,42 +361,52 @@ void destroyProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
     }
     state.readFbo = state.drawFbo = 0;
     state.textureStateEmitted.fill(false);
+    state.stagedProxyCount = 0;
+    state.active = false;
     state.cacheValid = false;
 }
 
-bool createProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
-    for (auto& proxy : state.proxies) {
-        XrSwapchainCreateInfo ci{XR_TYPE_SWAPCHAIN_CREATE_INFO};
-        ci.usageFlags = kUsage;
-        ci.format = kFormat;
-        ci.sampleCount = 1;
-        ci.width = kExtent;
-        ci.height = kExtent;
-        ci.faceCount = 1;
-        ci.arraySize = 1;
-        ci.mipCount = 1;
-        if (XR_FAILED(callUnlocked(lock,
-                [&] { return g.createSwapchain(state.session, &ci, &proxy.handle); }))) {
-            destroyProxies(state, lock);
-            return false;
-        }
-        uint32_t count{};
-        if (XR_FAILED(callUnlocked(lock,
-                [&] { return g.enumerateImages(proxy.handle, 0, &count, nullptr); })) || !count) {
-            destroyProxies(state, lock);
-            return false;
-        }
-        proxy.images.assign(count, {XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
-        if (XR_FAILED(callUnlocked(lock, [&] {
-                return g.enumerateImages(proxy.handle, count, &count,
-                    reinterpret_cast<XrSwapchainImageBaseHeader*>(proxy.images.data()));
-            }))) {
-            destroyProxies(state, lock);
-            return false;
-        }
+bool createProxy(SessionState& state, size_t index, std::unique_lock<std::mutex>& lock) {
+    if (index >= state.proxies.size() || state.proxies[index].handle) return false;
+    auto& proxy = state.proxies[index];
+    XrSwapchainCreateInfo ci{XR_TYPE_SWAPCHAIN_CREATE_INFO};
+    ci.usageFlags = kUsage;
+    ci.format = kFormat;
+    ci.sampleCount = 1;
+    ci.width = kExtent;
+    ci.height = kExtent;
+    ci.faceCount = 1;
+    ci.arraySize = 1;
+    ci.mipCount = 1;
+    XrResult result = callUnlocked(lock,
+        [&] { return g.createSwapchain(state.session, &ci, &proxy.handle); });
+    if (XR_FAILED(result)) {
+        emit("proxy_stage_failure", "\"proxyIndex\":" + std::to_string(index) +
+            ",\"stage\":\"create\",\"result\":" + std::to_string(result));
+        return false;
     }
-    emit("proxy_swapchains_created", "\"count\":6,\"width\":1536,\"height\":1536,"
-        "\"sourceSampleCount\":2,\"proxySampleCount\":1,\"scaleApplied\":false");
+    uint32_t count{};
+    result = callUnlocked(lock,
+        [&] { return g.enumerateImages(proxy.handle, 0, &count, nullptr); });
+    if (XR_FAILED(result) || !count) {
+        emit("proxy_stage_failure", "\"proxyIndex\":" + std::to_string(index) +
+            ",\"stage\":\"enumerate_count\",\"result\":" + std::to_string(result));
+        return false;
+    }
+    proxy.images.assign(count, {XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
+    result = callUnlocked(lock, [&] {
+        return g.enumerateImages(proxy.handle, count, &count,
+            reinterpret_cast<XrSwapchainImageBaseHeader*>(proxy.images.data()));
+    });
+    if (XR_FAILED(result)) {
+        emit("proxy_stage_failure", "\"proxyIndex\":" + std::to_string(index) +
+            ",\"stage\":\"enumerate_images\",\"result\":" + std::to_string(result));
+        return false;
+    }
+    emit("proxy_staged", "\"proxyIndex\":" + std::to_string(index) +
+        ",\"swapchain\":" + std::to_string(hv(proxy.handle)) +
+        ",\"imageCount\":" + std::to_string(count) +
+        ",\"width\":1536,\"height\":1536,\"sampleCount\":1");
     return true;
 }
 
@@ -422,6 +435,34 @@ bool acquireProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
         }
         proxy.waited = true;
     }
+    return true;
+}
+
+bool acquireProxy(SessionState& state, size_t index, std::unique_lock<std::mutex>& lock) {
+    if (index >= state.proxies.size()) return false;
+    auto& proxy = state.proxies[index];
+    if (!proxy.handle || proxy.acquired || proxy.poisoned) return false;
+    XrSwapchainImageAcquireInfo acquireInfo{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+    XrResult result = callUnlocked(lock,
+        [&] { return g.acquireImage(proxy.handle, &acquireInfo, &proxy.index); });
+    if (XR_FAILED(result)) {
+        emit("proxy_acquire_failure", "\"proxyIndex\":" + std::to_string(index) +
+            ",\"swapchain\":" + std::to_string(hv(proxy.handle)) +
+            ",\"result\":" + std::to_string(result));
+        return false;
+    }
+    proxy.acquired = true;
+    XrSwapchainImageWaitInfo waitInfo{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
+    waitInfo.timeout = XR_INFINITE_DURATION;
+    result = callUnlocked(lock, [&] { return g.waitImage(proxy.handle, &waitInfo); });
+    if (XR_FAILED(result)) {
+        proxy.poisoned = true;
+        emit("proxy_wait_failure", "\"proxyIndex\":" + std::to_string(index) +
+            ",\"swapchain\":" + std::to_string(hv(proxy.handle)) +
+            ",\"result\":" + std::to_string(result));
+        return false;
+    }
+    proxy.waited = true;
     return true;
 }
 
@@ -556,8 +597,8 @@ bool resolveSources(SessionState& state) {
     return ok;
 }
 
-bool primeProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
-    if (!acquireProxies(state, lock)) return false;
+bool primeProxy(SessionState& state, size_t index, std::unique_lock<std::mutex>& lock) {
+    if (!acquireProxy(state, index, lock)) return false;
     if (eglGetCurrentContext() != state.context || eglGetCurrentDisplay() != state.display) {
         emit("proxy_gl_failure", "\"reason\":\"prime_egl_context_mismatch\"");
         releaseProxies(state, lock);
@@ -573,35 +614,31 @@ bool primeProxies(SessionState& state, std::unique_lock<std::mutex>& lock) {
     glDisable(GL_SCISSOR_TEST);
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     const GLfloat transparent[] = {0.f, 0.f, 0.f, 0.f};
-    bool ok = true;
-    for (size_t i = 0; i < state.proxies.size() && ok; ++i) {
-        auto& proxy = state.proxies[i];
-        if (!proxy.acquired || proxy.index >= proxy.images.size()) {
-            ok = false;
-            break;
-        }
+    auto& proxy = state.proxies[index];
+    bool ok = proxy.acquired && proxy.index < proxy.images.size();
+    if (ok) {
         const GLuint texture = proxy.images[proxy.index].image;
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, state.drawFbo);
         glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
             GL_TEXTURE_2D, texture, 0);
         const GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
         glDrawBuffers(1, drawBuffers);
-        ok = configureProxyTexture(state, i, texture) &&
+        ok = configureProxyTexture(state, index, texture) &&
             glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
         if (ok) glClearBufferfv(GL_COLOR, 0, transparent);
         const GLenum error = drainGlErrors();
         if (error != GL_NO_ERROR) {
             emit("proxy_gl_failure", "\"reason\":\"prime_clear_error\",\"proxyIndex\":" +
-                std::to_string(i) + ",\"glError\":" + std::to_string(error));
+                std::to_string(index) + ",\"glError\":" + std::to_string(error));
             ok = false;
         }
     }
-    if (ok) glFlush();
+    glFlush();
     restoreGl(saved);
     const bool releaseOk = releaseProxies(state, lock);
-    emit("three_projection_sampler_proxy_primed",
+    emit("proxy_primed",
         "\"session\":" + std::to_string(hv(state.session)) +
-        ",\"proxySwapchainCount\":6,\"success\":" +
+        ",\"proxyIndex\":" + std::to_string(index) + ",\"success\":" +
         (ok && releaseOk ? "true" : "false"));
     return ok && releaseOk;
 }
@@ -620,9 +657,173 @@ void learn(SessionState& state, const Fingerprint& fingerprint) {
     state.sources = fingerprint.handles;
     for (XrSwapchain handle : state.sources) swapchains[handle].source = true;
     state.learned = true;
+    state.lastAuxiliarySignature.clear();
     emit("proxy_fingerprint_learned",
-        "\"sourceProjectionCount\":3,\"sourceViewCount\":6,\"sourceExtent\":1536,"
+        "\"session\":" + std::to_string(hv(state.session)) +
+        ",\"sourceProjectionCount\":3,\"sourceViewCount\":6,\"sourceExtent\":1536,"
         "\"sourceSampleCount\":2,\"sourceFormat\":35907");
+}
+
+void forgetSources(SessionState& state) {
+    for (XrSwapchain handle : state.sources) {
+        auto it = swapchains.find(handle);
+        if (it != swapchains.end()) it->second.source = false;
+    }
+    state.sources.fill(XR_NULL_HANDLE);
+    state.learned = false;
+    state.active = false;
+    state.everActivated = false;
+    state.cacheValid = false;
+}
+
+bool disarm(SessionState& state, const std::string& reason,
+    std::unique_lock<std::mutex>& lock, bool disableOnFailure = true) {
+    const bool wasEverActivated = state.everActivated;
+    const bool sourceOk = flushSources(state, lock);
+    const bool proxyOk = releaseProxies(state, lock);
+    forgetSources(state);
+    destroyProxies(state, lock);
+    emit("proxy_disarmed", "\"session\":" + std::to_string(hv(state.session)) +
+        ",\"reason\":" + quote(reason) +
+        ",\"everActivated\":" + (wasEverActivated ? "true" : "false") +
+        ",\"sourceReleaseSuccess\":" + (sourceOk ? "true" : "false") +
+        ",\"proxyReleaseSuccess\":" + (proxyOk ? "true" : "false"));
+    if ((!sourceOk || !proxyOk) && disableOnFailure) {
+        disable(state, "disarm_release_failed");
+        return false;
+    }
+    return sourceOk && proxyOk;
+}
+
+bool isLearnedSource(const SessionState& state, XrSwapchain handle) {
+    if (!state.learned || handle == XR_NULL_HANDLE) return false;
+    for (XrSwapchain source : state.sources)
+        if (source != XR_NULL_HANDLE && source == handle) return true;
+    return false;
+}
+
+struct AuxiliaryObservation {
+    uint32_t layerCount{};
+    std::array<int64_t, 3> layerTypes{};
+    uint32_t recordedTypeCount{};
+    bool referencesLearnedSources{};
+    std::string signature;
+};
+
+AuxiliaryObservation observeAuxiliary(const SessionState& state, const XrFrameEndInfo* info) {
+    AuxiliaryObservation observation;
+    if (!info || info->type != XR_TYPE_FRAME_END_INFO) {
+        observation.signature = "invalid";
+        return observation;
+    }
+    observation.layerCount = info->layerCount;
+    if (!info->layers) {
+        observation.signature = std::to_string(info->layerCount) + ":null";
+        return observation;
+    }
+    for (uint32_t i = 0; i < info->layerCount; ++i) {
+        const auto* layer = info->layers[i];
+        if (!layer) continue;
+        if (i < observation.layerTypes.size()) {
+            observation.layerTypes[i] = static_cast<int64_t>(layer->type);
+            observation.recordedTypeCount = i + 1;
+        }
+        if (layer->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION) {
+            const auto* projection = reinterpret_cast<const XrCompositionLayerProjection*>(layer);
+            if (projection->views) {
+                for (uint32_t view = 0; view < projection->viewCount; ++view)
+                    observation.referencesLearnedSources |=
+                        isLearnedSource(state, projection->views[view].subImage.swapchain);
+            }
+        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_QUAD) {
+            const auto* quad = reinterpret_cast<const XrCompositionLayerQuad*>(layer);
+            observation.referencesLearnedSources |=
+                isLearnedSource(state, quad->subImage.swapchain);
+        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR) {
+            const auto* cylinder = reinterpret_cast<const XrCompositionLayerCylinderKHR*>(layer);
+            observation.referencesLearnedSources |=
+                isLearnedSource(state, cylinder->subImage.swapchain);
+        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_CUBE_KHR) {
+            const auto* cube = reinterpret_cast<const XrCompositionLayerCubeKHR*>(layer);
+            observation.referencesLearnedSources |=
+                isLearnedSource(state, cube->swapchain);
+        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_EQUIRECT_KHR) {
+            const auto* equirect = reinterpret_cast<const XrCompositionLayerEquirectKHR*>(layer);
+            observation.referencesLearnedSources |=
+                isLearnedSource(state, equirect->subImage.swapchain);
+        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR) {
+            const auto* equirect = reinterpret_cast<const XrCompositionLayerEquirect2KHR*>(layer);
+            observation.referencesLearnedSources |=
+                isLearnedSource(state, equirect->subImage.swapchain);
+        }
+    }
+    std::ostringstream signature;
+    signature << observation.layerCount;
+    for (uint32_t i = 0; i < observation.recordedTypeCount; ++i)
+        signature << ':' << observation.layerTypes[i];
+    signature << ':' << observation.referencesLearnedSources;
+    observation.signature = signature.str();
+    return observation;
+}
+
+XrResult submitAuxiliary(XrSession session, SessionState& state,
+    const XrFrameEndInfo* info, uint64_t frame, const std::string& reason,
+    std::unique_lock<std::mutex>& lock) {
+    const AuxiliaryObservation observation = observeAuxiliary(state, info);
+    const uint32_t mask = deferredMask(state);
+    bool auxiliaryOk = true;
+    bool cacheRefreshed = false;
+    bool sourceOk = true;
+    bool proxyOk = true;
+    if (state.active && mask == 0x3fu) {
+        auxiliaryOk = acquireProxies(state, lock) && resolveSources(state);
+        sourceOk = flushSources(state, lock);
+        proxyOk = releaseProxies(state, lock);
+        cacheRefreshed = auxiliaryOk && sourceOk && proxyOk;
+        state.cacheValid = cacheRefreshed;
+    } else {
+        sourceOk = flushSources(state, lock);
+        proxyOk = releaseProxies(state, lock);
+        if (mask) state.cacheValid = false;
+    }
+    const bool changed = observation.signature != state.lastAuxiliarySignature;
+    state.lastAuxiliarySignature = observation.signature;
+    if (changed || sample(frame) || mask) {
+        std::ostringstream types;
+        types << '[';
+        for (uint32_t i = 0; i < observation.recordedTypeCount; ++i) {
+            if (i) types << ',';
+            types << observation.layerTypes[i];
+        }
+        types << ']';
+        emit("three_projection_sampler_proxy_auxiliary",
+            "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
+            ",\"layerCount\":" + std::to_string(observation.layerCount) +
+            ",\"layerTypes\":" + types.str() +
+            ",\"referencesLearnedSources\":" +
+                (observation.referencesLearnedSources ? "true" : "false") +
+            ",\"everActivated\":" + (state.everActivated ? "true" : "false") +
+            ",\"deferredMask\":" + std::to_string(mask) +
+            ",\"cacheRefreshed\":" + (cacheRefreshed ? "true" : "false") +
+            ",\"cacheInvalidated\":" + (mask && !cacheRefreshed ? "true" : "false") +
+            ",\"reason\":" + quote(reason));
+    }
+    const XrFrameEndInfo* submitted = info;
+    XrFrameEndInfo empty{XR_TYPE_FRAME_END_INFO};
+    if (!auxiliaryOk || !sourceOk || !proxyOk) {
+        disable(state, auxiliaryOk ? "auxiliary_release_failed" : "auxiliary_proxy_refresh_failed");
+        if (info) empty = *info;
+        empty.layerCount = 0;
+        empty.layers = nullptr;
+        submitted = &empty;
+    }
+    XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, submitted); });
+    if (changed || sample(frame) || mask || XR_FAILED(result))
+        emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
+            ",\"auxiliary\":true,\"result\":" + std::to_string(result));
+    return result;
 }
 
 XrResult passthrough(XrSession session, SessionState* state, const XrFrameEndInfo* info,
@@ -722,8 +923,12 @@ XrResult XRAPI_PTR layerAcquire(XrSwapchain handle,
     if (it != swapchains.end() && it->second.deferred) {
         auto sit = sessions.find(it->second.session);
         if (sit != sessions.end()) {
-            flushSources(sit->second, lock);
-            disable(sit->second, "acquire_before_end_frame");
+            const bool flushed = flushSources(sit->second, lock);
+            sit->second.cacheValid = false;
+            emit("proxy_source_reacquire", "\"session\":" +
+                std::to_string(hv(sit->second.session)) +
+                ",\"flushSuccess\":" + (flushed ? "true" : "false"));
+            if (!flushed) disable(sit->second, "reacquire_release_failed");
         }
     }
     XrResult result = callUnlocked(lock, [&] { return g.acquireImage(handle, info, index); });
@@ -758,7 +963,13 @@ XrResult XRAPI_PTR layerRelease(XrSwapchain handle,
                     std::to_string(it->second.acquired.front()));
             return XR_SUCCESS;
         }
-        if (sit != sessions.end() && sit->second.active) disable(sit->second, "release_sequence");
+        if (sit != sessions.end() && sit->second.active) {
+            sit->second.cacheValid = false;
+            emit("proxy_source_release_passthrough", "\"session\":" +
+                std::to_string(hv(sit->second.session)) +
+                ",\"swapchain\":" + std::to_string(hv(handle)) +
+                ",\"reason\":\"unsupported_sequence\"");
+        }
     }
     XrResult result = callUnlocked(lock, [&] { return g.releaseImage(handle, info); });
     if (XR_SUCCEEDED(result) && it != swapchains.end()) {
@@ -776,54 +987,63 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     if (sit == sessions.end())
         return passthrough(session, nullptr, info, frame, "unknown_session", false, lock);
     SessionState& state = sit->second;
-    const bool idleFrame = info && info->type == XR_TYPE_FRAME_END_INFO && !info->next &&
-        info->layerCount == 0;
-    if (idleFrame && state.learned && state.active && !state.disabled) {
-        const uint32_t mask = deferredMask(state);
-        emit("three_projection_sampler_proxy_idle_frame", "\"frame\":" + std::to_string(frame) +
-            ",\"session\":" + std::to_string(hv(session)) +
-            ",\"layerCount\":0,\"deferredMask\":" + std::to_string(mask) +
-            ",\"accepted\":" + (mask == 0 ? "true" : "false"));
-        if (mask != 0) {
-            disable(state, "idle_with_deferred_sources");
-            return passthrough(session, &state, info, frame,
-                "idle_with_deferred_sources", true, lock);
-        }
-        XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, info); });
-        if (XR_FAILED(result)) disable(state, "idle_end_frame_failed");
-        emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
-            ",\"session\":" + std::to_string(hv(session)) +
-            ",\"idle\":true,\"result\":" + std::to_string(result));
-        return result;
-    }
-    if (!fingerprint.valid || fingerprint.session != session) {
-        if (state.learned && !state.disabled) disable(state, "unsafe_" + fingerprint.reason);
-        return passthrough(session, &state, info, frame, fingerprint.reason, false, lock);
-    }
+    if (!fingerprint.valid || fingerprint.session != session)
+        return submitAuxiliary(session, state, info, frame,
+            fingerprint.reason.empty() ? "non_target" : fingerprint.reason, lock);
     if (state.disabled)
-        return passthrough(session, &state, info, frame, "disabled", false, lock);
+        return submitAuxiliary(session, state, info, frame, "disabled", lock);
     if (!state.learned) {
         XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, info); });
-        learn(state, fingerprint);
-        if (XR_SUCCEEDED(result) && state.context != EGL_NO_CONTEXT &&
-            createProxies(state, lock) && primeProxies(state, lock)) {
-            state.active = true;
-        }
-        else
-            disable(state, "initialization_failed");
+        if (XR_SUCCEEDED(result)) learn(state, fingerprint);
         emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
             ",\"session\":" + std::to_string(hv(session)) +
+            ",\"learned\":" + (XR_SUCCEEDED(result) ? "true" : "false") +
             ",\"result\":" + std::to_string(result));
         return result;
     }
     if (state.sources != fingerprint.handles) {
-        disable(state, "source_identity_changed");
-        return passthrough(session, &state, info, frame, "source_identity_changed", true, lock);
+        XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, info); });
+        if (XR_SUCCEEDED(result) && disarm(state, "source_identity_changed", lock))
+            learn(state, fingerprint);
+        emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
+            ",\"relearned\":" +
+                (XR_SUCCEEDED(result) && state.learned ? "true" : "false") +
+            ",\"result\":" + std::to_string(result));
+        return result;
+    }
+    if (!state.active) {
+        XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, info); });
+        if (XR_SUCCEEDED(result)) {
+            const size_t index = state.stagedProxyCount;
+            const bool staged = state.context != EGL_NO_CONTEXT &&
+                createProxy(state, index, lock) && primeProxy(state, index, lock);
+            if (!staged) {
+                disable(state, "proxy_stage_failed");
+            } else {
+                ++state.stagedProxyCount;
+                emit("proxy_stage_progress", "\"session\":" +
+                    std::to_string(hv(session)) + ",\"stagedProxyCount\":" +
+                    std::to_string(state.stagedProxyCount) + ",\"requiredProxyCount\":6");
+                if (state.stagedProxyCount == state.proxies.size()) {
+                    state.active = true;
+                    emit("proxy_ready", "\"session\":" + std::to_string(hv(session)) +
+                        ",\"proxySwapchainCount\":6,\"everActivated\":" +
+                        (state.everActivated ? "true" : "false"));
+                }
+            }
+        }
+        emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
+            ",\"session\":" + std::to_string(hv(session)) +
+            ",\"staging\":true,\"stagedProxyCount\":" +
+                std::to_string(state.stagedProxyCount) +
+            ",\"result\":" + std::to_string(result));
+        return result;
     }
     const uint32_t mask = deferredMask(state);
     const bool cached = mask == 0 && state.cacheValid;
     if (mask != 0x3fu && !cached) {
-        if (mask) disable(state, "partial_source_update");
+        state.cacheValid = false;
         return passthrough(session, &state, info, frame,
             mask ? "partial_source_update" : "cached_proxy_unavailable", true, lock);
     }
@@ -855,7 +1075,6 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     }
     XrFrameEndInfo output = *info;
     output.layers = layers.data();
-    state.everActivated = true;
     emit("three_projection_sampler_proxy_transform",
         "\"frame\":" + std::to_string(frame) +
         ",\"session\":" + std::to_string(hv(session)) +
@@ -875,6 +1094,7 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
         ",\"reusedProxy\":" + (cached ? "true" : "false"));
     XrResult result = callUnlocked(lock, [&] { return g.endFrame(session, &output); });
     if (XR_FAILED(result)) disable(state, "proxy_end_frame_failed");
+    else state.everActivated = true;
     emit("end_frame_result", "\"frame\":" + std::to_string(frame) +
         ",\"session\":" + std::to_string(hv(session)) +
         ",\"result\":" + std::to_string(result));
@@ -886,8 +1106,10 @@ XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain handle) {
     auto it = swapchains.find(handle);
     if (it != swapchains.end()) {
         auto sit = sessions.find(it->second.session);
-        if (it->second.deferred && sit != sessions.end()) flushSources(sit->second, lock);
-        if (sit != sessions.end() && it->second.source) disable(sit->second, "source_destroyed");
+        if (sit != sessions.end() && it->second.source)
+            disarm(sit->second, "source_destroyed", lock, false);
+        else if (it->second.deferred && sit != sessions.end())
+            flushSources(sit->second, lock);
         swapchains.erase(it);
     }
     return callUnlocked(lock, [&] { return g.destroySwapchain(handle); });
