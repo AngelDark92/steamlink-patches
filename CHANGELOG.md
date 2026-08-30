@@ -1,3 +1,9 @@
+## [1.10.1-dev.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.10...v1.10.1-dev.11) (2026-08-30)
+
+### 🐛 Bug Fixes
+
+* documentation for single projection experiment ([d75007e](https://github.com/AngelDark92/steamlink-patches/commit/d75007eb044fba25c201732c86d5f948ccd703f8))
+
 ## [1.10.1-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.9...v1.10.1-dev.10) (2026-08-30)
 
 ### 🐛 Bug Fixes
