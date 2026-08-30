@@ -12,7 +12,7 @@ This directory is the historical record for approaches that did not produce perm
 | Projection settings stripped | Attempt invalid: the captures requested stripped mode but loaded `projection_settings_quality`. It was not a valid test and must not be cited as a failure of settings removal. |
 | Projection metadata compatibility v2 | Corrected removal was proven active on 75 sampled frames across two intact runs. Resolution remained low without SystemUI, high only while SystemUI was visible, then low again. The hypothesis is conclusively rejected. |
 
-The active successors are mutually exclusive. The next discriminator is **Experimental Single Projection Fovea Quads** (`single_projection_fovea_quads_v1`): one original opaque projection plus two eye-isolated quads carrying the original foveal images, with no resampling or private swapchain.
+The 2026-08-30 `single_projection_fovea_quads_v1` capture proved 5042 successful transformations but stayed `LOW0 -> LOW -> LOW1`, visibly worse than the original two- and three-projection low path. It also recorded repeated compositor buffer-acquisition and latch failures. The patch is retired and removed from Morphe; do not repeat or tune it.
 
 ## Captured single-projection v1 result
 

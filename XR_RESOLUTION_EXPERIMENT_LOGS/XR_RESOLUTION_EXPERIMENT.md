@@ -12,13 +12,17 @@ Two-projection drop-base v1.1 produced 3967 successful 3-to-2 transformations an
 
 The valid three-projection sampler-proxy v1.2 run independently produced 4811 successful unchanged 3-projection/6-view submissions and stayed `LOW0 -> HIGH -> LOW1`. Replacing all six original MSAA2 swapchains with 1:1 single-sample proxies did not escape the low path, ruling out original swapchain identity and MSAA as sufficient triggers.
 
+Single-projection fovea-quads v1.0 produced 5042 successful 3-projection/6-view to 1-projection/2-quad transformations and stayed `LOW0 -> LOW -> LOW1`. It was visibly worse than the original two- and three-projection low path, which is sufficient to retire it. The same capture recorded 284 compositor buffer-acquisition failures and 14 latch failures, but it also reached Android XR thermal status 3, activated `thermalSevere` and `compositorAnyJank`, and used the old high-frequency `dumpsys` sampler. Those errors are confounded scheduling evidence and are not attributed to the quad topology without an untraced control.
+
 DynamicPolicyManager logs exposed `PanelSuperSampling=1`, `RecommendedResolution=1`, `openxr.currentApp.FRS=1`, and `openxr.sysUi.FRS=1` throughout the palm cycle. SystemUI show/hide events coincide with the visual switch, but those app-visible values do not change. The switch is therefore below the exposed policy surface, in the Galaxy XR compositor/runtime implementation.
+
+The appear-on-top patch does not directly set a Steam Link resolution or OpenXR quality option. When `Settings.canDrawOverlays` succeeds, its Java bridge attaches a real 2x2, nearly transparent `TYPE_APPLICATION_OVERLAY` window named `SteamLinkOverlay` before VR launch and on resume. The available evidence therefore supports a compositor surface trigger rather than a Steam Link renderer branch, but AppOp grant and attached-surface state were previously conflated. The corrected collector now records AppOp, Steam Link-owned type-2038 window existence, and WindowManager visible/display-ready surface state separately. SurfaceFlinger presentation still requires trace evidence.
 
 Public OpenXR/Android XR APIs provide no control that forces the SystemUI-selected internal quality state. `XR_ANDROID_recommended_resolution` is a change notification followed by re-enumeration, not an application setter, and composition-layer supersampling is an optional compositor hint that is unavailable when the extension is not advertised. Multiple projections remain legal and every captured `xrEndFrame` succeeded, so this is not a core OpenXR projection limit.
 
 ## Available experimental patches
 
-Select exactly one projection experiment in Morphe for Steam Link 2.0.22 build 5002322. The next test is **Experimental Single Projection Fovea Quads**; patch generation fails if it is combined with any other projection mode.
+Select exactly one remaining projection experiment in Morphe for Steam Link 2.0.22 build 5002322. The fovea-quad patch has been removed after its failed headset run. No replacement topology experiment is proposed from this capture.
 
 Do not select **Appear on top** or any retired resolution experiment.
 
@@ -48,27 +52,17 @@ Mode `three_projection_sampler_proxy_v1` answers whether three projections can r
 - applies explicit linear/clamp application texture-object state and records it without claiming it crosses into the compositor process;
 - reuses released proxy contents only on zero-update frames and rejects partial updates, source-identity changes, unsafe topology, GL errors, and post-activation passthrough.
 
-Mode `single_projection_fovea_quads_v1` is the next practical discriminator:
+Retired mode `single_projection_fovea_quads_v1` established that spatial quads are not a usable replacement for the original foveal projection:
 
 - forwards one original opaque projection unchanged;
 - converts the two original per-eye alpha-foveal images to eye-isolated far-plane quads;
 - preserves source handles, rectangles, array indices, alpha flags, and FOV-derived geometry;
 - performs no allocation, GL operation, resolve, or resampling.
+- nevertheless remained low before, during, and after the SystemUI element and triggered repeated compositor buffer/latch failures.
 
 ## Capture commands
 
-```powershell
-$tool = 'C:\Users\Angelo\Desktop\SteamLink-GalaxyXR-Windows-Toolkit-FULL\GalaxyXR-APK\diagnostics\steamlink-resolution-ab'
-$common = @{
-    Label = 'overlay-off'
-    Mode = 'single_projection_fovea_quads_v1'
-    ExperimentId = 'single-projection-fovea-quads-v1'
-    SceneId = 'SteamVR Home - fixed viewpoint'
-    NetworkProfile = 'same PC, access point, band, and headset position'
-}
-
-& "$tool\Capture-SteamLinkResolutionRun.ps1" @common -Repeat 2
-```
+Do not repeat the retired fovea-quad mode. The collector retains its parser only to validate already archived captures. Use Repeat 2 only for a specifically selected remaining control or a future experiment with a concrete sampling model.
 
 The script discovers the installed APK hashes. No pre-known Morphe APK SHA-256 is required.
 
@@ -86,7 +80,9 @@ Mode = 'three_projection_sampler_proxy_v1'
 ExperimentId = 'three-projection-sampler-proxy-v1'
 ```
 
-During each run it temporarily streams all Android logcat buffers so unknown XR tags are not lost, but archives only size-capped XR/SystemUI/OpenXR/Steam Link/compositor lines. It also samples filtered WindowManager, ActivityManager, and SurfaceFlinger layer state around the palm observation window. Cleanup stops the background collectors and runs `adb kill-server`, including when capture fails.
+During each run it temporarily streams all Android logcat buffers so unknown XR tags are not lost, but archives only size-capped XR/SystemUI/OpenXR/Steam Link/compositor lines. Expensive WindowManager, ActivityManager, and SurfaceFlinger snapshots now run only at three phase boundaries; the high-frequency background `dumpsys` sampler was removed. Passive logs retain all DynamicPolicy capability values, context samples, GNAV transitions, policy activation/deactivation, and timestamped buffer/latch/HWC failures. Cleanup stops the logcat collector and runs `adb kill-server`, including when capture fails.
+
+For deeper Android XR scheduling evidence, run `GalaxyXR-APK\diagnostics\steamlink-resolution-ab\Capture-AndroidXrCompositorTrace.ps1` separately. Its bounded Perfetto capture is diagnostic-only because tracing adds overhead; pair the palm-cycle trace with a no-palm trace and never use either as the visual acceptance run.
 
 ## Number choices in VR
 

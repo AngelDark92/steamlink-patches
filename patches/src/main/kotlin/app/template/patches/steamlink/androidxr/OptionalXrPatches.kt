@@ -229,21 +229,6 @@ private val twoProjectionDropBaseLayerPatch = rawResourcePatch {
     }
 }
 
-private val singleProjectionFoveaQuadsLayerPatch = rawResourcePatch {
-    execute {
-        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
-        val layerDir = get(
-            "assets/openxr/1/api_layers/implicit.d/$FOVEA_QUADS_MANIFEST",
-        ).parentFile!!
-
-        installProjectionModeResources(
-            libDir,
-            layerDir,
-            activeProjectionModes.first { it.mode == FOVEA_QUADS_MODE },
-        )
-    }
-}
-
 private val threeProjectionSamplerProxyLayerPatch = rawResourcePatch {
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
@@ -275,26 +260,6 @@ val xrSingleProjectionReconstructionPatch = resourcePatch(
     finalize {
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, SINGLE_PROJECTION_MODE)
-        }
-    }
-}
-
-@Suppress("unused")
-val xrSingleProjectionFoveaQuadsPatch = resourcePatch(
-    name = "Experimental Single Projection Fovea Quads",
-    description = "5002322-only permission-free experiment. Keeps one original projection and preserves Steam Link's native per-eye foveal images as eye-isolated far-plane quads.",
-    default = false,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
-    dependsOn(
-        xrLauncherBootstrapPatch,
-        xrPermissionSettingsBootstrapPatch,
-        singleProjectionFoveaQuadsLayerPatch,
-    )
-
-    finalize {
-        document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, FOVEA_QUADS_MODE)
         }
     }
 }

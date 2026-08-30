@@ -150,16 +150,12 @@ The layer fails open for runtime safety when the exact Steam Link topology, imag
 
 ---
 
-### Experimental Single Projection Fovea Quads
-**Default: disabled; 5002322 only** — mutually exclusive with every other projection transform and `Appear on top`
+### Retired: Experimental Single Projection Fovea Quads
+**Removed after the 2026-08-30 headset run; 5002322 only**
 
-| Artifact | Edit |
-|---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_fovea_quads_v1` |
-| `lib/arm64-v8a/libgxr_single_projection_fovea_quads_v1.so` | Recognizes the exact three-projection/six-view stream, drops the redundant first opaque projection, forwards the second opaque projection unchanged, and converts the final per-eye alpha-foveal views to eye-isolated far-plane quads derived from their original pose and FOV. It preserves original swapchain handles, rectangles, array indices, projection space, and alpha flags; it creates no swapchain, performs no GL operation, and does not intercept source-image lifetime. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_fovea_quads_v1.json` | Registers the hybrid layer with a unique v1 identity |
+The trace proved 5042 exact 3-projection/6-view to 1-projection/2-quad transforms with successful `xrEndFrame`, but the visual result stayed `LOW0 -> LOW -> LOW1` and was worse than the original two- and three-projection low path. Android compositor logs also recorded 284 missing-buffer acquisitions and 14 latch failures during this mode.
 
-The output is exactly one projection plus two quads. This preserves the original foveal texel density while testing whether Galaxy XR's low-quality path is selected by multiple projection layers or by any alpha-foveated multilayer topology. Quad alignment and runtime quality remain headset-test questions.
+Projection views use pose/FOV ray mapping; spatial quads use a different compositor sampling path. Converting the foveal projections to kilometer-scale alpha quads therefore did not preserve sampling semantics, despite retaining their source handles and rectangles. The selectable Morphe patch and bundled APK artifacts have been removed. Its mode identity remains reserved only so the other projection patches can reject stale/conflicting decoded APK contents.
 
 ---
 

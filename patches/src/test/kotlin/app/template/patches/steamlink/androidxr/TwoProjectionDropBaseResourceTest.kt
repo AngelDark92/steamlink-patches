@@ -33,6 +33,18 @@ class TwoProjectionDropBaseResourceTest {
                 "two_projection_drop_base_v1",
             ),
         )
+        assertTrue(
+            projectionModesConflict(
+                "single_projection_fovea_quads_v1",
+                "two_projection_drop_base_v1",
+            ),
+        )
+        assertTrue(
+            projectionModesConflict(
+                "two_projection_drop_base_v1",
+                "single_projection_fovea_quads_v1",
+            ),
+        )
     }
 
     @Test
