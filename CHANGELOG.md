@@ -1,3 +1,9 @@
+## [1.10.1-dev.15](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.14...v1.10.1-dev.15) (2026-08-30)
+
+### 🐛 Bug Fixes
+
+* Experimental Native Single Projection Renderer Hook ([7326cfd](https://github.com/AngelDark92/steamlink-patches/commit/7326cfd83e5bcf33da8172785b8e68d3144a781f))
+
 ## [1.10.1-dev.14](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.13...v1.10.1-dev.14) (2026-08-30)
 
 ### 🐛 Bug Fixes
