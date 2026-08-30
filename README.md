@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.1-dev.13](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.13)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;22 patches total
+> **[v1.10.1-dev.14](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.14)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -55,7 +55,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -67,7 +67,7 @@ To download it:
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
 | [Experimental Single Projection Reconstruction](#experimental-single-projection-reconstruction) | 5002322-only permission-free experiment. Reconstructs Steam Link's opaque full-FOV underside and alpha-foveated inset into one stereo projection before submission. | 5002322 |  |
-| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free A/B. Preserves the original reconstructed image while reducing scratch memory, repeated GL setup, and success-log overhead. | 5002322 |  |
+| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Preserves the v1 reconstructed image while reducing scratch memory, repeated GL setup, and success-log overhead. | 5002322 |  |
 
 </details>
 

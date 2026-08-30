@@ -1,3 +1,9 @@
+## [1.10.1-dev.14](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.13...v1.10.1-dev.14) (2026-08-30)
+
+### 🐛 Bug Fixes
+
+* added newer experimental supposedly more efficient patch for single projection mode ([560debb](https://github.com/AngelDark92/steamlink-patches/commit/560debb4ca26a8addff519cdfba42b7246c43338))
+
 ## [1.10.1-dev.13](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.12...v1.10.1-dev.13) (2026-08-30)
 
 ### 🐛 Bug Fixes
