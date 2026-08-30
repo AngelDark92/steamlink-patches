@@ -1,3 +1,9 @@
+## [1.10.1-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.9...v1.10.1-dev.10) (2026-08-30)
+
+### 🐛 Bug Fixes
+
+* projection exp fix ([d3612f9](https://github.com/AngelDark92/steamlink-patches/commit/d3612f9b23ff4778bd62f867e75cbe1f404cf891))
+
 ## [1.10.1-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.8...v1.10.1-dev.9) (2026-08-29)
 
 ### 🐛 Bug Fixes
