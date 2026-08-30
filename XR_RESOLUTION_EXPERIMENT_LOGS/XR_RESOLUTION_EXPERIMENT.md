@@ -6,7 +6,7 @@ The valid 2026-08-29 build-5002322 captures now isolate the projection-topology 
 
 `HIGH without Android XR UI → HIGH while UI is visible → HIGH after UI disappears`
 
-Single-projection reconstruction v1.2 produced 5772 successful 3-to-1 transformations and stayed `HIGH0 -> HIGH -> HIGH1` without `SYSTEM_ALERT_WINDOW`, but remained softer than the granted-overlay control. Its six 1536x1536 MSAA2 sources required a 3745x4048 merged target to preserve foveal angular density; the runtime capped that target at 3152x3682. The captured runtime reported `qualityExtensionAdvertised=false`, so `XR_FB_composition_layer_settings` could not legally be attached.
+Single-projection reconstruction v1.2 produced 5772 successful 3-to-1 transformations and stayed `HIGH0 -> HIGH -> HIGH1` without `SYSTEM_ALERT_WINDOW`. On 2026-08-30, the user corrected the earlier subjective softness report after further comparison: no remaining softness is visible, and reconstruction now appears equal to the normal APK with the granted appear-on-top control. Its six 1536x1536 MSAA2 sources produced a calculated 3745x4048 detail-preserving request that the runtime capped at 3152x3682. That size cap remains measured telemetry, but it must not be cited as proof of a visible quality loss. The captured runtime reported `qualityExtensionAdvertised=false`, so `XR_FB_composition_layer_settings` could not legally be attached.
 
 Two-projection drop-base v1.1 produced 3967 successful 3-to-2 transformations and stayed `LOW0 -> HIGH -> LOW1`. It forwarded the original opaque underside and alpha-foveal projections unchanged, with no private swapchain, resampling, disable, or failed `xrEndFrame`. The redundant base and an exact count of three projections are therefore ruled out. The remaining classifier is more than one projection, or the broader alpha-foveated multilayer topology.
 
@@ -19,6 +19,10 @@ DynamicPolicyManager logs exposed `PanelSuperSampling=1`, `RecommendedResolution
 The appear-on-top patch does not directly set a Steam Link resolution or OpenXR quality option. When `Settings.canDrawOverlays` succeeds, its Java bridge attaches a real 2x2, nearly transparent `TYPE_APPLICATION_OVERLAY` window named `SteamLinkOverlay` before VR launch and on resume. The available evidence therefore supports a compositor surface trigger rather than a Steam Link renderer branch, but AppOp grant and attached-surface state were previously conflated. The corrected collector now records AppOp, Steam Link-owned type-2038 window existence, and WindowManager visible/display-ready surface state separately. SurfaceFlinger presentation still requires trace evidence.
 
 Public OpenXR/Android XR APIs provide no control that forces the SystemUI-selected internal quality state. `XR_ANDROID_recommended_resolution` is a change notification followed by re-enumeration, not an application setter, and composition-layer supersampling is an optional compositor hint that is unavailable when the extension is not advertised. Multiple projections remain legal and every captured `xrEndFrame` succeeded, so this is not a core OpenXR projection limit.
+
+## Plain-language explanation
+
+Steam Link submits 3 stereo OpenXR projection layers: full-view imagery plus a higher-detail foveal inset. On Galaxy XR, those separate layers enter a low-resolution compositor path unless an Android XR/SystemUI or granted appear-on-top overlay is present. The experimental OpenXR API layer intercepts `xrEndFrame`, composites the same 3 submitted layers into 1 ordinary stereo projection, and submits that equivalent final image to Android XR. Galaxy XR then selects its high-resolution path without the overlay permission. "Single-projection reconstruction" means reconstructing the final OpenXR layer composition; it does not reconstruct video frames, change Steam Link streaming, or invent image detail. The corrected user observation is that its visible quality now matches the normal APK with appear-on-top granted.
 
 ## Available experimental patches
 
@@ -112,7 +116,7 @@ If a trace-proven reconstructed single projection remains UI-dependent, stop APK
 
 For `two_projection_drop_base_v1`, require build ID `two-projection-drop-base-v1.1-20260829`, one OpenXR session, successful trace-proven 3-to-2 transforms before and during the device-clock-bounded observation, matching successful `xrEndFrame` results, and zero disable or failed-end-frame events through observation. Auxiliary spinner/UI frames are archived but do not disable or validate the transform. Interpret the result as follows:
 
-- high and sharper than reconstruction: single projection is unnecessary; the redundant-base/three-layer topology selects the low-quality path, while reconstruction caused the remaining softness;
+- high and sharper than reconstruction in the same controlled comparison: single projection may be unnecessary and the redundant-base/three-layer topology may select the low-quality path; this hypothetical outcome was not observed in the accepted runs;
 - low while single projection is high: dropping the base is insufficient; either multiple projections/alpha-fovea or another reconstruction property is involved;
 - high but below the overlay control: topology explains the low-to-high transition, but the Android XR overlay changes an additional quality state;
 - any mixed result, disable event, fallback, or `xrEndFrame` error: inconclusive.
