@@ -82,19 +82,15 @@ private const val SINGLE_PROJECTION_MODE = "single_projection_reconstruction_v1"
 private const val SINGLE_PROJECTION_LIBRARY = "libgxr_single_projection_reconstruction_v1.so"
 private const val SINGLE_PROJECTION_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1.json"
+private const val EFFICIENT_SINGLE_PROJECTION_MODE = "single_projection_reconstruction_efficient_v1"
+private const val EFFICIENT_SINGLE_PROJECTION_LIBRARY =
+    "libgxr_single_projection_reconstruction_efficient_v1.so"
+private const val EFFICIENT_SINGLE_PROJECTION_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json"
 private const val FOVEA_QUADS_MODE = "single_projection_fovea_quads_v1"
 private const val FOVEA_QUADS_LIBRARY = "libgxr_single_projection_fovea_quads_v1.so"
 private const val FOVEA_QUADS_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_single_projection_fovea_quads_v1.json"
-private const val TWO_PROJECTION_MODE = "two_projection_drop_base_v1"
-private const val TWO_PROJECTION_LIBRARY = "libgxr_two_projection_drop_base_v1.so"
-private const val TWO_PROJECTION_MANIFEST =
-    "XR_APILAYER_local_GalaxyXR_two_projection_drop_base_v1.json"
-private const val THREE_PROJECTION_PROXY_MODE = "three_projection_sampler_proxy_v1"
-private const val THREE_PROJECTION_PROXY_LIBRARY = "libgxr_three_projection_sampler_proxy_v1.so"
-private const val THREE_PROJECTION_PROXY_MANIFEST =
-    "XR_APILAYER_local_GalaxyXR_three_projection_sampler_proxy_v1.json"
-
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -108,19 +104,14 @@ private val activeProjectionModes = listOf(
         SINGLE_PROJECTION_MANIFEST,
     ),
     ProjectionModeResources(
+        EFFICIENT_SINGLE_PROJECTION_MODE,
+        EFFICIENT_SINGLE_PROJECTION_LIBRARY,
+        EFFICIENT_SINGLE_PROJECTION_MANIFEST,
+    ),
+    ProjectionModeResources(
         FOVEA_QUADS_MODE,
         FOVEA_QUADS_LIBRARY,
         FOVEA_QUADS_MANIFEST,
-    ),
-    ProjectionModeResources(
-        TWO_PROJECTION_MODE,
-        TWO_PROJECTION_LIBRARY,
-        TWO_PROJECTION_MANIFEST,
-    ),
-    ProjectionModeResources(
-        THREE_PROJECTION_PROXY_MODE,
-        THREE_PROJECTION_PROXY_LIBRARY,
-        THREE_PROJECTION_PROXY_MANIFEST,
     ),
 )
 
@@ -134,6 +125,8 @@ private val retiredProjectionModes = setOf(
     "projection_settings_stripped",
     "vrlink_unmanaged_full_space",
     "projection_metadata_compat_v2",
+    "two_projection_drop_base_v1",
+    "three_projection_sampler_proxy_v1",
 )
 
 private fun projectionModeResource(name: String): ByteArray =
@@ -156,8 +149,14 @@ private fun installProjectionModeResources(
     }
 
     retiredProjectionModes.forEach { mode ->
-        File(libDir, "libgxr_$mode.so").delete()
-        File(layerDir, "XR_APILAYER_local_GalaxyXR_$mode.json").delete()
+        listOf(
+            File(libDir, "libgxr_$mode.so"),
+            File(layerDir, "XR_APILAYER_local_GalaxyXR_$mode.json"),
+        ).forEach { retiredFile ->
+            if (retiredFile.exists() && !retiredFile.delete()) {
+                throw PatchException("Could not remove retired XR projection resource: ${retiredFile.path}")
+            }
+        }
     }
 
     File(libDir, requested.library).writeBytes(projectionModeResource(requested.library))
@@ -214,32 +213,17 @@ private val singleProjectionReconstructionLayerPatch = rawResourcePatch {
     }
 }
 
-private val twoProjectionDropBaseLayerPatch = rawResourcePatch {
+private val efficientSingleProjectionReconstructionLayerPatch = rawResourcePatch {
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         val layerDir = get(
-            "assets/openxr/1/api_layers/implicit.d/$TWO_PROJECTION_MANIFEST",
+            "assets/openxr/1/api_layers/implicit.d/$EFFICIENT_SINGLE_PROJECTION_MANIFEST",
         ).parentFile!!
 
         installProjectionModeResources(
             libDir,
             layerDir,
-            activeProjectionModes.first { it.mode == TWO_PROJECTION_MODE },
-        )
-    }
-}
-
-private val threeProjectionSamplerProxyLayerPatch = rawResourcePatch {
-    execute {
-        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
-        val layerDir = get(
-            "assets/openxr/1/api_layers/implicit.d/$THREE_PROJECTION_PROXY_MANIFEST",
-        ).parentFile!!
-
-        installProjectionModeResources(
-            libDir,
-            layerDir,
-            activeProjectionModes.first { it.mode == THREE_PROJECTION_PROXY_MODE },
+            activeProjectionModes.first { it.mode == EFFICIENT_SINGLE_PROJECTION_MODE },
         )
     }
 }
@@ -265,41 +249,21 @@ val xrSingleProjectionReconstructionPatch = resourcePatch(
 }
 
 @Suppress("unused")
-val xrTwoProjectionDropBasePatch = resourcePatch(
-    name = "Experimental Two Projection Drop Base",
-    description = "5002322-only permission-free discriminator. Drops only the redundant first opaque full-FOV projection while forwarding Steam Link's original underside and alpha-foveated projections unchanged.",
+val xrEfficientSingleProjectionReconstructionPatch = resourcePatch(
+    name = "Experimental Single Projection Reconstruction Efficient",
+    description = "5002322-only permission-free experiment. Preserves the v1 reconstructed image while reducing scratch memory, repeated GL setup, and success-log overhead.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
-        twoProjectionDropBaseLayerPatch,
+        efficientSingleProjectionReconstructionLayerPatch,
     )
 
     finalize {
         document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, TWO_PROJECTION_MODE)
-        }
-    }
-}
-
-@Suppress("unused")
-val xrThreeProjectionSamplerProxyPatch = resourcePatch(
-    name = "Experimental Three Projection Sampler Proxy",
-    description = "5002322-only permission-free discriminator. Preserves Steam Link's three projection layers while resolving their source images into controlled sampleCount-1 proxy swapchains.",
-    default = false,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
-    dependsOn(
-        xrLauncherBootstrapPatch,
-        xrPermissionSettingsBootstrapPatch,
-        threeProjectionSamplerProxyLayerPatch,
-    )
-
-    finalize {
-        document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, THREE_PROJECTION_PROXY_MODE)
+            configurePermissionFreeProjectionMode(document, EFFICIENT_SINGLE_PROJECTION_MODE)
         }
     }
 }

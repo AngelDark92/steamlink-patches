@@ -6,7 +6,7 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
-Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations now include v2.0.20 build 5001740 plus v2.0.22 builds 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. The available 5001740 source is an analysis reconstruction from a malformed hybrid APK, so pristine-APK Morphe patching, installation, and headset runtime validation remain pending. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. Build 5002322 exposes the requested six recommended patches plus optional **Experimental Single Projection Reconstruction**.
+Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations now include v2.0.20 build 5001740 plus v2.0.22 builds 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. The available 5001740 source is an analysis reconstruction from a malformed hybrid APK, so pristine-APK Morphe patching, installation, and headset runtime validation remain pending. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. Build 5002322 exposes the requested 6 recommended patches plus the optional original and efficient single-projection reconstruction experiments.
 
 Use Morphe Manager 1.22 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Older builds retain their historical recommended defaults. Experimental and legacy-only patches default off.
 
@@ -67,8 +67,7 @@ To download it:
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
 | [Experimental Single Projection Reconstruction](#experimental-single-projection-reconstruction) | 5002322-only permission-free experiment. Reconstructs Steam Link's opaque full-FOV underside and alpha-foveated inset into one stereo projection before submission. | 5002322 |  |
-| [Experimental Three Projection Sampler Proxy](#experimental-three-projection-sampler-proxy) | 5002322-only permission-free discriminator. Preserves Steam Link's three projection layers while resolving their source images into controlled sampleCount-1 proxy swapchains. | 5002322 |  |
-| [Experimental Two Projection Drop Base](#experimental-two-projection-drop-base) | 5002322-only permission-free discriminator. Drops only the redundant first opaque full-FOV projection while forwarding Steam Link's original underside and alpha-foveated projections unchanged. | 5002322 |  |
+| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free A/B. Preserves the original reconstructed image while reducing scratch memory, repeated GL setup, and success-log overhead. | 5002322 |  |
 
 </details>
 

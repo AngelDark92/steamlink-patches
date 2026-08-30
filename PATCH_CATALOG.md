@@ -151,6 +151,19 @@ The layer fails open for runtime safety when the exact Steam Link topology, imag
 
 ---
 
+### Experimental Single Projection Reconstruction Efficient
+**Default: disabled; 5002322 only** — do not combine with the original reconstruction or `Appear on top`
+
+| Artifact | Edit |
+|---|---|
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_efficient_v1` |
+| `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` | Preserves the original v1.2 output contract: 1 opaque stereo sRGB projection, 4 MSAA resolves, 2 eye draws, the same 4-tap foveal filter, synchronization, and repeated-image reuse. It reduces scratch textures from 4 to 2, caches immutable GL/FOV state, and aggregates successful transforms every 30 frames while keeping failures immediate. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json` | Registers the efficient reconstruction layer with a separate v1 identity |
+
+This is an isolated performance A/B, not a quality or topology change. It does not reduce resolution, alter foveated source composition, synthesize frames, or force runtime performance settings.
+
+---
+
 ### Retired: Experimental Single Projection Fovea Quads
 **Removed after the 2026-08-30 headset run; 5002322 only**
 
@@ -160,29 +173,17 @@ Projection views use pose/FOV ray mapping; spatial quads use a different composi
 
 ---
 
-### Experimental Two Projection Drop Base
-**Default: disabled; 5002322 only** — mutually exclusive with every other projection transform and `Appear on top`
+### Retired: Experimental Two Projection Drop Base
+**Removed after low-resolution headset results; 5002322 only**
 
-| Artifact | Edit |
-|---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=two_projection_drop_base_v1` |
-| `lib/arm64-v8a/libgxr_two_projection_drop_base_v1.so` | Recognizes the exact three-projection stream, proves the first and second opaque full-FOV projections share pose/FOV, drops only the first, and forwards the original underside plus alpha-foveated projections unchanged. It creates no swapchains and performs no GL or source-image lifetime operations. v1.1 forwards unrelated spinner/UI frames unchanged without disarming the transform. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_two_projection_drop_base_v1.json` | Registers the drop-base layer with a unique v1 identity |
-
-Exact target frames are always rewritten to two projections; unrelated auxiliary frames are forwarded unchanged and recorded separately. Only a failed rewritten `xrEndFrame` permanently disables the transform. The collector requires successful two-projection frames before and during the device-clock-bounded visual interval, so auxiliary and teardown frames cannot validate or falsely reject the result.
+The mode forwarded the original underside plus alpha-foveated projections as 2 projections after dropping only the redundant base. It still selected the visibly low-resolution compositor path without `Appear on top`. The selectable patch, native source, and bundled APK artifacts have been removed; its mode identity remains cleanup-only for stale decoded APK contents. Historical evidence remains in `XR_RESOLUTION_EXPERIMENT_LOGS`.
 
 ---
 
-### Experimental Three Projection Sampler Proxy
-**Default: disabled; 5002322 only** — mutually exclusive with both projection transforms and `Appear on top`
+### Retired: Experimental Three Projection Sampler Proxy
+**Removed after low-resolution headset results; 5002322 only**
 
-| Artifact | Edit |
-|---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=three_projection_sampler_proxy_v1` |
-| `lib/arm64-v8a/libgxr_three_projection_sampler_proxy_v1.so` | Preserves the exact three-projection/six-view submission and all projection metadata, but resolves the six 1536x1536 MSAA2 source images 1:1 with `GL_NEAREST` into private single-sample swapchains and rewrites only the six swapchain handles. v1.2 stages and primes one proxy per target frame, forwards unrelated spinner/UI layers as explicitly recorded auxiliary frames, and refreshes the proxy cache when a complete six-image update coincides with an auxiliary frame. Proxy application texture objects use explicit linear/clamp state; this is not evidence of the compositor's sampler state. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_three_projection_sampler_proxy_v1.json` | Registers the sampler-proxy layer with a unique v1 identity |
-
-The target transform accepts only the known six-distinct-swapchain topology. Auxiliary app layers never trigger a target transform; source-referencing auxiliary frames, source-identity changes, partial post-activation passthrough, GL failures, or rewritten `xrEndFrame` failures remain invalid evidence. The useful runtime inference is limited to original swapchain identity and/or sample-count/resource allocation versus three-layer topology; without compositor swapchain-state support, application texture parameters cannot be treated as compositor state.
+The mode preserved all 3 projections and replaced only the 6 source swapchain handles with controlled sampleCount-1 proxies. It still selected the visibly low-resolution compositor path without `Appear on top`. The selectable patch, native source, and bundled APK artifacts have been removed; its mode identity remains cleanup-only for stale decoded APK contents. Historical evidence remains in `XR_RESOLUTION_EXPERIMENT_LOGS`.
 
 ---
 
@@ -343,10 +344,9 @@ This intentionally preserves the native builds' requested extensions and vendor 
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrSingleProjectionReconstructionPatch`, `xrTwoProjectionDropBasePatch`, `xrThreeProjectionSamplerProxyPatch`, `changePackageNamePatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrSingleProjectionReconstructionPatch`, `xrEfficientSingleProjectionReconstructionPatch`, `changePackageNamePatch` |
 | `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` + matching implicit-layer JSON | `xrSingleProjectionReconstructionPatch` |
-| `lib/arm64-v8a/libgxr_two_projection_drop_base_v1.so` + matching implicit-layer JSON | `xrTwoProjectionDropBasePatch` |
-| `lib/arm64-v8a/libgxr_three_projection_sampler_proxy_v1.so` + matching implicit-layer JSON | `xrThreeProjectionSamplerProxyPatch` |
+| `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` + matching implicit-layer JSON | `xrEfficientSingleProjectionReconstructionPatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

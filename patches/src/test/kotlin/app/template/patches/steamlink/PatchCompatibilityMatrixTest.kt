@@ -9,12 +9,11 @@ import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.xrDirectInputFixPatch
 import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
+import app.template.patches.steamlink.androidxr.xrEfficientSingleProjectionReconstructionPatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
 import app.template.patches.steamlink.androidxr.xrSingleProjectionReconstructionPatch
-import app.template.patches.steamlink.androidxr.xrThreeProjectionSamplerProxyPatch
-import app.template.patches.steamlink.androidxr.xrTwoProjectionDropBasePatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -49,14 +48,10 @@ class PatchCompatibilityMatrixTest {
         assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002318))
         assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002244))
         assertFalse(xrSingleProjectionReconstructionPatch.default)
-        assertTrue(xrTwoProjectionDropBasePatch.supports("2.0.22", 5002322))
-        assertFalse(xrTwoProjectionDropBasePatch.supports("2.0.22", 5002318))
-        assertFalse(xrTwoProjectionDropBasePatch.supports("2.0.22", 5002244))
-        assertFalse(xrTwoProjectionDropBasePatch.default)
-        assertTrue(xrThreeProjectionSamplerProxyPatch.supports("2.0.22", 5002322))
-        assertFalse(xrThreeProjectionSamplerProxyPatch.supports("2.0.22", 5002318))
-        assertFalse(xrThreeProjectionSamplerProxyPatch.supports("2.0.22", 5002244))
-        assertFalse(xrThreeProjectionSamplerProxyPatch.default)
+        assertTrue(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002322))
+        assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002318))
+        assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002244))
+        assertFalse(xrEfficientSingleProjectionReconstructionPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -79,8 +74,7 @@ class PatchCompatibilityMatrixTest {
             assertTrue(patch.supports("2.0.20", 5001740), patch.name)
         }
         assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.20", 5001740))
-        assertFalse(xrTwoProjectionDropBasePatch.supports("2.0.20", 5001740))
-        assertFalse(xrThreeProjectionSamplerProxyPatch.supports("2.0.20", 5001740))
+        assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.20", 5001740))
     }
 
     @Test
@@ -115,8 +109,7 @@ class PatchCompatibilityMatrixTest {
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
             xrSingleProjectionReconstructionPatch,
-            xrTwoProjectionDropBasePatch,
-            xrThreeProjectionSamplerProxyPatch,
+            xrEfficientSingleProjectionReconstructionPatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -167,8 +160,7 @@ class PatchCompatibilityMatrixTest {
             oledCalibrationPatch,
         ) + listOf(
             xrSingleProjectionReconstructionPatch,
-            xrTwoProjectionDropBasePatch,
-            xrThreeProjectionSamplerProxyPatch,
+            xrEfficientSingleProjectionReconstructionPatch,
         )
 
         val latestExcluded = excludedNativeXr + listOf(
