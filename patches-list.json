@@ -18,6 +18,28 @@
           "signatures": null,
           "targets": [
             {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
               "version": "2.0.22",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
@@ -132,6 +154,28 @@
         "ResourcePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -291,10 +335,34 @@
     },
     {
       "name": "Change package name",
-      "description": "Renames the app package so it can be installed alongside the original Steam Link. Default appends '.gxr'. Changing the package name may break features that rely on the original identity.",
+      "description": "Renames the manifest package and Steam Link's internal VR-launch component so the patched app can coexist with the original installation.",
       "default": false,
-      "dependencies": [],
+      "dependencies": [
+        "BytecodePatch"
+      ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -428,6 +496,28 @@
         "BytecodePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -599,6 +689,28 @@
         "RawResourcePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -856,10 +968,32 @@
     },
     {
       "name": "Force HMD initialization gates",
-      "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5002244 and 5002313.",
+      "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5001740, 5002244, and 5002313.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -975,10 +1109,32 @@
     },
     {
       "name": "Force lobby permission-state gate",
-      "description": "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5002244 and 5002313.",
+      "description": "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5001740, 5002244, and 5002313.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -1094,10 +1250,32 @@
     },
     {
       "name": "Force stream XR gates",
-      "description": "Bypasses the three verified XR gates in build 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
+      "description": "Bypasses the three verified XR gates in builds 5001740 and 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -1221,6 +1399,28 @@
         "ResourcePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -1384,6 +1584,28 @@
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -1558,10 +1780,32 @@
     },
     {
       "name": "OLED color calibration",
-      "description": "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5002244, 5002313, 5002318, and 5002322.",
+      "description": "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5001740, 5002244, 5002313, 5002318, and 5002322.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -1760,6 +2004,28 @@
           "signatures": null,
           "targets": [
             {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
               "version": "2.0.22",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
@@ -1916,6 +2182,28 @@
         "RawResourcePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -2089,6 +2377,28 @@
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -2275,6 +2585,28 @@
           "signatures": null,
           "targets": [
             {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
               "version": "2.0.22",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
@@ -2387,6 +2719,28 @@
         "BytecodePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -2517,6 +2871,28 @@
           "signatures": null,
           "targets": [
             {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
               "version": "2.0.22",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
@@ -2623,7 +2999,7 @@
     },
     {
       "name": "XR Launcher Bootstrap (Home Space)",
-      "description": "Installs GalaxyXRPermissionActivity as launcher and configures Steam Link/VRLink activity XR startup wiring.",
+      "description": "Installs GalaxyXRPermissionActivity as launcher and configures the Steam Link VR activity XR startup wiring.",
       "default": false,
       "dependencies": [
         "ResourcePatch",
@@ -2631,6 +3007,28 @@
         "BytecodePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -2752,6 +3150,28 @@
         "BytecodePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001740,
+                "ARMEABI_V7A": 5001740,
+                "X86_64": 5001740,
+                "X86": 5001740
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",

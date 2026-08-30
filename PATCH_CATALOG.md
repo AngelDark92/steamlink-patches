@@ -3,6 +3,7 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
+Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with its own guarded native layout. Its available source is a reconstruction from a malformed hybrid APK; pristine-APK Morphe patching, installation, and headset runtime validation remain pending.
 Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset, OLED color calibration,
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither.
 Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset,
@@ -34,7 +35,7 @@ OLED calibration dependency. Experimental and legacy-only patches default off.
 Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` @ `0x1422c4` (5002244) or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; 5002318, 5002322, and unknown layouts are preserved |
+| `lib/arm64-v8a/libvrlink_scene.so` @ `0x142a9c` (5001740), `0x1422c4` (5002244), or `0x1472a8` (5002313) | 8 bytes: replaces `RequestAndroidPermissions()` prologue with `movz w0,#1; ret`; 5002318, 5002322, and unknown layouts are preserved |
 
 ---
 
@@ -76,8 +77,8 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 |---|---|
 | `AndroidManifest.xml` `application/activity@android:name` | Adds `com.valvesoftware.steamlink.GalaxyXRPermissionActivity` (exported=true, MAIN/LAUNCHER, 1280×800px layout) |
 | `AndroidManifest.xml` direct `application/property` | Removes application-wide `android.window.PROPERTY_XR_ACTIVITY_START_MODE` (present in 5002313) before applying activity-specific modes |
-| `AndroidManifest.xml` `VRLink activity/property` | Adds `android.window.PROPERTY_XR_ACTIVITY_START_MODE = XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED` |
-| `AndroidManifest.xml` `VRLink activity/intent-filter/category` | Adds `org.khronos.openxr.intent.category.IMMERSIVE_HMD` |
+| `AndroidManifest.xml` VR activity/property | Adds `android.window.PROPERTY_XR_ACTIVITY_START_MODE = XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED`; recognizes later `VRLink` or 5001740's `android.app.NativeActivity` with `android.app.lib_name=vrlink_scene` |
+| `AndroidManifest.xml` VR activity/intent-filter/category | Adds `org.khronos.openxr.intent.category.IMMERSIVE_HMD` |
 | `AndroidManifest.xml` `SteamLink activity/intent-filter` | Removes LAUNCHER intent-filter |
 | `AndroidManifest.xml` `SteamLink activity/layout` | Sets `android:defaultWidth=1536.0px`, `android:defaultHeight=960.0px` |
 
@@ -96,7 +97,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_controller_velocity.so` | New file with embedded config patched at magic `GXRVELCFG0000001` |
-| `lib/arm64-v8a/libvrlink_scene.so` `QSVLClient::OnTopOfFrame` | Optional exact-layout AArch64 edits select stock 4×, evenly phased 2×, or display-rate 1× controller pose events while retaining the final type-2 frame-update event; verified layouts: versionCodes 5001712, 5002206, 5002244, 5002313 |
+| `lib/arm64-v8a/libvrlink_scene.so` `QSVLClient::OnTopOfFrame` | Optional exact-layout AArch64 edits select stock 4×, evenly phased 2×, or display-rate 1× controller pose events while retaining the final type-2 frame-update event; verified layouts: versionCodes 5001712, 5001740, 5002206, 5002244, 5002313 |
 | config block `+32` (int64 LE) | `maxDeltaMs × 1,000,000` nanoseconds — default 50 ms |
 | config block `+40` (float32 LE) | `maxLinearSpeed` m/s — default 20.0 |
 | config block `+44` (float32 LE) | `maxAngularSpeed` rad/s — default 50.0 |
@@ -223,6 +224,7 @@ existing unique semantic signature matcher.
 **Version layouts (matched by `libvrlink_scene.so` file size):**
 | versionCode | File size | Hook vaddr | PLT cave vaddr |
 |---|---|---|---|
+| 5001740 | 2,220,528 | `0x101378` | `0x20F0B0` |
 | 5001712 | 2,221,072 | `0x1014E8` | `0x20F2D0` |
 | 5002172 | 2,238,792 | `0xFD860` | `0x213370` |
 | 5002206 | 2,239,920 | `0xFDD68` | `0x213820` |
@@ -235,12 +237,12 @@ existing unique semantic signature matcher.
 
 ### Native XR Compatibility Gates
 **Default: disabled** (legacy builds only)
-| Patch | 5002244 target(s) | 5002313 target(s) |
-|---|---|---|
-| Android XR native permission names | Pattern-locates Oculus face/eye strings | Pattern-locates the relocated face/eye strings |
-| Force HMD initialization gates | `0xFD040`, `0xFD048` | `0xFF010`, `0xFF018` |
-| Force lobby permission-state gate | `0x10B658` | `0x10E6C0` |
-| Force stream XR gates | `0x1140AC`, `0x1140B4`, `0x114168` | No fixed edit: 5002313 rewrote `XrSceneStream::Init`, so the old three gates have no safe one-to-one target |
+| Patch | 5001740 target(s) | 5002244 target(s) | 5002313 target(s) |
+|---|---|---|---|
+| Android XR native permission names | Exact strings at `0x9987A`, `0xA19DD` | Exact strings at `0x93952`, `0x9C10E` | Exact strings at `0x94B4F`, `0x9D861` |
+| Force HMD initialization gates | `0xFFCB0`, `0xFFCB8` | `0xFD040`, `0xFD048` | `0xFF010`, `0xFF018` |
+| Force lobby permission-state gate | `0x10D9A0` | `0x10B658` | `0x10E6C0` |
+| Force stream XR gates | `0x1163F4`, `0x1163FC`, `0x1164B0` | `0x1140AC`, `0x1140B4`, `0x114168` | No fixed edit: 5002313 rewrote `XrSceneStream::Init`, so the old three gates have no safe one-to-one target |
 
 All fixed edits validate their exact stock or already-patched instruction bytes before writing. Unknown native layouts are left unchanged.
 
@@ -248,7 +250,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 
 ### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
 **Default: enabled through build 5002318; not independently compatible with 5002322**
-> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5002244, 5002313, 5002318, and 5002322.
+> ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded to ARM64 versionCodes 5001740, 5002244, 5002313, 5002318, and 5002322.
 
 | Artifact | Edit |
 |---|---|
@@ -259,6 +261,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 | GLSL dither | Zero-centred per-channel noise using `UniDitherOffsets.rgb`; sRGB8 scale `0.00392` gives +/-0.5 output-code-step noise, while experimental RGB10_A2 retains `0.00073` |
 | GLSL endpoint protection | Per-channel output-domain ramp preserves exact black/white and reaches full dither strength four codes from either output endpoint (`4/255` sRGB8, approximately `4/1023` linear RGB10_A2) |
 | GLSL `DITHER_ENABLE` | `1.` when enabled; toggled to `0.` by `videoDitherPatch` without losing the selected scale |
+| Two 5001740 instructions at `0x10a854`, `0x10a8c4` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | Three 5002244 instructions at `0x10826c`, `0x1082dc`, `0x10834c` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | Three 5002313 instructions at `0x10b2d4`, `0x10b344`, `0x10b3b4` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
 | Three 5002318 instructions at `0x10b430`, `0x10b4a0`, `0x10b510` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
@@ -273,7 +276,7 @@ All fixed edits validate their exact stock or already-patched instruction bytes 
 | `saturation` | `1.12` | 0.00–3.00 | Second argument in `mix()` |
 | `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and all three projection swapchain formats |
 
-`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the guarded 2,251,920-byte 5002244, 2,276,872-byte 5002313, 2,277,488-byte 5002318, or 2,283,400-byte 5002322 library layout, the unique shader/NUL boundary, all three layout-specific instruction contexts, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
+`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the guarded 2,220,528-byte 5001740, 2,251,920-byte 5002244, 2,276,872-byte 5002313, 2,277,488-byte 5002318, or 2,283,400-byte 5002322 library layout, the unique shader/NUL boundary, every layout-specific instruction context, and a uniform current swapchain state. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
 
 Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation remains a runtime acceptance gate for both modes.
 
@@ -326,6 +329,7 @@ This intentionally preserves the native builds' requested extensions and vendor 
 | `AndroidManifest.xml` `permission@android:name` | Prefix-replaced for custom permissions declared by this package |
 | `AndroidManifest.xml` `uses-permission@android:name` | Prefix-replaced for custom permissions used by this package |
 | `AndroidManifest.xml` `provider@android:authorities` | String-replaced for content provider authorities |
+| `classes.dex` `SteamLink.startVRLink(String)` | Replaces the exact original-package `const-string` used to create the `android.app.NativeActivity` component; 5001740 contains one verified target, while builds without that literal remain unchanged |
 
 **Option:** `packageName` — default appends `.gxr` to original; accepts any valid Java package name regex `^[a-z]\w*(\.[a-z]\w*)+$`
 

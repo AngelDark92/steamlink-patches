@@ -34,28 +34,28 @@ class PatchCompatibilityMatrixTest {
     @Test
     fun `native builds expose only the supported stable and experimental patches`() {
         allowedNativeXr.forEach { patch ->
-            assertTrue(patch.supports(5002318), "${patch.name} on 5002318")
+            assertTrue(patch.supports("2.0.22", 5002318), "${patch.name} on 5002318")
         }
         excludedNativeXr.forEach { patch ->
-            assertFalse(patch.supports(5002318), "${patch.name} on 5002318")
+            assertFalse(patch.supports("2.0.22", 5002318), "${patch.name} on 5002318")
         }
         latestCompatible.forEach { patch ->
-            assertTrue(patch.supports(5002322), "${patch.name} on 5002322")
+            assertTrue(patch.supports("2.0.22", 5002322), "${patch.name} on 5002322")
         }
         latestExcluded.forEach { patch ->
-            assertFalse(patch.supports(5002322), "${patch.name} on 5002322")
+            assertFalse(patch.supports("2.0.22", 5002322), "${patch.name} on 5002322")
         }
-        assertTrue(xrSingleProjectionReconstructionPatch.supports(5002322))
-        assertFalse(xrSingleProjectionReconstructionPatch.supports(5002318))
-        assertFalse(xrSingleProjectionReconstructionPatch.supports(5002244))
+        assertTrue(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002322))
+        assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002318))
+        assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002244))
         assertFalse(xrSingleProjectionReconstructionPatch.default)
-        assertTrue(xrTwoProjectionDropBasePatch.supports(5002322))
-        assertFalse(xrTwoProjectionDropBasePatch.supports(5002318))
-        assertFalse(xrTwoProjectionDropBasePatch.supports(5002244))
+        assertTrue(xrTwoProjectionDropBasePatch.supports("2.0.22", 5002322))
+        assertFalse(xrTwoProjectionDropBasePatch.supports("2.0.22", 5002318))
+        assertFalse(xrTwoProjectionDropBasePatch.supports("2.0.22", 5002244))
         assertFalse(xrTwoProjectionDropBasePatch.default)
-        assertTrue(xrThreeProjectionSamplerProxyPatch.supports(5002322))
-        assertFalse(xrThreeProjectionSamplerProxyPatch.supports(5002318))
-        assertFalse(xrThreeProjectionSamplerProxyPatch.supports(5002244))
+        assertTrue(xrThreeProjectionSamplerProxyPatch.supports("2.0.22", 5002322))
+        assertFalse(xrThreeProjectionSamplerProxyPatch.supports("2.0.22", 5002318))
+        assertFalse(xrThreeProjectionSamplerProxyPatch.supports("2.0.22", 5002244))
         assertFalse(xrThreeProjectionSamplerProxyPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
@@ -69,14 +69,24 @@ class PatchCompatibilityMatrixTest {
     @Test
     fun `previous verified build compatibility is preserved`() {
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
-            assertTrue(patch.supports(5002313), patch.name)
+            assertTrue(patch.supports("2.0.22", 5002313), patch.name)
         }
+    }
+
+    @Test
+    fun `all legacy patches support 2_0_20 build 5001740`() {
+        (allowedNativeXr + excludedNativeXr).forEach { patch ->
+            assertTrue(patch.supports("2.0.20", 5001740), patch.name)
+        }
+        assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.20", 5001740))
+        assertFalse(xrTwoProjectionDropBasePatch.supports("2.0.20", 5001740))
+        assertFalse(xrThreeProjectionSamplerProxyPatch.supports("2.0.20", 5001740))
     }
 
     @Test
     fun `latest build recommends exactly the requested six patches`() {
         val recommended = (latestCompatible + latestExcluded)
-            .filter { patch -> patch.default && patch.supports(5002322) }
+            .filter { patch -> patch.default && patch.supports("2.0.22", 5002322) }
             .mapNotNullTo(mutableSetOf()) { it.name }
 
         assertEquals(
@@ -112,10 +122,10 @@ class PatchCompatibilityMatrixTest {
         }
     }
 
-    private fun Patch<*>.supports(versionCode: Int): Boolean =
+    private fun Patch<*>.supports(version: String, versionCode: Int): Boolean =
         compatibility.orEmpty().any { compatibility ->
             compatibility.targets.any { target ->
-                target.version == "2.0.22" && target.versionCodes?.values?.contains(versionCode) == true
+                target.version == version && target.versionCodes?.values?.contains(versionCode) == true
             }
         }
 

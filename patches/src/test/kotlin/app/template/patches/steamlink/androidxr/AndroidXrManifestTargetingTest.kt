@@ -110,6 +110,32 @@ class AndroidXrManifestTargetingTest {
     }
 
     @Test
+    fun `legacy native activity is recognized as the VR entry point`() {
+        val propertyName = "android.window.PROPERTY_XR_ACTIVITY_START_MODE"
+        val doc = parse(
+            """
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application>
+                <activity android:name="android.app.NativeActivity">
+                  <meta-data android:name="android.app.lib_name" android:value="vrlink_scene"/>
+                </activity>
+              </application>
+            </manifest>
+            """.trimIndent(),
+        )
+        val app = doc.getElementsByTagName("application").item(0) as Element
+
+        assertTrue(upsertVrLinkUnmanagedFullSpace(doc, app))
+        val activity = app.getElementsByTagName("activity").item(0) as Element
+        val property = activity.getElementsByTagName("property").item(0) as Element
+        assertEquals(propertyName, property.getAttribute("android:name"))
+        assertEquals(
+            "XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED",
+            property.getAttribute("android:value"),
+        )
+    }
+
+    @Test
     fun `VRLink unmanaged full space fails when activity is absent`() {
         val doc = parse(
             """
