@@ -6,7 +6,7 @@ The valid 2026-08-29 build-5002322 captures now isolate the projection-topology 
 
 `HIGH without Android XR UI → HIGH while UI is visible → HIGH after UI disappears`
 
-Single-projection reconstruction v1.2 produced 5772 successful 3-to-1 transformations and stayed `HIGH0 -> HIGH -> HIGH1` without `SYSTEM_ALERT_WINDOW`. On 2026-08-30, the user corrected the earlier subjective softness report after further comparison: no remaining softness is visible, and reconstruction appears equal to the normal APK with the granted appear-on-top control when the validated `Highest` VRLink host profile is active. A later host-settings A/B on the same day proved that this quality is not supplied by the APK patch alone: the working profile produced a `3552x3840` VRLink render target and fixed `1536` transport target, while removing the profile produced `2048x2048` and automatic `1152` respectively. SteamVR's current-application render target remained `3756x4064` in both observed sessions, isolating VRLink's downstream render/encode selection, especially the `1536` versus `1152` transport target, as the immediate visual discriminator. Its six 1536x1536 MSAA2 sources produced a calculated 3745x4048 detail-preserving request that the runtime capped at 3152x3682. That size cap remains measured telemetry, but it must not be cited as proof of a visible quality loss. The captured runtime reported `qualityExtensionAdvertised=false`, so `XR_FB_composition_layer_settings` could not legally be attached.
+Single-projection reconstruction v1.2 produced 5772 successful 3-to-1 transformations and stayed `HIGH0 -> HIGH -> HIGH1` without `SYSTEM_ALERT_WINDOW`. On 2026-08-30, after further direct comparison, the user reported that the original 3-layer stream with a visible granted overlay remains sharper than the reconstructed output even with the validated `Highest` VRLink host profile. The working host profile produced a `3552x3840` VRLink render target and fixed `1536` transport target, while removing it produced `2048x2048` and automatic `1152` respectively. SteamVR's current-application render target remained `3756x4064` in both observed sessions, isolating VRLink's downstream render/encode selection, especially the `1536` versus `1152` transport target, as one visual discriminator. The six 1536x1536 MSAA2 sources produced a calculated 3745x4048 detail-preserving request that the runtime capped at 3152x3682; the foveal inset therefore occupies about 1293x1397 pixels in the reconstructed output instead of 1536x1536. This measured precomposition loss is the strongest explanation for the remaining difference, while the earlier 4-sample filter adds another plausible source of softness. The captured runtime reported `qualityExtensionAdvertised=false`, so `XR_FB_composition_layer_settings` could not legally be attached in that run. The efficient v1.1 centered-sample change has not yet received a headset A/B.
 
 Two-projection drop-base v1.1 produced 3967 successful 3-to-2 transformations and stayed `LOW0 -> HIGH -> LOW1`. It forwarded the original opaque underside and alpha-foveal projections unchanged, with no private swapchain, resampling, disable, or failed `xrEndFrame`. The redundant base and an exact count of three projections are therefore ruled out. The remaining classifier is more than one projection, or the broader alpha-foveated multilayer topology.
 
@@ -26,7 +26,12 @@ Steam Link submits 3 stereo OpenXR projection layers: full-view imagery plus a h
 
 ## Available experimental patches
 
-Select exactly one remaining projection experiment in Morphe for Steam Link 2.0.22 build 5002322. The fovea-quad patch has been removed after its failed headset run. No replacement topology experiment is proposed from this capture.
+For Steam Link 2.0.22 build 5002322, select exactly one A/B candidate in Morphe:
+
+- **Experimental Single Projection Reconstruction Efficient** uses an implicit OpenXR API layer.
+- **Experimental Native Single Projection Renderer Hook** patches the exact 5002322 AArch64 scene library and routes Valve's streaming `xrEndFrame` call through the injected `libgxr_nsp.so` helper.
+
+Both run the same optimized centered-sample reconstruction. The native candidate changes the interception boundary; it does not make Valve's renderer directly generate a single projection. The unoptimized and fovea-quad patches have been removed.
 
 Do not select **Appear on top** or any retired resolution experiment.
 
@@ -34,9 +39,10 @@ The patch:
 
 - removes `SYSTEM_ALERT_WINDOW`;
 - adds unmanaged Full Space directly to `VRLink`;
-- installs mode `single_projection_reconstruction_v1`;
+- installs mode `single_projection_reconstruction_efficient_v1` or `single_projection_native_renderer_v1`, according to the selected A/B candidate;
 - recognizes only the exact six-swapchain Steam Link streaming topology;
-- temporarily retains recognized source images, resolves the multisampled opaque underside and alpha-foveated images, and composites them into two private full-density eye swapchains. The earlier base projection is not sampled because the later same-pose full-FOV underside is opaque and fully covers it under OpenXR ordering;
+- temporarily retains recognized source images, resolves the multisampled opaque underside and alpha-foveated images, and composites them into two private runtime-limited eye swapchains. The earlier base projection is not sampled because the later same-pose full-FOV underside is opaque and fully covers it under OpenXR ordering;
+- uses one centered bilinear foveal sample instead of the retired 4-sample box, and requests quality supersampling plus quality sharpening only when `XR_FB_composition_layer_settings` is advertised;
 - replaces the three source projections with one opaque stereo projection;
 - reuses the last released private output on repeated-image frames only while the source handles, projection space, and full/foveal FOV mapping remain compatible;
 - forwards the original frame after safely releasing every held image when any topology, EGL, GL, or synchronization prerequisite is missing.
@@ -135,10 +141,10 @@ See `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README
 cmake -S extensions\resolution-trace-layer -B extensions\resolution-trace-layer\build-android-new -G Ninja `
   -DCMAKE_TOOLCHAIN_FILE="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/GalaxyXR-APK/tools-galaxyxr-native/android-ndk-r27d/build/cmake/android.toolchain.cmake" `
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 `
-  -DOPENXR_SDK_SOURCE_DIR="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/GalaxyXR-APK/tools-galaxyxr-native/OpenXR-SDK-1.1.61"
-cmake --build extensions\resolution-trace-layer\build-android-new
-Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_single_projection_reconstruction_v1.so patches\src\main\resources\steamlink\androidxr\
-Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_two_projection_drop_base_v1.so patches\src\main\resources\steamlink\androidxr\
-Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_three_projection_sampler_proxy_v1.so patches\src\main\resources\steamlink\androidxr\
+  -DOPENXR_SDK_SOURCE_DIR="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/GalaxyXR-APK/tools-galaxyxr-native/OpenXR-SDK-1.1.61" `
+  -DOPENXR_LOADER_LIBRARY="C:/path/to/exact/5002322/arm64-v8a/libopenxr_loader.so"
+cmake --build extensions\resolution-trace-layer\build-android-new --target gxr_single_projection_reconstruction_efficient_v1
+cmake --build extensions\resolution-trace-layer\build-android-new --target gxr_single_projection_native_renderer_v1
+Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_single_projection_reconstruction_efficient_v1.so patches\src\main\resources\steamlink\androidxr\
 .\gradlew.bat :patches:generatePatchesList -PreleaseChannel=all
 ```

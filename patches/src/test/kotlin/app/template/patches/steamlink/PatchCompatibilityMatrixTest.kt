@@ -13,7 +13,7 @@ import app.template.patches.steamlink.androidxr.xrEfficientSingleProjectionRecon
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
-import app.template.patches.steamlink.androidxr.xrSingleProjectionReconstructionPatch
+import app.template.patches.steamlink.androidxr.xrNativeSingleProjectionRendererPatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -44,14 +44,14 @@ class PatchCompatibilityMatrixTest {
         latestExcluded.forEach { patch ->
             assertFalse(patch.supports("2.0.22", 5002322), "${patch.name} on 5002322")
         }
-        assertTrue(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002322))
-        assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002318))
-        assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.22", 5002244))
-        assertFalse(xrSingleProjectionReconstructionPatch.default)
         assertTrue(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002322))
         assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002318))
         assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002244))
         assertFalse(xrEfficientSingleProjectionReconstructionPatch.default)
+        assertTrue(xrNativeSingleProjectionRendererPatch.supports("2.0.22", 5002322))
+        assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.22", 5002318))
+        assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.22", 5002244))
+        assertFalse(xrNativeSingleProjectionRendererPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -69,12 +69,17 @@ class PatchCompatibilityMatrixTest {
     }
 
     @Test
-    fun `all legacy patches support 2_0_20 build 5001740`() {
-        (allowedNativeXr + excludedNativeXr).forEach { patch ->
-            assertTrue(patch.supports("2.0.20", 5001740), patch.name)
+    fun `all legacy patches support exact 2_0_20 builds`() {
+        listOf(5001712, 5001740).forEach { versionCode ->
+            (allowedNativeXr + excludedNativeXr).forEach { patch ->
+                assertTrue(patch.supports("2.0.20", versionCode), "${patch.name} on $versionCode")
+            }
+            assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.20", versionCode))
+            assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.20", versionCode))
         }
-        assertFalse(xrSingleProjectionReconstructionPatch.supports("2.0.20", 5001740))
-        assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.20", 5001740))
+        (allowedNativeXr + excludedNativeXr).forEach { patch ->
+            assertFalse(patch.supports("2.0.22", 5001712), "${patch.name} on wrong versionName")
+        }
     }
 
     @Test
@@ -108,8 +113,8 @@ class PatchCompatibilityMatrixTest {
         listOf(
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
-            xrSingleProjectionReconstructionPatch,
             xrEfficientSingleProjectionReconstructionPatch,
+            xrNativeSingleProjectionRendererPatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -159,8 +164,8 @@ class PatchCompatibilityMatrixTest {
             deviceIdentityPatch,
             oledCalibrationPatch,
         ) + listOf(
-            xrSingleProjectionReconstructionPatch,
             xrEfficientSingleProjectionReconstructionPatch,
+            xrNativeSingleProjectionRendererPatch,
         )
 
         val latestExcluded = excludedNativeXr + listOf(

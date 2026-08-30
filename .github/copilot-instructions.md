@@ -1,7 +1,7 @@
 # steamlink-patches — Copilot context
 
 Kotlin morphe-patcher patch library targeting exact `(versionName, versionCode)` Steam Link bases,
-including 2.0.20/5001740 and the preserved 2.0.22 builds. Read repository-root `AGENTS.md` first.
+including 2.0.20 builds 5001712 and 5001740 plus the preserved 2.0.22 builds. Read repository-root `AGENTS.md` first.
 
 ## Patch authoring rules
 

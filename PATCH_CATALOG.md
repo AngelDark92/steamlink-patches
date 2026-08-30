@@ -7,8 +7,8 @@ Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with i
 Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset, OLED color calibration,
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither.
 Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset,
-Unrestricted battery usage, Video dither, and Visual Delay Fix. One 5002322-only Android XR
-single-projection reconstruction patch remains optional and experimental.
+Unrestricted battery usage, Video dither, and Visual Delay Fix. Two mutually exclusive 5002322-only
+single-projection A/B patches remain optional and experimental.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
@@ -138,29 +138,30 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 
 ---
 
-### Experimental Single Projection Reconstruction
+### Experimental Single Projection Reconstruction Efficient
 **Default: disabled; 5002322 only** — do not combine with `Appear on top`
 
 | Artifact | Edit |
 |---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_v1` |
-| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` | Adds the source-built implicit layer; recognizes Steam Link's exact three-projection stream, resolves the opaque full-FOV underside and alpha-foveated GLES images, and submits one opaque stereo projection. The earlier base is intentionally not sampled because the later same-pose full-FOV underside is opaque and compositionally covers it. v1.2 uses four subpixel samples when reducing the foveal inset and requests quality supersampling only when `XR_FB_composition_layer_settings` is advertised; the captured Galaxy XR runtime did not advertise it. Repeated-image frames reuse the last released private output only while the projection space and full/foveal FOV mapping match; unfamiliar or incomplete frames fail open with reason telemetry. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1.json` | Registers the reconstruction layer with a unique v1 identity |
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_efficient_v1` |
+| `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` | Recognizes Steam Link's exact three-projection stream and submits 1 opaque stereo sRGB projection. v1.1 replaces the earlier 4-sample box with 1 centered bilinear foveal sample so the reconstruction does not add an extra low-pass before Galaxy XR's final warp. When `XR_FB_composition_layer_settings` is advertised, it requests both quality supersampling and quality sharpening. It retains 2 scratch textures, cached immutable GL/FOV state, synchronization, repeated-image reuse, and 30-frame success summaries. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json` | Registers the efficient reconstruction layer with a separate v1 identity |
 
-The layer fails open for runtime safety when the exact Steam Link topology, image ownership, EGL context, FBO, or synchronization contract is unavailable. Its trace identifies every reconstructed or forwarded frame. Retired modes and outcomes are recorded under `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md`.
+The output request preserves the 1536-square foveal source density in tangent space where the runtime allows it. The accepted capture requested 3745x4048 per eye but Galaxy XR reported maxima of 3152x3682, so the single projection cannot retain all of the original foveal layer's local pixel density. The centered sample removes avoidable reconstruction blur but cannot exceed those OpenXR swapchain limits. Unfamiliar or incomplete frames fail open with reason telemetry.
 
 ---
 
-### Experimental Single Projection Reconstruction Efficient
-**Default: disabled; 5002322 only** — do not combine with the original reconstruction or `Appear on top`
+### Experimental Native Single Projection Renderer Hook
+**Default: disabled; 5002322 only** — mutually exclusive with the efficient API-layer patch; do not combine with `Appear on top`
 
-| Artifact | Edit |
+| Artifact | Exact guarded edit |
 |---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_efficient_v1` |
-| `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` | Preserves the original v1.2 output contract: 1 opaque stereo sRGB projection, 4 MSAA resolves, 2 eye draws, the same 4-tap foveal filter, synchronization, and repeated-image reuse. It reduces scratch textures from 4 to 2, caches immutable GL/FOV state, and aggregates successful transforms every 30 frames while keeping failures immediate. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json` | Registers the efficient reconstruction layer with a separate v1 identity |
+| `lib/arm64-v8a/libvrlink_scene.so` | Requires the 2,283,400-byte 5002322 layout and unique build ID `585d88d646a8c6efe94bdd9fc6c9dbbc68fc13ba`. At file offset `0x69635`, replaces the 20-byte `libopenxr_loader.so` dependency string with padded `libgxr_nsp.so`; the helper retains a real `DT_NEEDED` on the original loader. |
+| `libvrlink_scene.so` dynamic symbol at `0x3EB5E` | Replaces the unique padded `xrRequestExitSession` name with `gxrEndFrame`, repurposing that import slot without changing ELF table sizes. |
+| `libvrlink_scene.so` instruction at `0x11AA7C` | Replaces stock AArch64 `f1 f9 03 94` with `55 fe 03 94`, routing only the streaming `xrEndFrame` call to the repurposed PLT entry. All three sites must be uniformly stock or uniformly patched; mixed and unknown layouts fail closed. |
+| `lib/arm64-v8a/libgxr_nsp.so` | Injected helper that interposes the OpenXR calls needed to observe swapchain contents and runs the same centered-sample reconstruction at the exact streaming return address. The original request-exit caller at return offset `0x142064` is forwarded to the real loader. Unexpected call sites are logged and forwarded rather than reconstructed. |
 
-This is an isolated performance A/B, not a quality or topology change. It does not reduce resolution, alter foveated source composition, synthesize frames, or force runtime performance settings.
+This is a native-hook A/B of the interception boundary, not a rewrite of Valve's renderer and not proof that Valve directly renders one projection. Steam Link still produces its original three projections; the helper receives them at the renderer's final `xrEndFrame` call and reconstructs one projection without registering an implicit API layer. It shares the same runtime swapchain limits and centered sampling as the efficient patch, so it can test API-layer involvement but cannot restore foveal density beyond Galaxy XR's reported maximum dimensions. The pristine scene reference SHA-256 is `e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f`; exact size, build ID, and per-site bytes remain the operative guards so other independently guarded 5002322 edits can coexist.
 
 ---
 
@@ -344,8 +345,7 @@ This intentionally preserves the native builds' requested extensions and vendor 
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrSingleProjectionReconstructionPatch`, `xrEfficientSingleProjectionReconstructionPatch`, `changePackageNamePatch` |
-| `lib/arm64-v8a/libgxr_single_projection_reconstruction_v1.so` + matching implicit-layer JSON | `xrSingleProjectionReconstructionPatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrEfficientSingleProjectionReconstructionPatch`, `changePackageNamePatch` |
 | `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` + matching implicit-layer JSON | `xrEfficientSingleProjectionReconstructionPatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 

@@ -6,7 +6,7 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
-Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations now include v2.0.20 build 5001740 plus v2.0.22 builds 5001712, 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. The available 5001740 source is an analysis reconstruction from a malformed hybrid APK, so pristine-APK Morphe patching, installation, and headset runtime validation remain pending. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. Build 5002322 exposes the requested 6 recommended patches plus the optional original and efficient single-projection reconstruction experiments.
+Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations now include v2.0.20 builds 5001712 and 5001740 plus v2.0.22 builds 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. The available 5001740 source is an analysis reconstruction from a malformed hybrid APK, so pristine-APK Morphe patching, installation, and headset runtime validation remain pending. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. Build 5002322 exposes the requested 6 recommended patches plus two mutually exclusive single-projection experiments: the optimized implicit OpenXR layer and an exact-build native end-frame hook for A/B testing.
 
 Use Morphe Manager 1.22 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Older builds retain their historical recommended defaults. Experimental and legacy-only patches default off.
 
@@ -21,14 +21,14 @@ To download it:
 <!-- PATCHES_START EXPANDED -->
 > **[v1.10.1-dev.14](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.14)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
 <details open>
-<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
+<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;20 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 2.0.20 (5001740) | 2.0.22 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
+| 2.0.20 (5001740) | 2.0.20 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending. | Verified Steam Link 2.0.22 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. | Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Single-projection reconstruction remains experimental. |
+| Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending. | Verified Steam Link 2.0.20 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. | Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Single-projection reconstruction remains experimental. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
@@ -55,7 +55,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -66,8 +66,8 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [Experimental Single Projection Reconstruction](#experimental-single-projection-reconstruction) | 5002322-only permission-free experiment. Reconstructs Steam Link's opaque full-FOV underside and alpha-foveated inset into one stereo projection before submission. | 5002322 |  |
-| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Preserves the v1 reconstructed image while reducing scratch memory, repeated GL setup, and success-log overhead. | 5002322 |  |
+| [Experimental Native Single Projection Renderer Hook](#experimental-native-single-projection-renderer-hook) | 5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame call through an exact-build AArch64 hook and bundled native reconstruction helper instead of an implicit API layer. | 5002322 |  |
+| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Reconstructs Steam Link into one stereo projection with reduced scratch memory and a sharper centered foveal sample. | 5002322 |  |
 
 </details>
 

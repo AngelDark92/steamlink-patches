@@ -40,7 +40,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -49,7 +49,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -185,7 +185,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -194,7 +194,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -372,7 +372,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -381,7 +381,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -527,7 +527,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -536,7 +536,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -720,7 +720,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -729,7 +729,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -898,7 +898,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -907,7 +907,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -1039,7 +1039,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -1048,7 +1048,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -1180,7 +1180,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -1189,7 +1189,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -1325,7 +1325,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -1334,7 +1334,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -1510,7 +1510,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -1519,7 +1519,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -1710,7 +1710,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -1719,7 +1719,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -1921,7 +1921,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -1930,7 +1930,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -2108,7 +2108,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -2117,7 +2117,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -2303,7 +2303,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -2312,7 +2312,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -2502,7 +2502,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -2511,7 +2511,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -2645,7 +2645,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -2654,7 +2654,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -2788,7 +2788,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -2797,7 +2797,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -2933,7 +2933,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -2942,7 +2942,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },
@@ -3076,7 +3076,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.22",
+              "version": "2.0.20",
               "versionCodes": {
                 "ARM64_V8A": 5001712,
                 "ARMEABI_V7A": 5001712,
@@ -3085,7 +3085,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Verified Steam Link 2.0.22 build 5001712."
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         },

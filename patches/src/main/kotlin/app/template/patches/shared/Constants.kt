@@ -13,7 +13,7 @@ object Constants {
 
     private val LEGACY_STEAM_LINK_BUILDS = listOf(
         SteamLinkBuild("2.0.20", 5001740),
-        SteamLinkBuild("2.0.22", 5001712),
+        SteamLinkBuild("2.0.20", 5001712),
         SteamLinkBuild("2.0.22", 5002172),
         SteamLinkBuild("2.0.22", 5002206),
         SteamLinkBuild("2.0.22", 5002244),

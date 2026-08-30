@@ -78,40 +78,28 @@ val appearOnTopPatch = bytecodePatch(
     )
 }
 
-private const val SINGLE_PROJECTION_MODE = "single_projection_reconstruction_v1"
-private const val SINGLE_PROJECTION_LIBRARY = "libgxr_single_projection_reconstruction_v1.so"
-private const val SINGLE_PROJECTION_MANIFEST =
-    "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_v1.json"
 private const val EFFICIENT_SINGLE_PROJECTION_MODE = "single_projection_reconstruction_efficient_v1"
 private const val EFFICIENT_SINGLE_PROJECTION_LIBRARY =
     "libgxr_single_projection_reconstruction_efficient_v1.so"
 private const val EFFICIENT_SINGLE_PROJECTION_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json"
 private const val FOVEA_QUADS_MODE = "single_projection_fovea_quads_v1"
-private const val FOVEA_QUADS_LIBRARY = "libgxr_single_projection_fovea_quads_v1.so"
-private const val FOVEA_QUADS_MANIFEST =
-    "XR_APILAYER_local_GalaxyXR_single_projection_fovea_quads_v1.json"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
-    val manifest: String,
+    val manifest: String?,
 )
 
 private val activeProjectionModes = listOf(
-    ProjectionModeResources(
-        SINGLE_PROJECTION_MODE,
-        SINGLE_PROJECTION_LIBRARY,
-        SINGLE_PROJECTION_MANIFEST,
-    ),
     ProjectionModeResources(
         EFFICIENT_SINGLE_PROJECTION_MODE,
         EFFICIENT_SINGLE_PROJECTION_LIBRARY,
         EFFICIENT_SINGLE_PROJECTION_MANIFEST,
     ),
     ProjectionModeResources(
-        FOVEA_QUADS_MODE,
-        FOVEA_QUADS_LIBRARY,
-        FOVEA_QUADS_MANIFEST,
+        NATIVE_SINGLE_PROJECTION_MODE,
+        NATIVE_SINGLE_PROJECTION_LIBRARY,
+        null,
     ),
 )
 
@@ -120,6 +108,8 @@ internal fun projectionModesConflict(existingMode: String, requestedMode: String
         activeProjectionModes.any { it.mode == existingMode }
 
 private val retiredProjectionModes = setOf(
+    "single_projection_reconstruction_v1",
+    FOVEA_QUADS_MODE,
     "projection_trace_control",
     "projection_settings_quality",
     "projection_settings_stripped",
@@ -140,7 +130,8 @@ private fun installProjectionModeResources(
     requested: ProjectionModeResources,
 ) {
     activeProjectionModes.filterNot { it.mode == requested.mode }.forEach { sibling ->
-        if (File(libDir, sibling.library).exists() || File(layerDir, sibling.manifest).exists()) {
+        val siblingManifestExists = sibling.manifest?.let { File(layerDir, it).exists() } == true
+        if (File(libDir, sibling.library).exists() || siblingManifestExists) {
             throw PatchException(
                 "Experimental XR projection modes are mutually exclusive: " +
                     "${requested.mode} conflicts with ${sibling.mode}",
@@ -160,9 +151,11 @@ private fun installProjectionModeResources(
     }
 
     File(libDir, requested.library).writeBytes(projectionModeResource(requested.library))
-    val layerManifest = File(layerDir, requested.manifest)
-    layerManifest.parentFile!!.mkdirs()
-    layerManifest.writeBytes(projectionModeResource(requested.manifest))
+    requested.manifest?.let { manifest ->
+        val layerManifest = File(layerDir, manifest)
+        layerManifest.parentFile!!.mkdirs()
+        layerManifest.writeBytes(projectionModeResource(manifest))
+    }
 }
 
 private fun configurePermissionFreeProjectionMode(document: Document, requestedMode: String) {
@@ -198,21 +191,6 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
     metadata.setAttribute("android:value", requestedMode)
 }
 
-private val singleProjectionReconstructionLayerPatch = rawResourcePatch {
-    execute {
-        val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
-        val layerDir = get(
-            "assets/openxr/1/api_layers/implicit.d/$SINGLE_PROJECTION_MANIFEST",
-        ).parentFile!!
-
-        installProjectionModeResources(
-            libDir,
-            layerDir,
-            activeProjectionModes.first { it.mode == SINGLE_PROJECTION_MODE },
-        )
-    }
-}
-
 private val efficientSingleProjectionReconstructionLayerPatch = rawResourcePatch {
     execute {
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
@@ -228,30 +206,33 @@ private val efficientSingleProjectionReconstructionLayerPatch = rawResourcePatch
     }
 }
 
-@Suppress("unused")
-val xrSingleProjectionReconstructionPatch = resourcePatch(
-    name = "Experimental Single Projection Reconstruction",
-    description = "5002322-only permission-free experiment. Reconstructs Steam Link's opaque full-FOV underside and alpha-foveated inset into one stereo projection before submission.",
-    default = false,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
-    dependsOn(
-        xrLauncherBootstrapPatch,
-        xrPermissionSettingsBootstrapPatch,
-        singleProjectionReconstructionLayerPatch,
-    )
-
-    finalize {
-        document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, SINGLE_PROJECTION_MODE)
+private val nativeSingleProjectionRendererLayerPatch = rawResourcePatch {
+    execute {
+        val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
+        val sceneBytes = sceneFile.readBytes()
+        val patchedScene = patchNativeSingleProjectionRenderer(sceneBytes)
+        val helperBytes = projectionModeResource(NATIVE_SINGLE_PROJECTION_LIBRARY)
+        if (helperBytes.size < 4 || !helperBytes.copyOfRange(0, 4)
+                .contentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))) {
+            throw PatchException("Bundled native single-projection helper is not an ELF library")
         }
+        val libDir = sceneFile.parentFile!!
+        val layerDir = get(
+            "assets/openxr/1/api_layers/implicit.d/$EFFICIENT_SINGLE_PROJECTION_MANIFEST",
+        ).parentFile!!
+        installProjectionModeResources(
+            libDir,
+            layerDir,
+            activeProjectionModes.first { it.mode == NATIVE_SINGLE_PROJECTION_MODE },
+        )
+        if (!patchedScene.contentEquals(sceneBytes)) sceneFile.writeBytes(patchedScene)
     }
 }
 
 @Suppress("unused")
 val xrEfficientSingleProjectionReconstructionPatch = resourcePatch(
     name = "Experimental Single Projection Reconstruction Efficient",
-    description = "5002322-only permission-free experiment. Preserves the v1 reconstructed image while reducing scratch memory, repeated GL setup, and success-log overhead.",
+    description = "5002322-only permission-free experiment. Reconstructs Steam Link into one stereo projection with reduced scratch memory and a sharper centered foveal sample.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
@@ -264,6 +245,26 @@ val xrEfficientSingleProjectionReconstructionPatch = resourcePatch(
     finalize {
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, EFFICIENT_SINGLE_PROJECTION_MODE)
+        }
+    }
+}
+
+@Suppress("unused")
+val xrNativeSingleProjectionRendererPatch = resourcePatch(
+    name = "Experimental Native Single Projection Renderer Hook",
+    description = "5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame call through an exact-build AArch64 hook and bundled native reconstruction helper instead of an implicit API layer.",
+    default = false,
+) {
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        nativeSingleProjectionRendererLayerPatch,
+    )
+
+    finalize {
+        document("AndroidManifest.xml").use { document ->
+            configurePermissionFreeProjectionMode(document, NATIVE_SINGLE_PROJECTION_MODE)
         }
     }
 }
