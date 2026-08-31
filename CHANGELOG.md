@@ -1,3 +1,9 @@
+## [1.10.1-dev.16](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.15...v1.10.1-dev.16) (2026-08-31)
+
+### 🐛 Bug Fixes
+
+* fixed CPU overhead and new experimental native single projection with Quad-View GPU patch ([3097923](https://github.com/AngelDark92/steamlink-patches/commit/309792383e269f691b60f28bb1fa5d03b4d1045b))
+
 ## [1.10.1-dev.15](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.14...v1.10.1-dev.15) (2026-08-30)
 
 ### 🐛 Bug Fixes
