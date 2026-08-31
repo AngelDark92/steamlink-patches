@@ -24,11 +24,11 @@ class SingleProjectionReconstructionResourceTest {
             .digest(library)
             .joinToString("") { "%02x".format(it) }
         assertEquals(
-            "dd31e2907ea29506a392f5b2ddcf35019b687bf35c1d1e2da475b8c3635b6046",
+            "3028a667223774c6dd62f17dee6c07c5f0f67aed205effd3cd133122d291a319",
             sha256,
         )
         val nativeStrings = library.toString(Charsets.ISO_8859_1)
-        assertTrue(nativeStrings.contains("single-projection-reconstruction-efficient-v1.2-20260830"))
+        assertTrue(nativeStrings.contains("single-projection-reconstruction-efficient-v1.4-20260831"))
         assertTrue(nativeStrings.contains("linear_center_1tap"))
         assertFalse(nativeStrings.contains("linear_4tap_subpixel_box"))
         assertTrue(nativeStrings.contains("single_projection_reconstruction_success_summary"))
@@ -54,8 +54,11 @@ class SingleProjectionReconstructionResourceTest {
         fun normalized(value: String) = value.replace(Regex("\\s+"), "")
         listOf(
             "float rx=1,ry=1;for(int eye=0;eye<2;++eye)",
-            "const uint32_t requestedWidth=std::max",
-            "const uint32_t requestedHeight=std::max",
+            "checkedOutputExtent(std::max<double>(s.recommendedWidth",
+            "checkedOutputExtent(std::max<double>(s.recommendedHeight",
+            "kDensityPreservingTier,requestedWidth,requestedHeight",
+            "kPanelNativeTier,panelWidth,panelHeight",
+            "kReportedMaximumTier,reportedWidth,reportedHeight",
             "views[eye]=f.p[1]->views[eye]",
             "views[eye].subImage.swapchain=s.outputs[eye].handle",
             "views[eye].subImage.imageRect={{0,0}",
@@ -78,7 +81,7 @@ class SingleProjectionReconstructionResourceTest {
             """outputViewCount\":2""",
             """foveaFilter\":\"linear_center_1tap""",
             "ci.format=kSourceFormat;",
-            "ci.sampleCount=1;ci.width=s.outputWidth",
+            "ci.sampleCount=1;ci.width=width;ci.height=height",
             "qualitySettings.layerFlags=XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB",
             "XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB",
             "s.dither=glIsEnabled(GL_DITHER)",
@@ -87,6 +90,15 @@ class SingleProjectionReconstructionResourceTest {
             "fixedFunctionDitherDisabled\\\":true",
             "fixedFunctionDitherWasEnabled",
             "reconstruction_dither_state",
+            "reconstruction_output_attempt",
+            "reconstruction_output_tier_accepted",
+            "reconstruction_output_tier_rejected",
+            "XR_ANDROID_RECOMMENDED_RESOLUTION_EXTENSION_NAME",
+            "XR_TYPE_EVENT_DATA_RECOMMENDED_RESOLUTION_CHANGED_ANDROID",
+            "recommended_resolution_outputs_invalidated",
+            "publishedStereoViewLimitsGeneration.store(generation+1",
+            "if(before!=after||(after&1u))continue",
+            "frameDiscarded\\\":true,\\\"retrySameFrame\\\":false",
         ).forEach { invariant -> assertTrue(source.contains(invariant), invariant) }
         assertEquals(1, Regex("glDrawArrays\\(GL_TRIANGLES,0,3\\)").findAll(source).count())
         assertEquals(1, Regex("glBlitFramebuffer\\(").findAll(source).count())
@@ -101,9 +113,8 @@ class SingleProjectionReconstructionResourceTest {
         val activeModes = listOf(
             "single_projection_native_renderer_v1",
             "single_projection_reconstruction_efficient_v1",
-            "single_projection_native_quad_zero_copy_v1",
             "single_projection_native_renderer_dual_v1",
-            "single_projection_native_quad_zero_copy_dual_v1",
+            "single_projection_native_probe_v1",
         )
         activeModes.forEach { existing ->
             activeModes.forEach { requested ->
@@ -155,6 +166,8 @@ class SingleProjectionReconstructionResourceTest {
             "XR_APILAYER_local_GalaxyXR_two_projection_drop_base_v1.json",
             "libgxr_three_projection_sampler_proxy_v1.so",
             "XR_APILAYER_local_GalaxyXR_three_projection_sampler_proxy_v1.json",
+            "libgxr_nqv.so",
+            "libgxr_nqvd.so",
         ).forEach { resource ->
             assertNull(javaClass.getResourceAsStream("/steamlink/androidxr/$resource"), resource)
         }

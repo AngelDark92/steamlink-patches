@@ -102,18 +102,13 @@ private val activeProjectionModes = listOf(
         null,
     ),
     ProjectionModeResources(
-        NATIVE_QUAD_VIEW_MODE,
-        NATIVE_QUAD_VIEW_LIBRARY,
-        null,
-    ),
-    ProjectionModeResources(
         NATIVE_DUAL_SINGLE_PROJECTION_MODE,
         NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY,
         null,
     ),
     ProjectionModeResources(
-        NATIVE_DUAL_QUAD_VIEW_MODE,
-        NATIVE_DUAL_QUAD_VIEW_LIBRARY,
+        NATIVE_SINGLE_PROJECTION_PROBE_MODE,
+        NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
         null,
     ),
 )
@@ -132,6 +127,12 @@ private val retiredProjectionModes = setOf(
     "projection_metadata_compat_v2",
     "two_projection_drop_base_v1",
     "three_projection_sampler_proxy_v1",
+    NATIVE_QUAD_VIEW_MODE,
+    NATIVE_DUAL_QUAD_VIEW_MODE,
+)
+private val retiredProjectionLibraries = setOf(
+    NATIVE_QUAD_VIEW_LIBRARY,
+    NATIVE_DUAL_QUAD_VIEW_LIBRARY,
 )
 
 private fun projectionModeResource(name: String): ByteArray =
@@ -162,6 +163,12 @@ private fun installProjectionModeResources(
             if (retiredFile.exists() && !retiredFile.delete()) {
                 throw PatchException("Could not remove retired XR projection resource: ${retiredFile.path}")
             }
+        }
+    }
+    retiredProjectionLibraries.forEach { library ->
+        val retiredFile = File(libDir, library)
+        if (retiredFile.exists() && !retiredFile.delete()) {
+            throw PatchException("Could not remove retired XR projection resource: ${retiredFile.path}")
         }
     }
 
@@ -208,6 +215,9 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
 
 private val efficientSingleProjectionReconstructionLayerPatch = rawResourcePatch {
     execute {
+        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
+            return@execute
+        }
         val libDir = get("lib/arm64-v8a/libvrlink_scene.so").parentFile!!
         val layerDir = get(
             "assets/openxr/1/api_layers/implicit.d/$EFFICIENT_SINGLE_PROJECTION_MANIFEST",
@@ -223,6 +233,9 @@ private val efficientSingleProjectionReconstructionLayerPatch = rawResourcePatch
 
 private val nativeSingleProjectionRendererLayerPatch = rawResourcePatch {
     execute {
+        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
+            return@execute
+        }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
         val sceneBytes = sceneFile.readBytes()
         val patchedScene = patchNativeSingleProjectionRenderer(sceneBytes)
@@ -244,34 +257,11 @@ private val nativeSingleProjectionRendererLayerPatch = rawResourcePatch {
     }
 }
 
-private val nativeQuadViewRendererLayerPatch = rawResourcePatch {
-    execute {
-        val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
-        val sceneBytes = sceneFile.readBytes()
-        val patchedScene = patchNativeSingleProjectionRenderer(
-            sceneBytes,
-            NATIVE_QUAD_VIEW_LIBRARY,
-        )
-        val helperBytes = projectionModeResource(NATIVE_QUAD_VIEW_LIBRARY)
-        if (helperBytes.size < 4 || !helperBytes.copyOfRange(0, 4)
-                .contentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))) {
-            throw PatchException("Bundled native quad-view helper is not an ELF library")
-        }
-        val libDir = sceneFile.parentFile!!
-        val layerDir = get(
-            "assets/openxr/1/api_layers/implicit.d/$EFFICIENT_SINGLE_PROJECTION_MANIFEST",
-        ).parentFile!!
-        installProjectionModeResources(
-            libDir,
-            layerDir,
-            activeProjectionModes.first { it.mode == NATIVE_QUAD_VIEW_MODE },
-        )
-        if (!patchedScene.contentEquals(sceneBytes)) sceneFile.writeBytes(patchedScene)
-    }
-}
-
 private fun nativeProjectionHelperPatch(mode: String, library: String) = rawResourcePatch {
     execute {
+        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
+            return@execute
+        }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
         val sceneBytes = sceneFile.readBytes()
         val patchedScene = patchNativeSingleProjectionRenderer(sceneBytes, library)
@@ -298,15 +288,15 @@ private val nativeDualSingleProjectionRendererLayerPatch = nativeProjectionHelpe
     NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY,
 )
 
-private val nativeDualQuadViewRendererLayerPatch = nativeProjectionHelperPatch(
-    NATIVE_DUAL_QUAD_VIEW_MODE,
-    NATIVE_DUAL_QUAD_VIEW_LIBRARY,
+private val nativeSingleProjectionProbeLayerPatch = nativeProjectionHelperPatch(
+    NATIVE_SINGLE_PROJECTION_PROBE_MODE,
+    NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
 )
 
 @Suppress("unused")
 val xrEfficientSingleProjectionReconstructionPatch = resourcePatch(
     name = "Experimental Single Projection Reconstruction Efficient",
-    description = "5002322-only permission-free experiment. Reconstructs Steam Link into one stereo projection with a centered foveal sample and fixed-function GLES dithering disabled.",
+    description = "5002322-only permission-free experiment. Reconstructs one stereo projection and tries density-preserving, Galaxy XR panel-native, then runtime-maximum output sizes with guarded fallback.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
@@ -326,7 +316,7 @@ val xrEfficientSingleProjectionReconstructionPatch = resourcePatch(
 @Suppress("unused")
 val xrNativeSingleProjectionRendererPatch = resourcePatch(
     name = "Experimental Native Single Projection Renderer Hook",
-    description = "5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame through an exact-build native helper with fixed-function GLES dithering disabled.",
+    description = "5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame through an exact-build native helper and tries density-preserving, panel-native, then runtime-maximum output sizes.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
@@ -344,29 +334,9 @@ val xrNativeSingleProjectionRendererPatch = resourcePatch(
 }
 
 @Suppress("unused")
-val xrNativeQuadViewZeroCopyProjectionPatch = resourcePatch(
-    name = "Experimental Native Quad-View Zero-Copy Projection",
-    description = "5002322-only permission-free A/B. Uses a guarded native helper to submit Valve's outer and foveal images as one 4-view projection without reconstruction GPU passes.",
-    default = false,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
-    dependsOn(
-        xrLauncherBootstrapPatch,
-        xrPermissionSettingsBootstrapPatch,
-        nativeQuadViewRendererLayerPatch,
-    )
-
-    finalize {
-        document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, NATIVE_QUAD_VIEW_MODE)
-        }
-    }
-}
-
-@Suppress("unused")
 val xrNativeDualFormatSingleProjectionRendererPatch = resourcePatch(
     name = "Experimental Native Reconstruction CPU Optimized 8/10-bit",
-    description = "5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and reconstructs one stereo projection with matching scratch and output formats.",
+    description = "5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and tries density-preserving, panel-native, then runtime-maximum output sizes.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
@@ -384,21 +354,21 @@ val xrNativeDualFormatSingleProjectionRendererPatch = resourcePatch(
 }
 
 @Suppress("unused")
-val xrNativeDualFormatQuadViewZeroCopyProjectionPatch = resourcePatch(
-    name = "Experimental Native Quad Zero-Copy CPU+GPU Optimized 8/10-bit",
-    description = "5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and submits one 4-view projection without reconstruction GPU passes.",
+val xrNativeSingleProjectionResolutionProbePatch = resourcePatch(
+    name = "Experimental Native Single-Projection Resolution + 10-bit Probe",
+    description = "5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
-        nativeDualQuadViewRendererLayerPatch,
+        nativeSingleProjectionProbeLayerPatch,
     )
 
     finalize {
         document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, NATIVE_DUAL_QUAD_VIEW_MODE)
+            configurePermissionFreeProjectionMode(document, NATIVE_SINGLE_PROJECTION_PROBE_MODE)
         }
     }
 }

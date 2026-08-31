@@ -10,6 +10,10 @@ internal const val NATIVE_DUAL_SINGLE_PROJECTION_MODE = "single_projection_nativ
 internal const val NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY = "libgxr_nspd.so"
 internal const val NATIVE_DUAL_QUAD_VIEW_MODE = "single_projection_native_quad_zero_copy_dual_v1"
 internal const val NATIVE_DUAL_QUAD_VIEW_LIBRARY = "libgxr_nqvd.so"
+internal const val NATIVE_SINGLE_PROJECTION_PROBE_MODE = "single_projection_native_probe_v1"
+internal const val NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY = "libgxr_nspp.so"
+internal const val NATIVE_SINGLE_PROJECTION_PROBE_BUILD_ID =
+    "single-projection-native-probe-v1.2-20260831"
 internal const val NATIVE_SINGLE_PROJECTION_STOCK_SHA256 =
     "e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f"
 
@@ -25,12 +29,17 @@ private val STOCK_REQUEST_EXIT_SYMBOL = "xrRequestExitSession\u0000".encodeToByt
 private val PATCHED_REQUEST_EXIT_SYMBOL = paddedAscii("gxrEndFrame", STOCK_REQUEST_EXIT_SYMBOL.size)
 private val STOCK_STREAM_END_FRAME_CALL = byteArrayOf(0xF1.toByte(), 0xF9.toByte(), 0x03, 0x94.toByte())
 private val PATCHED_STREAM_END_FRAME_CALL = byteArrayOf(0x55, 0xFE.toByte(), 0x03, 0x94.toByte())
-private val NATIVE_HELPER_LIBRARIES = listOf(
+private val ACTIVE_NATIVE_HELPER_LIBRARIES = listOf(
     NATIVE_SINGLE_PROJECTION_LIBRARY,
-    NATIVE_QUAD_VIEW_LIBRARY,
     NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY,
+    NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
+)
+private val RETIRED_NATIVE_HELPER_LIBRARIES = listOf(
+    NATIVE_QUAD_VIEW_LIBRARY,
     NATIVE_DUAL_QUAD_VIEW_LIBRARY,
 )
+private val KNOWN_NATIVE_HELPER_LIBRARIES =
+    ACTIVE_NATIVE_HELPER_LIBRARIES + RETIRED_NATIVE_HELPER_LIBRARIES
 
 private data class NativeHookSite(
     val name: String,
@@ -92,7 +101,7 @@ internal fun patchNativeSingleProjectionRenderer(
     bytes: ByteArray,
     targetLibrary: String = NATIVE_SINGLE_PROJECTION_LIBRARY,
 ): ByteArray {
-    if (targetLibrary !in NATIVE_HELPER_LIBRARIES) {
+    if (targetLibrary !in ACTIVE_NATIVE_HELPER_LIBRARIES) {
         throw PatchException("Unsupported native projection helper: $targetLibrary")
     }
     if (bytes.size != SCENE_SIZE_5002322) {
@@ -115,7 +124,7 @@ internal fun patchNativeSingleProjectionRenderer(
     }
 
     val targetOpenXrNeeded = paddedAscii(targetLibrary, STOCK_OPENXR_NEEDED.size)
-    val siblingOpenXrNeeded = NATIVE_HELPER_LIBRARIES
+    val siblingOpenXrNeeded = KNOWN_NATIVE_HELPER_LIBRARIES
         .filterNot { it == targetLibrary }
         .associateWith { paddedAscii(it, STOCK_OPENXR_NEEDED.size) }
     val actualOpenXrNeeded = bytes.sliceArray(

@@ -6,7 +6,7 @@
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
-Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations now include v2.0.20 builds 5001712 and 5001740 plus v2.0.22 builds 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. The available 5001740 source is an analysis reconstruction from a malformed hybrid APK, so pristine-APK Morphe patching, installation, and headset runtime validation remain pending. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. Build 5002322 exposes the requested 6 recommended patches plus two mutually exclusive single-projection experiments: the optimized implicit OpenXR layer and an exact-build native end-frame hook for A/B testing.
+Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations now include v2.0.20 builds 5001712 and 5001740 plus v2.0.22 builds 5002172, 5002206, 5002244, 5002313, 5002318, and 5002322. The available 5001740 source is an analysis reconstruction from a malformed hybrid APK, so pristine-APK Morphe patching, installation, and headset runtime validation remain pending. Build 5002318 exposes Device identity, Microphone input preset, OLED color calibration, Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. Build 5002322 exposes the requested 6 recommended patches plus 4 mutually exclusive single-projection experiments, including the exact-build native resolution and 10-bit probe. The 2 native 4-view zero-copy experiments are retired after low-resolution headset results.
 
 Use Morphe Manager 1.22 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Older builds retain their historical recommended defaults. Experimental and legacy-only patches default off.
 
@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.1-dev.17](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.17)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;24 patches total
+> **[v1.10.1-dev.17](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.17)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -55,7 +55,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -66,11 +66,10 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [Experimental Native Quad Zero-Copy CPU+GPU Optimized 8/10-bit](#experimental-native-quad-zero-copy-cpu-gpu-optimized-8-10-bit) | 5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and submits one 4-view projection without reconstruction GPU passes. | 5002322 |  |
-| [Experimental Native Quad-View Zero-Copy Projection](#experimental-native-quad-view-zero-copy-projection) | 5002322-only permission-free A/B. Uses a guarded native helper to submit Valve's outer and foveal images as one 4-view projection without reconstruction GPU passes. | 5002322 |  |
-| [Experimental Native Reconstruction CPU Optimized 8/10-bit](#experimental-native-reconstruction-cpu-optimized-8-10-bit) | 5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and reconstructs one stereo projection with matching scratch and output formats. | 5002322 |  |
-| [Experimental Native Single Projection Renderer Hook](#experimental-native-single-projection-renderer-hook) | 5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame through an exact-build native helper with fixed-function GLES dithering disabled. | 5002322 |  |
-| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Reconstructs Steam Link into one stereo projection with a centered foveal sample and fixed-function GLES dithering disabled. | 5002322 |  |
+| [Experimental Native Reconstruction CPU Optimized 8/10-bit](#experimental-native-reconstruction-cpu-optimized-8-10-bit) | 5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and tries density-preserving, panel-native, then runtime-maximum output sizes. | 5002322 |  |
+| [Experimental Native Single Projection Renderer Hook](#experimental-native-single-projection-renderer-hook) | 5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame through an exact-build native helper and tries density-preserving, panel-native, then runtime-maximum output sizes. | 5002322 |  |
+| [Experimental Native Single-Projection Resolution + 10-bit Probe](#experimental-native-single-projection-resolution-10-bit-probe) | 5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame. | 5002322 |  |
+| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Reconstructs one stereo projection and tries density-preserving, Galaxy XR panel-native, then runtime-maximum output sizes with guarded fallback. | 5002322 |  |
 
 </details>
 

@@ -13,9 +13,8 @@ import app.template.patches.steamlink.androidxr.xrEfficientSingleProjectionRecon
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
-import app.template.patches.steamlink.androidxr.xrNativeDualFormatQuadViewZeroCopyProjectionPatch
 import app.template.patches.steamlink.androidxr.xrNativeDualFormatSingleProjectionRendererPatch
-import app.template.patches.steamlink.androidxr.xrNativeQuadViewZeroCopyProjectionPatch
+import app.template.patches.steamlink.androidxr.xrNativeSingleProjectionResolutionProbePatch
 import app.template.patches.steamlink.androidxr.xrNativeSingleProjectionRendererPatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
@@ -56,9 +55,8 @@ class PatchCompatibilityMatrixTest {
         assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.22", 5002244))
         assertFalse(xrNativeSingleProjectionRendererPatch.default)
         listOf(
-            xrNativeQuadViewZeroCopyProjectionPatch,
             xrNativeDualFormatSingleProjectionRendererPatch,
-            xrNativeDualFormatQuadViewZeroCopyProjectionPatch,
+            xrNativeSingleProjectionResolutionProbePatch,
         ).forEach { patch ->
             assertTrue(patch.supports("2.0.22", 5002322), patch.name)
             assertFalse(patch.supports("2.0.22", 5002318), patch.name)
@@ -90,7 +88,7 @@ class PatchCompatibilityMatrixTest {
             assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.20", versionCode))
             assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.20", versionCode))
             assertFalse(xrNativeDualFormatSingleProjectionRendererPatch.supports("2.0.20", versionCode))
-            assertFalse(xrNativeDualFormatQuadViewZeroCopyProjectionPatch.supports("2.0.20", versionCode))
+            assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.20", versionCode))
         }
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertFalse(patch.supports("2.0.22", 5001712), "${patch.name} on wrong versionName")
@@ -131,7 +129,7 @@ class PatchCompatibilityMatrixTest {
             xrEfficientSingleProjectionReconstructionPatch,
             xrNativeSingleProjectionRendererPatch,
             xrNativeDualFormatSingleProjectionRendererPatch,
-            xrNativeDualFormatQuadViewZeroCopyProjectionPatch,
+            xrNativeSingleProjectionResolutionProbePatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -183,9 +181,8 @@ class PatchCompatibilityMatrixTest {
         ) + listOf(
             xrEfficientSingleProjectionReconstructionPatch,
             xrNativeSingleProjectionRendererPatch,
-            xrNativeQuadViewZeroCopyProjectionPatch,
             xrNativeDualFormatSingleProjectionRendererPatch,
-            xrNativeDualFormatQuadViewZeroCopyProjectionPatch,
+            xrNativeSingleProjectionResolutionProbePatch,
         )
 
         val latestExcluded = excludedNativeXr + listOf(

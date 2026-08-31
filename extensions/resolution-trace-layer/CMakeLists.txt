@@ -87,43 +87,29 @@ if(EXISTS "${OPENXR_LOADER_LIBRARY}")
         OUTPUT_NAME gxr_nspd
     )
 
-    add_library(gxr_single_projection_native_quad_zero_copy_v1 SHARED
-        src/single_projection_native_quad_zero_copy.cpp
+    add_library(gxr_single_projection_native_probe_v1 SHARED
+        src/single_projection_reconstruction_efficient_layer.cpp
+        src/native_probe_media_interpose.cpp
     )
-    target_include_directories(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE
+    target_include_directories(gxr_single_projection_native_probe_v1 PRIVATE
         "${OPENXR_SDK_SOURCE_DIR}/include"
     )
-    target_compile_definitions(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE
+    target_compile_definitions(gxr_single_projection_native_probe_v1 PRIVATE
         XR_USE_PLATFORM_ANDROID
-    )
-    target_link_options(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE "-Wl,--no-as-needed")
-    target_link_libraries(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE
-        log dl "${OPENXR_LOADER_LIBRARY}"
-    )
-    set_target_properties(gxr_single_projection_native_quad_zero_copy_v1 PROPERTIES
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN YES
-        OUTPUT_NAME gxr_nqv
-    )
-
-    add_library(gxr_single_projection_native_quad_zero_copy_dual_v1 SHARED
-        src/single_projection_native_quad_zero_copy.cpp
-    )
-    target_include_directories(gxr_single_projection_native_quad_zero_copy_dual_v1 PRIVATE
-        "${OPENXR_SDK_SOURCE_DIR}/include"
-    )
-    target_compile_definitions(gxr_single_projection_native_quad_zero_copy_dual_v1 PRIVATE
-        XR_USE_PLATFORM_ANDROID
+        XR_USE_GRAPHICS_API_OPENGL_ES
+        GXR_NATIVE_RENDERER_HELPER
         GXR_NATIVE_DUAL_FORMAT
+        GXR_DIAGNOSTIC_PROBE
+        GXR_LAYER_NAME="libgxr_nspp"
     )
-    target_link_options(gxr_single_projection_native_quad_zero_copy_dual_v1 PRIVATE "-Wl,--no-as-needed")
-    target_link_libraries(gxr_single_projection_native_quad_zero_copy_dual_v1 PRIVATE
-        log dl "${OPENXR_LOADER_LIBRARY}"
+    target_link_options(gxr_single_projection_native_probe_v1 PRIVATE "-Wl,--no-as-needed")
+    target_link_libraries(gxr_single_projection_native_probe_v1 PRIVATE
+        log android mediandk EGL GLESv3 dl "${OPENXR_LOADER_LIBRARY}"
     )
-    set_target_properties(gxr_single_projection_native_quad_zero_copy_dual_v1 PROPERTIES
+    set_target_properties(gxr_single_projection_native_probe_v1 PROPERTIES
         CXX_VISIBILITY_PRESET hidden
         VISIBILITY_INLINES_HIDDEN YES
-        OUTPUT_NAME gxr_nqvd
+        OUTPUT_NAME gxr_nspp
     )
 else()
     message(STATUS

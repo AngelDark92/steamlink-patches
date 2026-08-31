@@ -10,6 +10,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class NativeSingleProjectionRendererTest {
@@ -28,17 +29,26 @@ class NativeSingleProjectionRendererTest {
     }
 
     @Test
-    fun `exact 5002322 quad hook is atomic idempotent and mutually exclusive`() {
+    fun `exact 5002322 probe hook is atomic idempotent and retired quads are target-ineligible`() {
         val stock = stockSceneFixture()
-        val quad = patchNativeSingleProjectionRenderer(stock, NATIVE_QUAD_VIEW_LIBRARY)
+        val probe = patchNativeSingleProjectionRenderer(stock, NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY)
 
-        assertContentEquals(paddedAscii("libgxr_nqv.so", 20), quad.sliceArray(0x69635 until 0x69649))
-        assertContentEquals(quad, patchNativeSingleProjectionRenderer(quad, NATIVE_QUAD_VIEW_LIBRARY))
-        assertFailsWith<PatchException> { patchNativeSingleProjectionRenderer(quad) }
+        assertContentEquals(paddedAscii("libgxr_nspp.so", 20), probe.sliceArray(0x69635 until 0x69649))
+        assertContentEquals(
+            probe,
+            patchNativeSingleProjectionRenderer(probe, NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY),
+        )
+        assertFailsWith<PatchException> { patchNativeSingleProjectionRenderer(probe) }
 
         val reconstruction = patchNativeSingleProjectionRenderer(stock)
         assertFailsWith<PatchException> {
-            patchNativeSingleProjectionRenderer(reconstruction, NATIVE_QUAD_VIEW_LIBRARY)
+            patchNativeSingleProjectionRenderer(reconstruction, NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY)
+        }
+        assertFailsWith<PatchException> {
+            patchNativeSingleProjectionRenderer(stock, NATIVE_QUAD_VIEW_LIBRARY)
+        }
+        assertFailsWith<PatchException> {
+            patchNativeSingleProjectionRenderer(stock, NATIVE_DUAL_QUAD_VIEW_LIBRARY)
         }
         assertFailsWith<PatchException> {
             patchNativeSingleProjectionRenderer(stock, "libgxr_unknown.so")
@@ -46,12 +56,11 @@ class NativeSingleProjectionRendererTest {
     }
 
     @Test
-    fun `all four native helpers are atomic idempotent and mutually exclusive`() {
+    fun `all active native helpers are atomic idempotent and mutually exclusive`() {
         val libraries = listOf(
             NATIVE_SINGLE_PROJECTION_LIBRARY,
-            NATIVE_QUAD_VIEW_LIBRARY,
             NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY,
-            NATIVE_DUAL_QUAD_VIEW_LIBRARY,
+            NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
         )
         libraries.forEach { library ->
             val patched = patchNativeSingleProjectionRenderer(stockSceneFixture(), library)
@@ -75,6 +84,14 @@ class NativeSingleProjectionRendererTest {
         assertFailsWith<PatchException> {
             patchNativeSingleProjectionRenderer(stockSceneFixture().also { it[0x300] = 0 })
         }
+        listOf(NATIVE_QUAD_VIEW_LIBRARY, NATIVE_DUAL_QUAD_VIEW_LIBRARY).forEach { retiredLibrary ->
+            val retired = patchNativeSingleProjectionRenderer(stockSceneFixture()).also {
+                paddedAscii(retiredLibrary, 20).copyInto(it, 0x69635)
+            }
+            assertFailsWith<PatchException>(retiredLibrary) {
+                patchNativeSingleProjectionRenderer(retired, NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY)
+            }
+        }
     }
 
     @Test
@@ -94,12 +111,12 @@ class NativeSingleProjectionRendererTest {
             .use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "dbdf7e1a25dd088853abf7bf72d3d03afec2513925194bfeb586720ceaa530f7",
+            "ace99456350a790bc39945d672fad149a83d2d3f9943eb9a966a0b30d02755bc",
             MessageDigest.getInstance("SHA-256").digest(helper).joinToString("") { "%02x".format(it) },
         )
         val nativeStrings = helper.toString(Charsets.ISO_8859_1)
         listOf(
-            "single-projection-native-renderer-v1.2-20260831",
+            "single-projection-native-renderer-v1.4-20260831",
             "single_projection_native_renderer_v1",
             "libopenxr_loader.so",
             "libgxr_nsp.so",
@@ -108,6 +125,7 @@ class NativeSingleProjectionRendererTest {
             "xrCreateSwapchain",
             "xrAcquireSwapchainImage",
             "xrReleaseSwapchainImage",
+            "xrPollEvent",
             "linear_center_1tap",
             "fastFingerprintCount",
         ).forEach { identity -> assertTrue(nativeStrings.contains(identity), identity) }
@@ -128,70 +146,74 @@ class NativeSingleProjectionRendererTest {
             "xrAcquireSwapchainImage",
             "xrWaitSwapchainImage",
             "xrReleaseSwapchainImage",
+            "xrPollEvent",
         ).forEach { symbol -> assertTrue(symbol in elf.exportedSymbols, symbol) }
     }
 
     @Test
-    fun `bundled quad helper is zero-copy and exports guarded virtualization`() {
-        val helper = checkNotNull(javaClass.getResourceAsStream("/steamlink/androidxr/libgxr_nqv.so"))
+    fun `bundled probe helper exposes resolution decoder and precision evidence`() {
+        val helper = checkNotNull(javaClass.getResourceAsStream("/steamlink/androidxr/libgxr_nspp.so"))
             .use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "d7cc22af0127ddd4a5a176d741afee193a598a64ebd509c858a273dc9869c8fd",
+            "64090a6564952353f86258e25c20ece7129ce616e4f08b3a7b24db37f4fbe0e8",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
         val nativeStrings = helper.toString(Charsets.ISO_8859_1)
         listOf(
-            "single-projection-native-quad-zero-copy-v1.0-20260831",
-            "single_projection_native_quad_zero_copy_v1",
+            NATIVE_SINGLE_PROJECTION_PROBE_BUILD_ID,
+            NATIVE_SINGLE_PROJECTION_PROBE_MODE,
             "libopenxr_loader.so",
-            "libgxr_nqv.so",
-            "native_quad_capability",
-            "native_quad_summary",
-            "reconstructionPasses\":0",
-            "fastFingerprintCount",
+            NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
+            "view_configuration_eye",
+            "resolution_probe_capabilities",
+            "resolution_probe_candidate",
+            "reconstruction_attachment_precision",
+            "probe_source_swapchain_contract",
+            "decoder_probe_initialized",
+            "decoder_hardware_buffer_descriptor",
+            "linear_center_1tap",
+            "rgb10a2",
         ).forEach { identity -> assertTrue(nativeStrings.contains(identity), identity) }
 
         val elf = Elf64DynamicView(helper)
         assertTrue("libopenxr_loader.so" in elf.neededLibraries)
-        assertFalse("libEGL.so" in elf.neededLibraries)
-        assertFalse("libGLESv3.so" in elf.neededLibraries)
-        assertEquals("libgxr_nqv.so", elf.soname)
+        assertTrue("libEGL.so" in elf.neededLibraries)
+        assertTrue("libGLESv3.so" in elf.neededLibraries)
+        assertTrue("libmediandk.so" in elf.neededLibraries)
+        assertTrue("libandroid.so" in elf.neededLibraries)
+        assertEquals(NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY, elf.soname)
         listOf(
             "gxrEndFrame",
             "xrCreateInstance",
-            "xrGetInstanceProcAddr",
             "xrDestroyInstance",
-            "xrGetSystem",
-            "xrEnumerateViewConfigurations",
-            "xrGetViewConfigurationProperties",
             "xrEnumerateViewConfigurationViews",
             "xrCreateSession",
             "xrDestroySession",
-            "xrBeginSession",
-            "xrEndSession",
-            "xrLocateViews",
             "xrCreateSwapchain",
             "xrDestroySwapchain",
             "xrAcquireSwapchainImage",
             "xrWaitSwapchainImage",
             "xrReleaseSwapchainImage",
-            "xrRequestExitSession",
+            "AMediaCodec_configure",
+            "AMediaCodec_dequeueOutputBuffer",
+            "AImage_getHardwareBuffer",
         ).forEach { symbol -> assertTrue(symbol in elf.exportedSymbols, symbol) }
-        assertFalse("xrEndFrame" in elf.exportedSymbols)
+        assertNull(javaClass.getResourceAsStream("/steamlink/androidxr/libgxr_nqv.so"))
+        assertNull(javaClass.getResourceAsStream("/steamlink/androidxr/libgxr_nqvd.so"))
     }
 
     @Test
-    fun `dual-format helpers have isolated identities and expected GPU dependencies`() {
+    fun `dual-format cpu helper retains its isolated identity`() {
         val cpu = bundledHelper("libgxr_nspd.so")
         assertEquals(
-            "851e80b27b884044235660c2be3fef1483d291ce02dd1191e826ea014bef772e",
+            "ef0850799744d8fd65277820a3115822b50aad9de6d6d83bed3d7aceca70959a",
             sha256(cpu),
         )
         val cpuStrings = cpu.toString(Charsets.ISO_8859_1)
         listOf(
-            "single-projection-native-renderer-dual-v1.0-20260831",
+            "single-projection-native-renderer-dual-v1.2-20260831",
             "single_projection_native_renderer_dual_v1",
             "libgxr_nspd.so",
             "rgb10a2",
@@ -204,29 +226,10 @@ class NativeSingleProjectionRendererTest {
         assertTrue("libGLESv3.so" in cpuElf.neededLibraries)
         assertTrue("libopenxr_loader.so" in cpuElf.neededLibraries)
 
-        val gpu = bundledHelper("libgxr_nqvd.so")
-        assertEquals(
-            "0c81af731de716594c3b8fc3888018e7fc1a9aed7723298c761d585c45efc7e2",
-            sha256(gpu),
-        )
-        val gpuStrings = gpu.toString(Charsets.ISO_8859_1)
-        listOf(
-            "single-projection-native-quad-zero-copy-dual-v1.0-20260831",
-            "single_projection_native_quad_zero_copy_dual_v1",
-            "libgxr_nqvd.so",
-            "rgb10a2",
-            "mixed_source_format",
-            "reconstructionPasses\":0",
-        ).forEach { assertTrue(gpuStrings.contains(it), it) }
-        val gpuElf = Elf64DynamicView(gpu)
-        assertEquals("libgxr_nqvd.so", gpuElf.soname)
-        assertTrue("libopenxr_loader.so" in gpuElf.neededLibraries)
-        assertFalse("libEGL.so" in gpuElf.neededLibraries)
-        assertFalse("libGLESv3.so" in gpuElf.neededLibraries)
     }
 
     @Test
-    fun `native source contracts retain cpu fast paths and legal quad fallback`() {
+    fun `native source contracts retain cpu fast paths and isolate diagnostic work`() {
         fun source(name: String): String = listOf(
             File("extensions/resolution-trace-layer/src/$name"),
             File("../extensions/resolution-trace-layer/src/$name"),
@@ -247,35 +250,30 @@ class NativeSingleProjectionRendererTest {
             "glTexStorage2D(GL_TEXTURE_2D,1,static_cast<GLenum>(s.sourceFormat)",
             "uniform highp sampler2D underTex",
             "xrEnumerateSwapchainFormats",
+            "GXR_DIAGNOSTIC_PROBE",
+            "view_configuration_eye",
+            "resolution_probe_capabilities",
+            "resolution_probe_candidate",
+            "reconstruction_attachment_precision",
+            "probe_source_swapchain_contract",
+            "probe_submitted_frame",
         ).forEach { invariant -> assertTrue(reconstruction.contains(invariant), invariant) }
 
-        val quad = source("single_projection_native_quad_zero_copy.cpp")
+        val decoderProbe = source("native_probe_media_interpose.cpp")
         listOf(
-            "XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO_WITH_FOVEATED_INSET",
-            "viewCount != state.views.size()",
-            "view.maxImageRectWidth < kSourceExtent",
-            "view.maxSwapchainSampleCount < 2",
-            "patched.primaryViewConfigurationType = kQuadViewConfiguration",
-            "committed = found != sessions.end() && found->second.quadCommitted",
-            "if (capacity == 0) return XR_SUCCESS",
-            "views[0] = under->views[0]",
-            "views[1] = under->views[1]",
-            "views[2] = fovea->views[0]",
-            "views[3] = fovea->views[1]",
-            "projection.viewCount = static_cast<uint32_t>(views.size())",
-            "output.layerCount = 1",
-            "fingerprintReady",
-            "binding.state->generation == binding.generation",
-            "markUnsafeAndExit",
-            "forceNextSessionStock",
-            "\\\"reconstructionPasses\\\":0",
-            "kRgb10A2Format = 0x8059",
-            "mixed_source_format",
-            "sourcePrecision",
-        ).forEach { invariant -> assertTrue(quad.contains(invariant), invariant) }
-        assertFalse(quad.contains("#include <EGL"))
-        assertFalse(quad.contains("#include <GLES"))
-        assertFalse(Regex("\\bgl[A-Z][A-Za-z0-9_]*\\(").containsMatchIn(quad))
+            "dlopen(library, RTLD_NOW | RTLD_LOCAL)",
+            "AMediaCodec_configure",
+            "AMediaCodec_dequeueOutputBuffer",
+            "AMediaCodec_getOutputFormat",
+            "AImage_getHardwareBuffer",
+            "AHardwareBuffer_describe",
+            "AHARDWAREBUFFER_FORMAT_R10G10B10A2_UNORM",
+            "AHARDWAREBUFFER_FORMAT_YCbCr_P010",
+            "decoder_probe_initialized",
+            "decoder_output_format_changed",
+            "decoder_hardware_buffer_descriptor",
+            "precisionHint",
+        ).forEach { invariant -> assertTrue(decoderProbe.contains(invariant), invariant) }
     }
 
     private fun stockSceneFixture(): ByteArray = ByteArray(2_283_400).also { fixture ->

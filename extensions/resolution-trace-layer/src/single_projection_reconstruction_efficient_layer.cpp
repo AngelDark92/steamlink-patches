@@ -14,6 +14,7 @@
 #include <cstring>
 #include <deque>
 #include <iomanip>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <sstream>
@@ -21,6 +22,7 @@
 #include <time.h>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <unistd.h>
 #include <vector>
 
@@ -33,20 +35,34 @@ namespace {
 
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
-#if defined(GXR_NATIVE_RENDERER_HELPER) && defined(GXR_NATIVE_DUAL_FORMAT)
+#if defined(GXR_NATIVE_RENDERER_HELPER) && defined(GXR_NATIVE_DUAL_FORMAT) && defined(GXR_DIAGNOSTIC_PROBE)
+constexpr char kModeName[] = "single_projection_native_probe_v1";
+constexpr char kBuildId[] = "single-projection-native-probe-v1.2-20260831";
+constexpr uint64_t kSuccessSummaryInterval = 900;
+#elif defined(GXR_NATIVE_RENDERER_HELPER) && defined(GXR_NATIVE_DUAL_FORMAT)
 constexpr char kModeName[] = "single_projection_native_renderer_dual_v1";
-constexpr char kBuildId[] = "single-projection-native-renderer-dual-v1.0-20260831";
+constexpr char kBuildId[] = "single-projection-native-renderer-dual-v1.2-20260831";
 constexpr uint64_t kSuccessSummaryInterval = 900;
 #elif defined(GXR_NATIVE_RENDERER_HELPER)
 constexpr char kModeName[] = "single_projection_native_renderer_v1";
-constexpr char kBuildId[] = "single-projection-native-renderer-v1.2-20260831";
+constexpr char kBuildId[] = "single-projection-native-renderer-v1.4-20260831";
 constexpr uint64_t kSuccessSummaryInterval = 900;
 #else
 constexpr char kModeName[] = "single_projection_reconstruction_efficient_v1";
-constexpr char kBuildId[] = "single-projection-reconstruction-efficient-v1.2-20260830";
+constexpr char kBuildId[] = "single-projection-reconstruction-efficient-v1.4-20260831";
 constexpr uint64_t kSuccessSummaryInterval = 30;
 #endif
 constexpr uint32_t kSourceExtent = 1536;
+constexpr uint32_t kGalaxyXrPanelWidth = 3552;
+constexpr uint32_t kGalaxyXrPanelHeight = 3840;
+constexpr uint32_t kDensityPreservingTier = 0;
+constexpr uint32_t kPanelNativeTier = 1;
+constexpr uint32_t kReportedMaximumTier = 2;
+const char* outputTierName(uint32_t tier){
+    if(tier==kDensityPreservingTier)return "density_preserving";
+    if(tier==kPanelNativeTier)return "panel_native";
+    return "reported_maximum";
+}
 constexpr int64_t kSourceFormat = GL_SRGB8_ALPHA8;
 #ifdef GXR_NATIVE_DUAL_FORMAT
 constexpr int64_t kRgb10A2Format = GL_RGB10_A2;
@@ -141,6 +157,11 @@ struct SessionState {
     EGLContext context{EGL_NO_CONTEXT};
     uint32_t recommendedWidth{}, recommendedHeight{}, maxWidth{}, maxHeight{};
     uint32_t outputWidth{}, outputHeight{};
+    uint32_t outputAttemptTier{kDensityPreservingTier};
+    bool outputAboveReportedMaximum{};
+    bool outputTierAccepted{};
+    bool viewLimitsDirty{};
+    uint64_t viewLimitsGeneration{};
     std::array<XrSwapchain, 6> sources{};
     std::array<OutputEye, 2> outputs{};
     GlState gl;
@@ -155,6 +176,14 @@ struct SessionState {
 #endif
 #ifdef GXR_NATIVE_DUAL_FORMAT
     int64_t sourceFormat{};
+#endif
+#ifdef GXR_DIAGNOSTIC_PROBE
+    std::array<XrViewConfigurationView, 2> probeViews{};
+    std::array<uint32_t, 2> probeRequestedWidths{}, probeRequestedHeights{};
+    std::array<uint32_t, 2> probeClampedWidths{}, probeClampedHeights{};
+    std::array<bool, 2> probeOutputStorageEmitted{};
+    bool probeViewLimitsReady{};
+    bool probeSubmissionAttemptEmitted{}, probeSubmissionSuccessEmitted{};
 #endif
     uint64_t successfulTransforms{}, transformsSinceSummary{};
     uint64_t freshSinceSummary{}, reusedSinceSummary{};
@@ -181,6 +210,16 @@ std::map<XrSession, SessionState> sessions;
 std::array<XrViewConfigurationView, 2> stereoViews{};
 bool haveStereoViews{};
 bool qualitySettingsEnabled{};
+bool recommendedResolutionEnabled{};
+bool recommendedResolutionAppRequested{};
+XrSystemId stereoSystemId{XR_NULL_SYSTEM_ID};
+XrViewConfigurationType stereoViewType{XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO};
+std::array<std::atomic<uint32_t>,8> publishedStereoViewLimits{};
+std::atomic<uint64_t> publishedStereoViewLimitsGeneration{0};
+std::mutex publishedStereoViewLimitsMutex;
+#ifdef GXR_DIAGNOSTIC_PROBE
+bool probeXrFbFoveationAdvertised{};
+#endif
 std::atomic<uint64_t> frameCounter{0};
 
 uint64_t elapsedMs() {
@@ -258,6 +297,11 @@ void rememberMapping(SessionState& s,const XrCompositionLayerProjection& under,c
 }
 float spanX(const XrFovf& f) { return std::tan(f.angleRight)-std::tan(f.angleLeft); }
 float spanY(const XrFovf& f) { return std::tan(f.angleUp)-std::tan(f.angleDown); }
+bool checkedOutputExtent(double value,uint32_t& output){
+    if(!std::isfinite(value)||value<=0.0||value>static_cast<double>(std::numeric_limits<int32_t>::max()))
+        return false;
+    output=static_cast<uint32_t>(std::ceil(value));return true;
+}
 bool finitePositiveFov(const XrFovf& f) {
     const float x=spanX(f),y=spanY(f);
     return std::isfinite(x)&&std::isfinite(y)&&x>0.01f&&y>0.01f;
@@ -285,10 +329,108 @@ GLuint compile(GLenum type, const char* source, std::string& error) {
     return 0;
 }
 
+#ifdef GXR_DIAGNOSTIC_PROBE
+std::string number(double value) {
+    std::ostringstream out;
+    out << std::setprecision(9) << value;
+    return out.str();
+}
+
+bool glExtensionAdvertised(const char* wanted) {
+    GLint count{};
+    glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+    for (GLint i = 0; i < count; ++i) {
+        const auto* extension = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, static_cast<GLuint>(i)));
+        if (extension && std::strcmp(extension, wanted) == 0) return true;
+    }
+    return false;
+}
+
+void emitGlStorageProbe(const char* attachment, int eye, GLuint texture, GLenum framebufferTarget,
+                        GLenum framebufferStatus, int64_t requestedFormat,
+                        uint32_t requestedWidth, uint32_t requestedHeight) {
+    GLint internalFormat{}, width{}, height{}, redBits{}, greenBits{}, blueBits{}, alphaBits{};
+    GLint immutable{}, immutableLevels{}, attachmentType{}, attachmentName{}, componentType{}, colorEncoding{};
+    GLint attachmentRedBits{}, attachmentGreenBits{}, attachmentBlueBits{}, attachmentAlphaBits{};
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_RED_SIZE, &redBits);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_GREEN_SIZE, &greenBits);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_BLUE_SIZE, &blueBits);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_ALPHA_SIZE, &alphaBits);
+    glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_IMMUTABLE_FORMAT, &immutable);
+    glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_IMMUTABLE_LEVELS, &immutableLevels);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE, &attachmentType);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &attachmentName);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_COMPONENT_TYPE, &componentType);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, &colorEncoding);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE, &attachmentRedBits);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE, &attachmentGreenBits);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE, &attachmentBlueBits);
+    glGetFramebufferAttachmentParameteriv(framebufferTarget, GL_COLOR_ATTACHMENT0,
+        GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE, &attachmentAlphaBits);
+    emit("reconstruction_attachment_precision",
+        "\"attachment\":" + quote(attachment) +
+        ",\"eye\":" + std::to_string(eye) +
+        ",\"texture\":" + std::to_string(texture) +
+        ",\"requestedFormat\":" + std::to_string(requestedFormat) +
+        ",\"requestedWidth\":" + std::to_string(requestedWidth) +
+        ",\"requestedHeight\":" + std::to_string(requestedHeight) +
+        ",\"actualInternalFormat\":" + std::to_string(internalFormat) +
+        ",\"internalFormat\":" + std::to_string(internalFormat) +
+        ",\"actualWidth\":" + std::to_string(width) +
+        ",\"actualHeight\":" + std::to_string(height) +
+        ",\"textureRedBits\":" + std::to_string(redBits) +
+        ",\"textureGreenBits\":" + std::to_string(greenBits) +
+        ",\"textureBlueBits\":" + std::to_string(blueBits) +
+        ",\"textureAlphaBits\":" + std::to_string(alphaBits) +
+        ",\"immutableStorage\":" + std::string(immutable ? "true" : "false") +
+        ",\"immutableLevels\":" + std::to_string(immutableLevels) +
+        ",\"framebufferStatus\":" + std::to_string(framebufferStatus) +
+        ",\"fboStatus\":" + std::to_string(framebufferStatus) +
+        ",\"attachmentObjectType\":" + std::to_string(attachmentType) +
+        ",\"attachmentObjectName\":" + std::to_string(attachmentName) +
+        ",\"attachmentComponentType\":" + std::to_string(componentType) +
+        ",\"attachmentColorEncoding\":" + std::to_string(colorEncoding) +
+        ",\"attachmentRedBits\":" + std::to_string(attachmentRedBits) +
+        ",\"attachmentGreenBits\":" + std::to_string(attachmentGreenBits) +
+        ",\"attachmentBlueBits\":" + std::to_string(attachmentBlueBits) +
+        ",\"attachmentAlphaBits\":" + std::to_string(attachmentAlphaBits) +
+        ",\"redBits\":" + std::to_string(attachmentRedBits) +
+        ",\"greenBits\":" + std::to_string(attachmentGreenBits) +
+        ",\"blueBits\":" + std::to_string(attachmentBlueBits) +
+        ",\"alphaBits\":" + std::to_string(attachmentAlphaBits));
+}
+#endif
+
 void destroyGl(GlState& gl);
 
 bool ensureGl(SessionState& s) {
     if (s.gl.ready) return true;
+#ifdef GXR_DIAGNOSTIC_PROBE
+    const auto* vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+    const auto* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+    const auto* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    const bool glQcomTextureFoveatedSupported=
+        glExtensionAdvertised("GL_QCOM_texture_foveated");
+    emit("resolution_probe_capabilities",
+        "\"vendor\":" + quote(vendor ? vendor : "") +
+        ",\"renderer\":" + quote(renderer ? renderer : "") +
+        ",\"version\":" + quote(version ? version : "") +
+        ",\"xrFbFoveationAdvertised\":" +
+        std::string(probeXrFbFoveationAdvertised ? "true" : "false") +
+        ",\"glQcomTextureFoveatedSupported\":" +
+        std::string(glQcomTextureFoveatedSupported ? "true" : "false"));
+#endif
 #ifdef GXR_NATIVE_DUAL_FORMAT
 #define GXR_SAMPLER_DECLARATIONS "uniform highp sampler2D underTex;uniform highp sampler2D foveaTex;\n"
 #else
@@ -332,7 +474,8 @@ void main(){
     }
     glGenVertexArrays(1,&s.gl.vao);
     glGenTextures(2,s.gl.resolved.data());
-    for(GLuint texture:s.gl.resolved){
+    for(size_t textureIndex=0;textureIndex<s.gl.resolved.size();++textureIndex){
+        const GLuint texture=s.gl.resolved[textureIndex];
         glBindTexture(GL_TEXTURE_2D,texture);
 #ifdef GXR_NATIVE_DUAL_FORMAT
         glTexStorage2D(GL_TEXTURE_2D,1,static_cast<GLenum>(s.sourceFormat),kSourceExtent,kSourceExtent);
@@ -349,6 +492,10 @@ void main(){
         glBindFramebuffer(GL_FRAMEBUFFER,framebuffer);
         glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,texture,0);
         const GLenum status=glCheckFramebufferStatus(GL_FRAMEBUFFER);
+#ifdef GXR_DIAGNOSTIC_PROBE
+        emitGlStorageProbe("scratch", static_cast<int>(textureIndex),
+            texture, GL_FRAMEBUFFER, status, s.sourceFormat, kSourceExtent, kSourceExtent);
+#endif
         glDeleteFramebuffers(1,&framebuffer);
         if(status!=GL_FRAMEBUFFER_COMPLETE){
             emit("reconstruction_gl_failure","\"stage\":\"scratch_fbo\",\"status\":"+
@@ -494,6 +641,14 @@ bool compose(SessionState& s,const XrCompositionLayerProjection& under,const XrC
         auto& out=s.outputs[eye];if(!out.acquired||out.index>=out.images.size()){ok=false;break;}
         GLuint outputFbo{};if(!framebufferForTexture(s.gl,out.images[out.index].image,outputFbo)){ok=false;break;}
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER,outputFbo);
+#ifdef GXR_DIAGNOSTIC_PROBE
+        if(!s.probeOutputStorageEmitted[eye]){
+            emitGlStorageProbe("output",static_cast<int>(eye),out.images[out.index].image,
+                GL_DRAW_FRAMEBUFFER,glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER),s.sourceFormat,
+                s.outputWidth,s.outputHeight);
+            s.probeOutputStorageEmitted[eye]=true;
+        }
+#endif
         glViewport(0,0,s.outputWidth,s.outputHeight);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,s.gl.resolved[0]);
         glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,s.gl.resolved[1]);
         const auto& fullTan=s.gl.cachedFullTans[eye];const auto& foveaTan=s.gl.cachedFoveaTans[eye];
@@ -535,7 +690,12 @@ bool acquireOutputs(SessionState& s){for(auto& out:s.outputs){XrSwapchainImageAc
 void destroyOutputs(SessionState& s){s.mapping.valid=false;releaseOutputs(s);for(auto& out:s.outputs){
     if(eglGetCurrentContext()==s.context)for(const auto& image:out.images)forgetFramebuffer(s.gl,image.image);
     if(out.handle&&g.destroySwapchain&&!out.acquired)g.destroySwapchain(out.handle);out={};}
-    if(eglGetCurrentContext()==s.context)destroyGl(s.gl);else s.gl={};}
+    if(eglGetCurrentContext()==s.context)destroyGl(s.gl);else s.gl={};
+#ifdef GXR_DIAGNOSTIC_PROBE
+    s.probeOutputStorageEmitted={};
+    s.probeSubmissionAttemptEmitted=false;s.probeSubmissionSuccessEmitted=false;
+#endif
+}
 
 void emitSuccessSummary(SessionState& s,uint64_t lastFrame,const char* reason){
     if(s.transformsSinceSummary==0)return;
@@ -562,6 +722,9 @@ void emitSuccessSummary(SessionState& s,uint64_t lastFrame,const char* reason){
         "\"outputProjectionCount\":1,\"sourceViewCount\":6,\"outputViewCount\":2,"
         "\"unsafeLayerCount\":0,\"reconstructed\":true,\"changed\":true,\"releaseSuccess\":true,"
         "\"outputWidth\":"+std::to_string(s.outputWidth)+",\"outputHeight\":"+std::to_string(s.outputHeight)+
+        ",\"outputTier\":"+quote(outputTierName(s.outputAttemptTier))+
+        ",\"reportedMaxWidth\":"+std::to_string(s.maxWidth)+",\"reportedMaxHeight\":"+std::to_string(s.maxHeight)+
+        ",\"aboveReportedMaximum\":"+std::string(s.outputAboveReportedMaximum?"true":"false")+
         ",\"foveaFilter\":\"linear_center_1tap\",\"fixedFunctionDitherDisabled\":true,\"fixedFunctionDitherWasEnabled\":"+
         (s.gl.ditherStateObserved?(s.gl.ditherWasEnabled?std::string("true"):std::string("false")):std::string("null"))+
         ",\"outputQualitySettingsAttached\":"+
@@ -576,16 +739,129 @@ void emitSuccessSummary(SessionState& s,uint64_t lastFrame,const char* reason){
     s.summaryFirstFrame=0;s.summaryFirstElapsedMs=0;
 }
 
+#ifdef GXR_DIAGNOSTIC_PROBE
+uint32_t probeCeilToUint32(double value) {
+    if (!std::isfinite(value) || value <= 0.0) return 0;
+    const double limit = static_cast<double>(std::numeric_limits<uint32_t>::max());
+    return static_cast<uint32_t>(std::ceil(std::min(value, limit)));
+}
+
+void emitProbeDensity(SessionState& s,const XrCompositionLayerProjection& full,
+                      const XrCompositionLayerProjection& fovea,
+                      uint32_t jointRequestedWidth,uint32_t jointRequestedHeight) {
+    for(int eye=0;eye<2;++eye){
+        const double ratioX=static_cast<double>(spanX(full.views[eye].fov))/spanX(fovea.views[eye].fov);
+        const double ratioY=static_cast<double>(spanY(full.views[eye].fov))/spanY(fovea.views[eye].fov);
+        const auto& limits=s.probeViews[eye];
+        const uint32_t detailWidth=probeCeilToUint32(kSourceExtent*ratioX);
+        const uint32_t detailHeight=probeCeilToUint32(kSourceExtent*ratioY);
+        const uint32_t requestedWidth=std::max(limits.recommendedImageRectWidth,detailWidth);
+        const uint32_t requestedHeight=std::max(limits.recommendedImageRectHeight,detailHeight);
+        const uint32_t clampedWidth=limits.maxImageRectWidth?std::min(requestedWidth,limits.maxImageRectWidth):requestedWidth;
+        const uint32_t clampedHeight=limits.maxImageRectHeight?std::min(requestedHeight,limits.maxImageRectHeight):requestedHeight;
+        s.probeRequestedWidths[eye]=requestedWidth;s.probeRequestedHeights[eye]=requestedHeight;
+        s.probeClampedWidths[eye]=clampedWidth;s.probeClampedHeights[eye]=clampedHeight;
+        const double mappedFoveaWidth=ratioX>0.0?static_cast<double>(s.outputWidth)/ratioX:0.0;
+        const double mappedFoveaHeight=ratioY>0.0?static_cast<double>(s.outputHeight)/ratioY:0.0;
+        emit("probe_eye_density",
+            "\"eye\":"+std::to_string(eye)+
+            ",\"fullSpanX\":"+number(spanX(full.views[eye].fov))+
+            ",\"fullSpanY\":"+number(spanY(full.views[eye].fov))+
+            ",\"foveaSpanX\":"+number(spanX(fovea.views[eye].fov))+
+            ",\"foveaSpanY\":"+number(spanY(fovea.views[eye].fov))+
+            ",\"densityRatioX\":"+number(ratioX)+
+            ",\"densityRatioY\":"+number(ratioY)+
+            ",\"detailPreservingWidth\":"+std::to_string(detailWidth)+
+            ",\"detailPreservingHeight\":"+std::to_string(detailHeight)+
+            ",\"recommendedWidth\":"+std::to_string(limits.recommendedImageRectWidth)+
+            ",\"recommendedHeight\":"+std::to_string(limits.recommendedImageRectHeight)+
+            ",\"maxWidth\":"+std::to_string(limits.maxImageRectWidth)+
+            ",\"maxHeight\":"+std::to_string(limits.maxImageRectHeight)+
+            ",\"requestedWidth\":"+std::to_string(requestedWidth)+
+            ",\"requestedHeight\":"+std::to_string(requestedHeight)+
+            ",\"clampedWidth\":"+std::to_string(clampedWidth)+
+            ",\"clampedHeight\":"+std::to_string(clampedHeight)+
+            ",\"jointRequestedWidth\":"+std::to_string(jointRequestedWidth)+
+            ",\"jointRequestedHeight\":"+std::to_string(jointRequestedHeight)+
+            ",\"submittedWidth\":"+std::to_string(s.outputWidth)+
+            ",\"submittedHeight\":"+std::to_string(s.outputHeight)+
+            ",\"mappedFoveaWidth\":"+number(mappedFoveaWidth)+
+            ",\"mappedFoveaHeight\":"+number(mappedFoveaHeight)+
+            ",\"foveaDensityRetentionX\":"+number(mappedFoveaWidth/kSourceExtent)+
+            ",\"foveaDensityRetentionY\":"+number(mappedFoveaHeight/kSourceExtent));
+    }
+}
+
+void probeAboveCapAllocations(SessionState& s,uint32_t jointRequestedWidth,uint32_t jointRequestedHeight) {
+    struct Candidate { const char* name; uint32_t width; uint32_t height; };
+    const uint32_t plusWidth=s.maxWidth<std::numeric_limits<uint32_t>::max()?s.maxWidth+1:s.maxWidth;
+    const uint32_t plusHeight=s.maxHeight<std::numeric_limits<uint32_t>::max()?s.maxHeight+1:s.maxHeight;
+    const std::array<Candidate,5> candidates{{
+        {"joint_detail_request",jointRequestedWidth,jointRequestedHeight},
+        {"left_eye_request",s.probeRequestedWidths[0],s.probeRequestedHeights[0]},
+        {"right_eye_request",s.probeRequestedWidths[1],s.probeRequestedHeights[1]},
+        {"max_plus_1_width",plusWidth,s.maxHeight},
+        {"max_plus_1_height",s.maxWidth,plusHeight},
+    }};
+    std::vector<std::pair<uint32_t,uint32_t>> attempted;
+    const uint64_t safeWidth=std::max<uint64_t>(static_cast<uint64_t>(s.maxWidth)*2,plusWidth);
+    const uint64_t safeHeight=std::max<uint64_t>(static_cast<uint64_t>(s.maxHeight)*2,plusHeight);
+    for(const auto& candidate:candidates){
+        const bool aboveCap=candidate.width>s.maxWidth||candidate.height>s.maxHeight;
+        const bool duplicate=std::find(attempted.begin(),attempted.end(),
+            std::make_pair(candidate.width,candidate.height))!=attempted.end();
+        const bool bounded=candidate.width>0&&candidate.height>0&&candidate.width<=safeWidth&&candidate.height<=safeHeight;
+        if(!aboveCap||duplicate||!bounded){
+            emit("resolution_probe_candidate",
+                "\"candidate\":"+quote(candidate.name)+",\"width\":"+std::to_string(candidate.width)+
+                ",\"height\":"+std::to_string(candidate.height)+
+                ",\"createResult\":"+std::to_string(XR_ERROR_VALIDATION_FAILURE)+
+                ",\"submitAttempted\":false,\"submitResult\":"+
+                std::to_string(XR_ERROR_FUNCTION_UNSUPPORTED)+
+                ",\"accepted\":false,\"allocationAttempted\":false,\"reason\":"+
+                quote(!aboveCap?"not_above_cap":(duplicate?"duplicate":"safety_bound"))+
+                ",\"fallbackWidth\":"+std::to_string(s.outputWidth)+
+                ",\"fallbackHeight\":"+std::to_string(s.outputHeight));
+            continue;
+        }
+        attempted.emplace_back(candidate.width,candidate.height);
+        XrSwapchainCreateInfo ci{XR_TYPE_SWAPCHAIN_CREATE_INFO};
+        ci.usageFlags=XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT|XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
+        ci.format=s.sourceFormat;ci.sampleCount=1;ci.width=candidate.width;ci.height=candidate.height;
+        ci.faceCount=1;ci.arraySize=1;ci.mipCount=1;
+        XrSwapchain handle{XR_NULL_HANDLE};
+        const XrResult createResult=g.createSwapchain(s.session,&ci,&handle);
+        XrResult destroyResult=XR_SUCCESS;
+        if(XR_SUCCEEDED(createResult)&&handle!=XR_NULL_HANDLE)destroyResult=g.destroySwapchain(handle);
+        emit("resolution_probe_candidate",
+            "\"candidate\":"+quote(candidate.name)+",\"width\":"+std::to_string(candidate.width)+
+            ",\"height\":"+std::to_string(candidate.height)+",\"attempted\":true,\"format\":"+
+            std::to_string(s.sourceFormat)+",\"createResult\":"+std::to_string(createResult)+
+            ",\"submitAttempted\":false,\"submitResult\":"+
+            std::to_string(XR_ERROR_FUNCTION_UNSUPPORTED)+
+            ",\"accepted\":false,\"allocationAttempted\":true,\"allocationAccepted\":"+
+            std::string(XR_SUCCEEDED(createResult)?"true":"false")+
+            ",\"destroyResult\":"+std::to_string(destroyResult)+
+            ",\"fallbackToClamped\":true,\"fallbackWidth\":"+std::to_string(s.outputWidth)+
+            ",\"fallbackHeight\":"+std::to_string(s.outputHeight));
+    }
+}
+#endif
+
 bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,const XrCompositionLayerProjection& fovea){
     s.mapping.valid=false;
     if(!s.recommendedWidth||!s.recommendedHeight||!s.maxWidth||!s.maxHeight){
         emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+",\"reason\":\"missing_view_limits\"");return false;
     }
     float rx=1,ry=1;for(int eye=0;eye<2;++eye){rx=std::max(rx,spanX(full.views[eye].fov)/spanX(fovea.views[eye].fov));ry=std::max(ry,spanY(full.views[eye].fov)/spanY(fovea.views[eye].fov));}
-    const uint32_t requestedWidth=std::max(s.recommendedWidth,static_cast<uint32_t>(std::ceil(kSourceExtent*rx)));
-    const uint32_t requestedHeight=std::max(s.recommendedHeight,static_cast<uint32_t>(std::ceil(kSourceExtent*ry)));
-    s.outputWidth=requestedWidth;s.outputHeight=requestedHeight;
-    if(s.maxWidth)s.outputWidth=std::min(s.outputWidth,s.maxWidth);if(s.maxHeight)s.outputHeight=std::min(s.outputHeight,s.maxHeight);
+    uint32_t requestedWidth{},requestedHeight{};
+    if(!checkedOutputExtent(std::max<double>(s.recommendedWidth,kSourceExtent*static_cast<double>(rx)),requestedWidth)||
+       !checkedOutputExtent(std::max<double>(s.recommendedHeight,kSourceExtent*static_cast<double>(ry)),requestedHeight)){
+        emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+
+            ",\"reason\":\"unsafe_density_extent\"");return false;
+    }
+    const uint32_t reportedWidth=std::min(requestedWidth,s.maxWidth);
+    const uint32_t reportedHeight=std::min(requestedHeight,s.maxHeight);
 #ifdef GXR_NATIVE_DUAL_FORMAT
     uint32_t formatCount{};
     if(!g.enumerateSwapchainFormats||XR_FAILED(g.enumerateSwapchainFormats(s.session,0,&formatCount,nullptr))||!formatCount){
@@ -600,20 +876,72 @@ bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,cons
             ",\"reason\":\"source_format_not_supported_for_output\",\"sourceFormat\":"+std::to_string(s.sourceFormat));
         return false;
     }
+#ifdef GXR_DIAGNOSTIC_PROBE
+    std::ostringstream formatList;
+    formatList << '[';
+    for(uint32_t i=0;i<formatCount;++i){if(i)formatList << ',';formatList << formats[i];}
+    formatList << ']';
+    emit("probe_swapchain_format_census","\"formats\":"+formatList.str()+
+        ",\"selectedFormat\":"+std::to_string(s.sourceFormat)+
+        ",\"selectedFormatAdvertised\":true");
 #endif
-    for(auto& out:s.outputs){XrSwapchainCreateInfo ci{XR_TYPE_SWAPCHAIN_CREATE_INFO};ci.usageFlags=XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT|XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
+#endif
+    const uint32_t panelWidth=std::max(reportedWidth,std::min(requestedWidth,kGalaxyXrPanelWidth));
+    const uint32_t panelHeight=std::max(reportedHeight,std::min(requestedHeight,kGalaxyXrPanelHeight));
+    struct OutputCandidate{uint32_t tier,width,height;};
+    const std::array<OutputCandidate,3> candidates{{
+        {kDensityPreservingTier,requestedWidth,requestedHeight},
+        {kPanelNativeTier,panelWidth,panelHeight},
+        {kReportedMaximumTier,reportedWidth,reportedHeight},
+    }};
+    auto tryCreatePair=[&](uint32_t width,uint32_t height,std::string& failedStage)->XrResult{
+        for(auto& out:s.outputs){XrSwapchainCreateInfo ci{XR_TYPE_SWAPCHAIN_CREATE_INFO};ci.usageFlags=XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT|XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
 #ifdef GXR_NATIVE_DUAL_FORMAT
-        ci.format=s.sourceFormat;
+            ci.format=s.sourceFormat;
 #else
-        ci.format=kSourceFormat;
+            ci.format=kSourceFormat;
 #endif
-        ci.sampleCount=1;ci.width=s.outputWidth;ci.height=s.outputHeight;ci.faceCount=1;ci.arraySize=1;ci.mipCount=1;
-        if(XR_FAILED(g.createSwapchain(s.session,&ci,&out.handle))){destroyOutputs(s);return false;}uint32_t count{};
-        if(XR_FAILED(g.enumerateImages(out.handle,0,&count,nullptr))||!count){destroyOutputs(s);return false;}
-        out.images.assign(count,{XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
-        if(XR_FAILED(g.enumerateImages(out.handle,count,&count,reinterpret_cast<XrSwapchainImageBaseHeader*>(out.images.data())))){destroyOutputs(s);return false;}}
+            ci.sampleCount=1;ci.width=width;ci.height=height;ci.faceCount=1;ci.arraySize=1;ci.mipCount=1;
+            XrResult result=g.createSwapchain(s.session,&ci,&out.handle);
+            if(XR_FAILED(result)){failedStage="create";destroyOutputs(s);return result;}
+            uint32_t count{};result=g.enumerateImages(out.handle,0,&count,nullptr);
+            if(XR_FAILED(result)||!count){failedStage="enumerate_count";destroyOutputs(s);return XR_FAILED(result)?result:XR_ERROR_RUNTIME_FAILURE;}
+            out.images.assign(count,{XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
+            result=g.enumerateImages(out.handle,count,&count,reinterpret_cast<XrSwapchainImageBaseHeader*>(out.images.data()));
+            if(XR_FAILED(result)){failedStage="enumerate_images";destroyOutputs(s);return result;}
+        }
+        return XR_SUCCESS;
+    };
+    bool created=false;std::pair<uint32_t,uint32_t> lastAttempt{};bool haveLastAttempt=false;
+    for(const auto& candidate:candidates){
+        if(candidate.tier<s.outputAttemptTier)continue;
+        const std::pair<uint32_t,uint32_t> dimensions{candidate.width,candidate.height};
+        if(haveLastAttempt&&dimensions==lastAttempt){s.outputAttemptTier=candidate.tier+1;continue;}
+        haveLastAttempt=true;lastAttempt=dimensions;s.outputWidth=candidate.width;s.outputHeight=candidate.height;
+        std::string failedStage;const XrResult result=tryCreatePair(candidate.width,candidate.height,failedStage);
+        emit("reconstruction_output_attempt","\"session\":"+std::to_string(hv(s.session))+
+            ",\"tier\":"+quote(outputTierName(candidate.tier))+
+            ",\"width\":"+std::to_string(candidate.width)+",\"height\":"+std::to_string(candidate.height)+
+            ",\"reportedMaxWidth\":"+std::to_string(s.maxWidth)+",\"reportedMaxHeight\":"+std::to_string(s.maxHeight)+
+            ",\"aboveReportedMaximum\":"+std::string(candidate.width>s.maxWidth||candidate.height>s.maxHeight?"true":"false")+
+            ",\"result\":"+std::to_string(result)+",\"failedStage\":"+quote(failedStage));
+        if(XR_SUCCEEDED(result)){s.outputAttemptTier=candidate.tier;s.outputTierAccepted=false;created=true;break;}
+        s.outputAttemptTier=candidate.tier+1;
+    }
+    if(!created){
+        emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+
+            ",\"reason\":\"all_output_tiers_rejected\"");return false;
+    }
+    s.outputAboveReportedMaximum=s.outputWidth>s.maxWidth||s.outputHeight>s.maxHeight;
+#ifdef GXR_DIAGNOSTIC_PROBE
+    emitProbeDensity(s,full,fovea,requestedWidth,requestedHeight);
+    probeAboveCapAllocations(s,requestedWidth,requestedHeight);
+#endif
     emit("reconstruction_outputs_created","\"width\":"+std::to_string(s.outputWidth)+",\"height\":"+std::to_string(s.outputHeight)+
         ",\"requestedWidth\":"+std::to_string(requestedWidth)+",\"requestedHeight\":"+std::to_string(requestedHeight)+
+        ",\"outputTier\":"+quote(outputTierName(s.outputAttemptTier))+
+        ",\"reportedMaxWidth\":"+std::to_string(s.maxWidth)+",\"reportedMaxHeight\":"+std::to_string(s.maxHeight)+
+        ",\"aboveReportedMaximum\":"+std::string(s.outputAboveReportedMaximum?"true":"false")+
         ",\"widthClamped\":"+std::string(s.outputWidth<requestedWidth?"true":"false")+",\"heightClamped\":"+
         std::string(s.outputHeight<requestedHeight?"true":"false")+
 #ifdef GXR_NATIVE_DUAL_FORMAT
@@ -753,19 +1081,92 @@ void learn(SessionState& s,const Fingerprint& f){
         ",\"sourceFormat\":"+std::to_string(s.sourceFormat)+",\"sourcePrecision\":"+quote(sourcePrecision(s.sourceFormat))
 #endif
     );
+#ifdef GXR_DIAGNOSTIC_PROBE
+    static constexpr const char* roleNames[]={"base_left","base_right","under_left","under_right","fovea_left","fovea_right"};
+    std::ostringstream contract;
+    contract << "\"sources\":[";
+    for(size_t i=0;i<f.states.size();++i){
+        if(i)contract << ',';
+        const auto* state=f.states[i];
+        contract << "{\"role\":" << quote(roleNames[i])
+                 << ",\"swapchain\":" << hv(f.handles[i])
+                 << ",\"width\":" << (state?state->info.width:0)
+                 << ",\"height\":" << (state?state->info.height:0)
+                 << ",\"sampleCount\":" << (state?state->info.sampleCount:0)
+                 << ",\"arraySize\":" << (state?state->info.arraySize:0)
+                 << ",\"format\":" << (state?state->info.format:0) << '}';
+    }
+    contract << "]";
+    emit("probe_source_swapchain_contract",contract.str());
+#endif
+}
+
+void applyStereoViewLimits(SessionState& s,const std::array<XrViewConfigurationView,2>& views){
+    s.recommendedWidth=std::max(views[0].recommendedImageRectWidth,views[1].recommendedImageRectWidth);
+    s.recommendedHeight=std::max(views[0].recommendedImageRectHeight,views[1].recommendedImageRectHeight);
+    s.maxWidth=std::min(views[0].maxImageRectWidth,views[1].maxImageRectWidth);
+    s.maxHeight=std::min(views[0].maxImageRectHeight,views[1].maxImageRectHeight);
+#ifdef GXR_DIAGNOSTIC_PROBE
+    s.probeViews=views;s.probeViewLimitsReady=true;
+#endif
+}
+
+void publishStereoViewLimits(const std::array<XrViewConfigurationView,2>& views){
+    std::lock_guard<std::mutex> lock(publishedStereoViewLimitsMutex);
+    const uint64_t generation=publishedStereoViewLimitsGeneration.load(std::memory_order_relaxed);
+    publishedStereoViewLimitsGeneration.store(generation+1,std::memory_order_release);
+    for(uint32_t eye=0;eye<2;++eye){const size_t base=eye*4;
+        publishedStereoViewLimits[base].store(views[eye].recommendedImageRectWidth,std::memory_order_relaxed);
+        publishedStereoViewLimits[base+1].store(views[eye].recommendedImageRectHeight,std::memory_order_relaxed);
+        publishedStereoViewLimits[base+2].store(views[eye].maxImageRectWidth,std::memory_order_relaxed);
+        publishedStereoViewLimits[base+3].store(views[eye].maxImageRectHeight,std::memory_order_relaxed);
+    }
+    publishedStereoViewLimitsGeneration.store(generation+2,std::memory_order_release);
+}
+
+bool applyPublishedStereoViewLimits(SessionState& s){
+    for(;;){
+        const uint64_t before=publishedStereoViewLimitsGeneration.load(std::memory_order_acquire);
+        if(!before||before==s.viewLimitsGeneration)return false;
+        if(before&1u)continue;
+        std::array<XrViewConfigurationView,2> views{{
+            {XR_TYPE_VIEW_CONFIGURATION_VIEW},{XR_TYPE_VIEW_CONFIGURATION_VIEW}}};
+        for(uint32_t eye=0;eye<2;++eye){const size_t base=eye*4;
+            views[eye].recommendedImageRectWidth=publishedStereoViewLimits[base].load(std::memory_order_relaxed);
+            views[eye].recommendedImageRectHeight=publishedStereoViewLimits[base+1].load(std::memory_order_relaxed);
+            views[eye].maxImageRectWidth=publishedStereoViewLimits[base+2].load(std::memory_order_relaxed);
+            views[eye].maxImageRectHeight=publishedStereoViewLimits[base+3].load(std::memory_order_relaxed);
+        }
+        const uint64_t after=publishedStereoViewLimitsGeneration.load(std::memory_order_acquire);
+        if(before!=after||(after&1u))continue;
+        applyStereoViewLimits(s,views);s.viewLimitsGeneration=after;return true;
+    }
 }
 
 XrResult XRAPI_PTR layerEnumerateViews(XrInstance instance,XrSystemId system,XrViewConfigurationType type,uint32_t cap,uint32_t* count,XrViewConfigurationView* views){
     XrResult r=g.enumerateViews(instance,system,type,cap,count,views);if(XR_SUCCEEDED(r)&&type==XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO&&count&&views&&cap>=*count&&*count>=2){
-        stereoViews[0]=views[0];stereoViews[1]=views[1];haveStereoViews=true;emit("view_configuration","\"recommendedWidth\":"+std::to_string(views[0].recommendedImageRectWidth)+
-        ",\"recommendedHeight\":"+std::to_string(views[0].recommendedImageRectHeight)+",\"maxWidth\":"+std::to_string(views[0].maxImageRectWidth)+",\"maxHeight\":"+std::to_string(views[0].maxImageRectHeight));}return r;}
+        stereoViews[0]=views[0];stereoViews[1]=views[1];haveStereoViews=true;stereoSystemId=system;stereoViewType=type;
+        publishStereoViewLimits(stereoViews);emit("view_configuration","\"recommendedWidth\":"+std::to_string(views[0].recommendedImageRectWidth)+
+        ",\"recommendedHeight\":"+std::to_string(views[0].recommendedImageRectHeight)+",\"maxWidth\":"+std::to_string(views[0].maxImageRectWidth)+",\"maxHeight\":"+std::to_string(views[0].maxImageRectHeight));
+#ifdef GXR_DIAGNOSTIC_PROBE
+        for(uint32_t eye=0;eye<2;++eye)emit("view_configuration_eye",
+            "\"eye\":"+std::to_string(eye)+
+            ",\"viewCount\":"+std::to_string(*count)+
+            ",\"recommendedWidth\":"+std::to_string(views[eye].recommendedImageRectWidth)+
+            ",\"recommendedHeight\":"+std::to_string(views[eye].recommendedImageRectHeight)+
+            ",\"maxWidth\":"+std::to_string(views[eye].maxImageRectWidth)+
+            ",\"maxHeight\":"+std::to_string(views[eye].maxImageRectHeight)+
+            ",\"recommendedSampleCount\":"+
+            std::to_string(views[eye].recommendedSwapchainSampleCount)+
+            ",\"maxSampleCount\":"+std::to_string(views[eye].maxSwapchainSampleCount));
+#endif
+    }return r;}
 
 XrResult XRAPI_PTR layerCreateSession(XrInstance instance,const XrSessionCreateInfo* info,XrSession* session){
     XrResult r=g.createSession(instance,info,session);if(XR_FAILED(r)||!session)return r;SessionState s;s.session=*session;
     auto* next=info?static_cast<const XrBaseInStructure*>(info->next):nullptr;for(int i=0;next&&i<32;++i,next=next->next)if(next->type==XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR){
         auto* b=reinterpret_cast<const XrGraphicsBindingOpenGLESAndroidKHR*>(next);s.display=b->display;s.context=b->context;break;}
-    if(haveStereoViews){s.recommendedWidth=std::max(stereoViews[0].recommendedImageRectWidth,stereoViews[1].recommendedImageRectWidth);s.recommendedHeight=std::max(stereoViews[0].recommendedImageRectHeight,stereoViews[1].recommendedImageRectHeight);
-        s.maxWidth=std::min(stereoViews[0].maxImageRectWidth,stereoViews[1].maxImageRectWidth);s.maxHeight=std::min(stereoViews[0].maxImageRectHeight,stereoViews[1].maxImageRectHeight);}sessions[*session]=s;
+    if(haveStereoViews)applyPublishedStereoViewLimits(s);sessions[*session]=s;
     emit("session_created","\"session\":"+std::to_string(hv(*session))+",\"hasGlesBinding\":"+(s.context!=EGL_NO_CONTEXT?"true":"false"));return r;}
 
 XrResult XRAPI_PTR layerCreateSwapchain(XrSession session,const XrSwapchainCreateInfo* info,XrSwapchain* handle){
@@ -838,6 +1239,13 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
     if(sit==sessions.end()||!f.valid||f.session!=handle)
         return submitPassthrough(handle,sit==sessions.end()?nullptr:&sit->second,info,frame,f.reason,false);
     SessionState& s=sit->second;
+    if(applyPublishedStereoViewLimits(s))s.viewLimitsDirty=true;
+    if(s.viewLimitsDirty){
+        flushSources(s);destroyOutputs(s);s.learned=false;s.active=false;s.disabled=false;
+        s.outputAttemptTier=kDensityPreservingTier;s.viewLimitsDirty=false;
+        emit("recommended_resolution_outputs_invalidated","\"session\":"+std::to_string(hv(handle))+
+            ",\"frame\":"+std::to_string(frame)+",\"retryTier\":\"density_preserving\"");
+    }
 #ifdef GXR_NATIVE_RENDERER_HELPER
     const bool sourceIdentityMatches=s.learned&&sameNativeIdentity(s,f);
 #else
@@ -888,8 +1296,59 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
     XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};projection.next=qualitySettingsEnabled?&qualitySettings:nullptr;projection.space=f.p[1]->space;projection.viewCount=2;projection.views=views.data();
     const auto* layer=reinterpret_cast<const XrCompositionLayerBaseHeader*>(&projection);XrFrameEndInfo output=*info;output.layerCount=1;output.layers=&layer;
     XrResult r=g.endFrame(handle,&output);
+#ifdef GXR_DIAGNOSTIC_PROBE
+    const bool successfulSubmission=XR_SUCCEEDED(r);
+    if(!s.probeSubmissionAttemptEmitted||(successfulSubmission&&!s.probeSubmissionSuccessEmitted)){
+        if(successfulSubmission)emit("single_projection_reconstruction_transform",
+            "\"session\":"+std::to_string(hv(handle))+
+            ",\"frame\":"+std::to_string(frame)+
+            ",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":1,"+
+            "\"outputProjectionCount\":1,\"sourceViewCount\":6,\"outputViewCount\":2,"+
+            "\"unsafeLayerCount\":0,\"reconstructed\":true,\"changed\":true,\"releaseSuccess\":true,"+
+            "\"outputWidth\":"+std::to_string(s.outputWidth)+
+            ",\"outputHeight\":"+std::to_string(s.outputHeight)+
+            ",\"sourceFormat\":"+std::to_string(s.sourceFormat)+
+            ",\"outputFormat\":"+std::to_string(s.sourceFormat)+
+            ",\"foveaFilter\":\"linear_center_1tap\",\"result\":"+std::to_string(r));
+        emit("probe_submitted_frame",
+            "\"session\":"+std::to_string(hv(handle))+
+            ",\"frame\":"+std::to_string(frame)+
+            ",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"sourceViewCount\":6,"+
+            "\"submittedLayerCount\":1,\"submittedProjectionCount\":1,\"submittedViewCount\":2,"+
+            "\"leftSwapchain\":"+std::to_string(hv(views[0].subImage.swapchain))+
+            ",\"leftRectOffsetX\":"+std::to_string(views[0].subImage.imageRect.offset.x)+
+            ",\"leftRectOffsetY\":"+std::to_string(views[0].subImage.imageRect.offset.y)+
+            ",\"leftRectWidth\":"+std::to_string(views[0].subImage.imageRect.extent.width)+
+            ",\"leftRectHeight\":"+std::to_string(views[0].subImage.imageRect.extent.height)+
+            ",\"leftArrayIndex\":"+std::to_string(views[0].subImage.imageArrayIndex)+
+            ",\"rightSwapchain\":"+std::to_string(hv(views[1].subImage.swapchain))+
+            ",\"rightRectOffsetX\":"+std::to_string(views[1].subImage.imageRect.offset.x)+
+            ",\"rightRectOffsetY\":"+std::to_string(views[1].subImage.imageRect.offset.y)+
+            ",\"rightRectWidth\":"+std::to_string(views[1].subImage.imageRect.extent.width)+
+            ",\"rightRectHeight\":"+std::to_string(views[1].subImage.imageRect.extent.height)+
+            ",\"rightArrayIndex\":"+std::to_string(views[1].subImage.imageArrayIndex)+
+            ",\"sourceFormat\":"+std::to_string(s.sourceFormat)+
+            ",\"scratchFormat\":"+std::to_string(s.sourceFormat)+
+            ",\"outputFormat\":"+std::to_string(s.sourceFormat)+
+            ",\"sourcePrecision\":"+quote(sourcePrecision(s.sourceFormat))+
+            ",\"outputQualitySettingsAttached\":"+std::string(qualitySettingsEnabled?"true":"false")+
+            ",\"displayTime\":"+std::to_string(output.displayTime)+
+            ",\"environmentBlendMode\":"+std::to_string(output.environmentBlendMode)+
+            ",\"result\":"+std::to_string(r));
+        if(successfulSubmission)emit("end_frame_result","\"session\":"+std::to_string(hv(handle))+
+            ",\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));
+        s.probeSubmissionAttemptEmitted=true;
+        if(successfulSubmission)s.probeSubmissionSuccessEmitted=true;
+    }
+#endif
     if(XR_SUCCEEDED(r)){
-        s.everActivated=true;if(!reusedOutput)rememberMapping(s,*f.p[1],*f.p[2]);
+        if(!s.outputTierAccepted)emit("reconstruction_output_tier_accepted",
+            "\"session\":"+std::to_string(hv(handle))+
+            ",\"tier\":"+quote(outputTierName(s.outputAttemptTier))+
+            ",\"width\":"+std::to_string(s.outputWidth)+",\"height\":"+std::to_string(s.outputHeight)+
+            ",\"reportedMaxWidth\":"+std::to_string(s.maxWidth)+",\"reportedMaxHeight\":"+std::to_string(s.maxHeight)+
+            ",\"aboveReportedMaximum\":"+std::string(s.outputAboveReportedMaximum?"true":"false"));
+        s.outputTierAccepted=true;s.everActivated=true;if(!reusedOutput)rememberMapping(s,*f.p[1],*f.p[2]);
         if(s.transformsSinceSummary==0){s.summaryFirstFrame=frame;s.summaryFirstElapsedMs=elapsedMs();}
         ++s.successfulTransforms;++s.transformsSinceSummary;
         if(reusedOutput)++s.reusedSinceSummary;else ++s.freshSinceSummary;
@@ -903,6 +1362,22 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
             "\"releaseSuccess\":true,\"reason\":\"end_frame_failed\",\"result\":"+std::to_string(r));
         emit("end_frame_result","\"session\":"+std::to_string(hv(handle))+
              ",\"frame\":"+std::to_string(frame)+",\"result\":"+std::to_string(r));
+        const bool recoverableOversizeRejection=s.outputAboveReportedMaximum&&
+            s.outputAttemptTier<kReportedMaximumTier&&
+            (r==XR_ERROR_SWAPCHAIN_RECT_INVALID||r==XR_ERROR_VALIDATION_FAILURE||r==XR_ERROR_LAYER_INVALID);
+        if(recoverableOversizeRejection){
+            const uint32_t rejectedTier=s.outputAttemptTier;
+            s.outputAttemptTier=std::min(kReportedMaximumTier,rejectedTier+1);
+            emit("reconstruction_output_tier_rejected",
+                "\"session\":"+std::to_string(hv(handle))+
+                ",\"frame\":"+std::to_string(frame)+
+                ",\"rejectedTier\":"+quote(outputTierName(rejectedTier))+
+                ",\"nextTier\":"+quote(outputTierName(s.outputAttemptTier))+
+                ",\"width\":"+std::to_string(s.outputWidth)+",\"height\":"+std::to_string(s.outputHeight)+
+                ",\"result\":"+std::to_string(r)+
+                ",\"frameDiscarded\":true,\"retrySameFrame\":false");
+            destroyOutputs(s);s.outputTierAccepted=false;s.learned=false;s.active=false;s.disabled=false;
+        }
     }
     return r;
 }
@@ -930,13 +1405,56 @@ XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance){for(auto& pair:sess
 #ifdef GXR_NATIVE_RENDERER_HELPER
     nativeDispatchReady.store(false,std::memory_order_release);
 #endif
-    g={};qualitySettingsEnabled=false;
+    g={};qualitySettingsEnabled=false;recommendedResolutionEnabled=false;recommendedResolutionAppRequested=false;
+    haveStereoViews=false;stereoSystemId=XR_NULL_SYSTEM_ID;
+    for(auto& value:publishedStereoViewLimits)value.store(0,std::memory_order_relaxed);
+    publishedStereoViewLimitsGeneration.store(0,std::memory_order_release);
+#ifdef GXR_DIAGNOSTIC_PROBE
+    probeXrFbFoveationAdvertised=false;
+#endif
 #ifdef GXR_NATIVE_RENDERER_HELPER
     nativeStreamCallsite.store(0,std::memory_order_release);
     nativeExitCallsite.store(0,std::memory_order_release);nativeUnexpectedCallsiteLogged.store(false,std::memory_order_release);
 #endif
     return r;}
-XrResult XRAPI_PTR layerPollEvent(XrInstance instance,XrEventDataBuffer* data){XrResult r=g.pollEvent(instance,data);if(XR_SUCCEEDED(r)&&data&&data->type==XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED){auto* e=reinterpret_cast<XrEventDataSessionStateChanged*>(data);emit("session_state_changed","\"state\":"+std::to_string(static_cast<int>(e->state)));}return r;}
+XrResult XRAPI_PTR layerPollEvent(XrInstance instance,XrEventDataBuffer* data){
+    for(;;){
+        XrResult r=g.pollEvent(instance,data);
+        if(XR_FAILED(r)||!data)return r;
+        if(data->type==XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED){
+            auto* e=reinterpret_cast<XrEventDataSessionStateChanged*>(data);
+            emit("session_state_changed","\"state\":"+std::to_string(static_cast<int>(e->state)));
+        }
+        if(!recommendedResolutionEnabled||
+           data->type!=XR_TYPE_EVENT_DATA_RECOMMENDED_RESOLUTION_CHANGED_ANDROID)return r;
+        std::array<XrViewConfigurationView,2> updated{{
+            {XR_TYPE_VIEW_CONFIGURATION_VIEW},{XR_TYPE_VIEW_CONFIGURATION_VIEW}}};
+        uint32_t count{};
+        const XrResult enumerateResult=haveStereoViews&&stereoSystemId!=XR_NULL_SYSTEM_ID?
+            g.enumerateViews(g.instance,stereoSystemId,stereoViewType,2,&count,updated.data()):
+            XR_ERROR_SYSTEM_INVALID;
+        bool changed=false;
+        if(XR_SUCCEEDED(enumerateResult)&&count>=2){
+            for(uint32_t eye=0;eye<2;++eye)changed=changed||
+                updated[eye].recommendedImageRectWidth!=stereoViews[eye].recommendedImageRectWidth||
+                updated[eye].recommendedImageRectHeight!=stereoViews[eye].recommendedImageRectHeight||
+                updated[eye].maxImageRectWidth!=stereoViews[eye].maxImageRectWidth||
+                updated[eye].maxImageRectHeight!=stereoViews[eye].maxImageRectHeight;
+            if(changed){stereoViews=updated;publishStereoViewLimits(stereoViews);}
+        }
+        emit("recommended_resolution_changed","\"result\":"+std::to_string(enumerateResult)+
+            ",\"viewCount\":"+std::to_string(count)+",\"changed\":"+
+            std::string(changed?"true":"false")+
+            (XR_SUCCEEDED(enumerateResult)&&count>=2?
+                ",\"recommendedWidth\":"+std::to_string(std::max(updated[0].recommendedImageRectWidth,updated[1].recommendedImageRectWidth))+
+                ",\"recommendedHeight\":"+std::to_string(std::max(updated[0].recommendedImageRectHeight,updated[1].recommendedImageRectHeight))+
+                ",\"maxWidth\":"+std::to_string(std::min(updated[0].maxImageRectWidth,updated[1].maxImageRectWidth))+
+                ",\"maxHeight\":"+std::to_string(std::min(updated[0].maxImageRectHeight,updated[1].maxImageRectHeight)):
+                std::string{}));
+        if(recommendedResolutionAppRequested)return r;
+        *data={XR_TYPE_EVENT_DATA_BUFFER};
+    }
+}
 XrResult XRAPI_PTR layerWaitFrame(XrSession session,const XrFrameWaitInfo* info,XrFrameState* state){XrResult r=g.waitFrame(session,info,state);if(XR_FAILED(r)||sample(frameCounter.load()))emit("wait_frame","\"result\":"+std::to_string(r)+(state?",\"predictedDisplayPeriod\":"+std::to_string(state->predictedDisplayPeriod):""));return r;}
 
 XrResult XRAPI_PTR layerGetInstanceProcAddr(XrInstance instance,const char* name,PFN_xrVoidFunction* fn){
@@ -952,7 +1470,7 @@ XrResult XRAPI_PTR layerGetInstanceProcAddr(XrInstance instance,const char* name
     return XR_SUCCESS;
 }
 
-bool runtimeAdvertisesQualitySettings(PFN_xrGetInstanceProcAddr getInstanceProcAddr){
+bool runtimeAdvertisesExtension(PFN_xrGetInstanceProcAddr getInstanceProcAddr,const char* extensionName){
     PFN_xrVoidFunction address{};
     if(!getInstanceProcAddr||XR_FAILED(getInstanceProcAddr(XR_NULL_HANDLE,
         "xrEnumerateInstanceExtensionProperties",&address))||!address)return false;
@@ -961,28 +1479,39 @@ bool runtimeAdvertisesQualitySettings(PFN_xrGetInstanceProcAddr getInstanceProcA
     if(XR_FAILED(enumerate(nullptr,0,&count,nullptr))||!count)return false;
     std::vector<XrExtensionProperties> properties(count,{XR_TYPE_EXTENSION_PROPERTIES});
     if(XR_FAILED(enumerate(nullptr,count,&count,properties.data())))return false;
-    for(const auto& property:properties)if(std::strcmp(property.extensionName,
-        XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME)==0)return true;
+    for(const auto& property:properties)if(std::strcmp(property.extensionName,extensionName)==0)return true;
     return false;
+}
+
+bool runtimeAdvertisesQualitySettings(PFN_xrGetInstanceProcAddr getInstanceProcAddr){
+    return runtimeAdvertisesExtension(getInstanceProcAddr,XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME);
 }
 
 XrResult XRAPI_PTR layerCreateApiLayerInstance(const XrInstanceCreateInfo* ci,const XrApiLayerCreateInfo* ai,XrInstance* instance){
     if(!ci||!ai||!ai->nextInfo)return XR_ERROR_INITIALIZATION_FAILED;
-    bool appEnabled=false;
+    bool appEnabled=false,recommendedAppEnabled=false;
     for(uint32_t i=0;i<ci->enabledExtensionCount;++i)if(std::strcmp(ci->enabledExtensionNames[i],
         XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME)==0){appEnabled=true;break;}
+    for(uint32_t i=0;i<ci->enabledExtensionCount;++i)if(std::strcmp(ci->enabledExtensionNames[i],
+        XR_ANDROID_RECOMMENDED_RESOLUTION_EXTENSION_NAME)==0){recommendedAppEnabled=true;break;}
     const bool advertised=runtimeAdvertisesQualitySettings(ai->nextInfo->nextGetInstanceProcAddr);
+    const bool recommendedAdvertised=runtimeAdvertisesExtension(ai->nextInfo->nextGetInstanceProcAddr,
+        XR_ANDROID_RECOMMENDED_RESOLUTION_EXTENSION_NAME);
     std::vector<const char*> extensions;
-    extensions.reserve(ci->enabledExtensionCount+1);
+    extensions.reserve(ci->enabledExtensionCount+2);
     for(uint32_t i=0;i<ci->enabledExtensionCount;++i)
         extensions.push_back(ci->enabledExtensionNames[i]);
     const bool appended=advertised&&!appEnabled;
     if(appended)extensions.push_back(XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME);
+    const bool recommendedAppended=recommendedAdvertised&&!recommendedAppEnabled;
+    if(recommendedAppended)extensions.push_back(XR_ANDROID_RECOMMENDED_RESOLUTION_EXTENSION_NAME);
     XrInstanceCreateInfo patched=*ci;
-    if(appended){patched.enabledExtensionCount=static_cast<uint32_t>(extensions.size());patched.enabledExtensionNames=extensions.data();}
+    if(appended||recommendedAppended){patched.enabledExtensionCount=static_cast<uint32_t>(extensions.size());patched.enabledExtensionNames=extensions.data();}
     XrApiLayerCreateInfo next=*ai;next.nextInfo=ai->nextInfo->next;
     XrResult r=ai->nextInfo->nextCreateApiLayerInstance(&patched,&next,instance);if(XR_FAILED(r))return r;
-    qualitySettingsEnabled=appEnabled||appended;g.instance=*instance;g.getInstanceProcAddr=ai->nextInfo->nextGetInstanceProcAddr;
+    qualitySettingsEnabled=appEnabled||appended;recommendedResolutionEnabled=recommendedAppEnabled||recommendedAppended;
+    recommendedResolutionAppRequested=recommendedAppEnabled;
+    g.instance=*instance;g.getInstanceProcAddr=ai->nextInfo->nextGetInstanceProcAddr;
     load("xrDestroyInstance",g.destroyInstance);load("xrEnumerateViewConfigurationViews",g.enumerateViews);load("xrCreateSession",g.createSession);load("xrDestroySession",g.destroySession);
     load("xrCreateSwapchain",g.createSwapchain);load("xrDestroySwapchain",g.destroySwapchain);load("xrEnumerateSwapchainImages",g.enumerateImages);load("xrAcquireSwapchainImage",g.acquireImage);
     load("xrWaitSwapchainImage",g.waitImage);load("xrReleaseSwapchainImage",g.releaseImage);load("xrEndFrame",g.endFrame);load("xrPollEvent",g.pollEvent);load("xrWaitFrame",g.waitFrame);
@@ -990,7 +1519,11 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(const XrInstanceCreateInfo* ci,co
         ",\"qualityExtensionAdvertised\":"+(advertised?std::string("true"):std::string("false"))+
         ",\"qualityExtensionAppEnabled\":"+(appEnabled?std::string("true"):std::string("false"))+
         ",\"qualityExtensionAppended\":"+(appended?std::string("true"):std::string("false"))+
-        ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false")));return XR_SUCCESS;
+        ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionAdvertised\":"+(recommendedAdvertised?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionAppEnabled\":"+(recommendedAppEnabled?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionAppended\":"+(recommendedAppended?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionEnabled\":"+(recommendedResolutionEnabled?std::string("true"):std::string("false")));return XR_SUCCESS;
 }
 
 #ifdef GXR_NATIVE_RENDERER_HELPER
@@ -1035,26 +1568,54 @@ bool initializeNativeDispatch(){
 
 XrResult nativeCreateInstance(const XrInstanceCreateInfo* ci,XrInstance* instance){
     if(!ci||!instance||!initializeNativeDispatch())return XR_ERROR_INITIALIZATION_FAILED;
-    bool appEnabled=false;
+    bool appEnabled=false,recommendedAppEnabled=false;
     for(uint32_t i=0;i<ci->enabledExtensionCount;++i)if(std::strcmp(ci->enabledExtensionNames[i],
         XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME)==0){appEnabled=true;break;}
     const bool advertised=runtimeAdvertisesQualitySettings(g.getInstanceProcAddr);
+    for(uint32_t i=0;i<ci->enabledExtensionCount;++i)if(std::strcmp(ci->enabledExtensionNames[i],
+        XR_ANDROID_RECOMMENDED_RESOLUTION_EXTENSION_NAME)==0){recommendedAppEnabled=true;break;}
+    const bool recommendedAdvertised=runtimeAdvertisesExtension(g.getInstanceProcAddr,
+        XR_ANDROID_RECOMMENDED_RESOLUTION_EXTENSION_NAME);
+#ifdef GXR_DIAGNOSTIC_PROBE
+    constexpr const char* foveationExtension="XR_FB_foveation";
+    const bool foveationAdvertised=runtimeAdvertisesExtension(g.getInstanceProcAddr,foveationExtension);
+    probeXrFbFoveationAdvertised=foveationAdvertised;
+    bool foveationAppEnabled=false;
+    for(uint32_t i=0;i<ci->enabledExtensionCount;++i)
+        if(std::strcmp(ci->enabledExtensionNames[i],foveationExtension)==0){foveationAppEnabled=true;break;}
+#endif
     std::vector<const char*> extensions;
-    extensions.reserve(ci->enabledExtensionCount+1);
+    extensions.reserve(ci->enabledExtensionCount+2);
     for(uint32_t i=0;i<ci->enabledExtensionCount;++i)extensions.push_back(ci->enabledExtensionNames[i]);
     const bool appended=advertised&&!appEnabled;
     if(appended)extensions.push_back(XR_FB_COMPOSITION_LAYER_SETTINGS_EXTENSION_NAME);
+    const bool recommendedAppended=recommendedAdvertised&&!recommendedAppEnabled;
+    if(recommendedAppended)extensions.push_back(XR_ANDROID_RECOMMENDED_RESOLUTION_EXTENSION_NAME);
     XrInstanceCreateInfo patched=*ci;
-    if(appended){patched.enabledExtensionCount=static_cast<uint32_t>(extensions.size());patched.enabledExtensionNames=extensions.data();}
+    if(appended||recommendedAppended){patched.enabledExtensionCount=static_cast<uint32_t>(extensions.size());patched.enabledExtensionNames=extensions.data();}
     XrResult r=g.createInstance(&patched,instance);
     if(XR_FAILED(r))return r;
     g.instance=*instance;qualitySettingsEnabled=appEnabled||appended;
+    recommendedResolutionEnabled=recommendedAppEnabled||recommendedAppended;
+    recommendedResolutionAppRequested=recommendedAppEnabled;
     emit("native_helper_initialized","\"helperName\":"+quote(kLayerName)+
         ",\"reconstructionBuildId\":"+quote(kBuildId)+
         ",\"qualityExtensionAdvertised\":"+(advertised?std::string("true"):std::string("false"))+
         ",\"qualityExtensionAppEnabled\":"+(appEnabled?std::string("true"):std::string("false"))+
         ",\"qualityExtensionAppended\":"+(appended?std::string("true"):std::string("false"))+
-        ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false")));
+        ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionAdvertised\":"+(recommendedAdvertised?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionAppEnabled\":"+(recommendedAppEnabled?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionAppended\":"+(recommendedAppended?std::string("true"):std::string("false"))+
+        ",\"recommendedResolutionEnabled\":"+(recommendedResolutionEnabled?std::string("true"):std::string("false")));
+#ifdef GXR_DIAGNOSTIC_PROBE
+    emit("probe_xr_capability_census",
+        "\"xrFbFoveationAdvertised\":"+std::string(foveationAdvertised?"true":"false")+
+        ",\"xrFbFoveationAppEnabled\":"+std::string(foveationAppEnabled?"true":"false")+
+        ",\"xrFbFoveationExperimentEnabled\":false,"+
+        "\"xrFbCompositionLayerSettingsAdvertised\":"+std::string(advertised?"true":"false")+
+        ",\"xrFbCompositionLayerSettingsEnabled\":"+std::string(qualitySettingsEnabled?"true":"false"));
+#endif
     return r;
 }
 
@@ -1105,6 +1666,7 @@ GXR_EXPORT XrResult XRAPI_CALL xrEnumerateSwapchainImages(XrSwapchain swapchain,
 GXR_EXPORT XrResult XRAPI_CALL xrAcquireSwapchainImage(XrSwapchain swapchain,const XrSwapchainImageAcquireInfo* info,uint32_t* index){return layerAcquire(swapchain,info,index);}
 GXR_EXPORT XrResult XRAPI_CALL xrWaitSwapchainImage(XrSwapchain swapchain,const XrSwapchainImageWaitInfo* info){return layerWait(swapchain,info);}
 GXR_EXPORT XrResult XRAPI_CALL xrReleaseSwapchainImage(XrSwapchain swapchain,const XrSwapchainImageReleaseInfo* info){return layerRelease(swapchain,info);}
+GXR_EXPORT XrResult XRAPI_CALL xrPollEvent(XrInstance instance,XrEventDataBuffer* data){return layerPollEvent(instance,data);}
 GXR_EXPORT __attribute__((noinline)) XrResult XRAPI_CALL gxrEndFrame(XrSession session,const XrFrameEndInfo* info){return nativeDispatchEndFrame(session,info,__builtin_return_address(0));}
 #else
 GXR_EXPORT XrResult XRAPI_CALL xrNegotiateLoaderApiLayerInterface(const XrNegotiateLoaderInfo* loader,const char* name,XrNegotiateApiLayerRequest* request){

@@ -147,7 +147,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` | Recognizes Steam Link's exact three-projection stream and submits 1 opaque stereo sRGB projection. v1.1 replaced the earlier 4-sample box with 1 centered bilinear foveal sample. v1.2 saves, disables, and restores fixed-function `GL_DITHER` around reconstruction so the new draw cannot add GLES fixed-function dithering independently of Valve's Video dither option; telemetry records whether the inherited bit was actually enabled. When `XR_FB_composition_layer_settings` is advertised, it requests both quality supersampling and quality sharpening. It retains 2 scratch textures, cached immutable GL/FOV state, synchronization, repeated-image reuse, and 30-frame success summaries. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json` | Registers the efficient reconstruction layer with a separate v1 identity |
 
-The output request preserves the 1536-square foveal source density in tangent space where the runtime allows it. The accepted capture requested 3745x4048 per eye but Galaxy XR reported maxima of 3152x3682, so the single projection cannot retain all of the original foveal layer's local pixel density. The centered sample removes avoidable reconstruction blur but cannot exceed those OpenXR swapchain limits. Unfamiliar or incomplete frames fail open with reason telemetry.
+The accepted capture requested about 3745x4048 per eye to preserve the 1536-square foveal source density, but Galaxy XR advertised a maximum submitted view rectangle of 3152x3682. The user now reports that this lower resolution is plainly visible against the granted-overlay control. v1.4 therefore tries 3 guarded output tiers: density-preserving request, Galaxy XR panel-native 3552x3840, then the advertised maximum. Allocation/enumeration rejection falls through atomically. A recoverable oversized `xrEndFrame` rejection discards that frame, permanently advances to the next tier for the session, and never retries the same frame. The first 2 tiers intentionally probe behavior beyond the advertised OpenXR view-rectangle maximum; successful submission is required before either can be treated as accepted. When available, `XR_ANDROID_recommended_resolution` is enabled; its event re-enumerates view limits and safely recreates outputs on the next frame, but it cannot request a higher maximum.
 
 ---
 
@@ -161,20 +161,7 @@ The output request preserves the 1536-square foveal source density in tangent sp
 | `libvrlink_scene.so` instruction at `0x11AA7C` | Replaces stock AArch64 `f1 f9 03 94` with `55 fe 03 94`, routing only the streaming `xrEndFrame` call to the repurposed PLT entry. All three sites must be uniformly stock or uniformly patched; mixed and unknown layouts fail closed. |
 | `lib/arm64-v8a/libgxr_nsp.so` | Injected helper that interposes the OpenXR calls needed to observe swapchain contents and runs the same centered-sample reconstruction at the exact streaming return address. v1.2 resolves loader symbols and scene callsites once, uses generation-checked fixed source bindings, caches validated FOV topology, and aggregates normal telemetry every 900 frames. The original request-exit caller at return offset `0x142064` is forwarded to the real loader; unexpected callsites fail closed. |
 
-This is a native-hook A/B of the interception boundary, not a rewrite of Valve's renderer and not proof that Valve directly renders one projection. Steam Link still produces its original three projections; the helper receives them at the renderer's final `xrEndFrame` call and reconstructs one projection without registering an implicit API layer. Native helper v1.2 retains the existing fixed-function `GL_DITHER` isolation while removing avoidable native CPU bookkeeping. It shares the same runtime swapchain limits and centered sampling as the efficient patch, so it cannot restore foveal density beyond Galaxy XR's reported maximum dimensions. The pristine scene reference SHA-256 is `e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f`; exact size, build ID, and per-site bytes remain the operative guards so other independently guarded 5002322 edits can coexist.
-
----
-
-### Experimental Native Quad-View Zero-Copy Projection
-**Default: disabled; 5002322 only** — mutually exclusive with both reconstruction patches; do not combine with `Appear on top`
-
-| Artifact | Exact guarded edit |
-|---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_quad_zero_copy_v1` |
-| `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact size, build-ID, dynamic-table, PLT, relocation, callsite, and atomic all-site guards above, but selects padded `libgxr_nqv.so`. An APK already containing `libgxr_nsp.so` is rejected as a sibling-mode conflict. |
-| `lib/arm64-v8a/libgxr_nqv.so` | GLES-free native helper that probes `PRIMARY_STEREO_WITH_FOVEATED_INSET`, virtualizes Steam Link's stereo session and locate calls, and maps Valve's under-L/R plus fovea-L/R images to 1 projection with 4 views. It creates no output swapchain and performs no reconstruction resolve, draw, or `glFlush`. |
-
-The mode activates only when the runtime enumerates exactly 4 compatible views, at least 1536x1536 and MSAA2 limits, plus opaque blending. Unsupported systems remain on Valve's stock stereo/3-layer path. Once a session begins in 4-view mode it cannot legally return to stereo: any later fingerprint, pose/FOV, release-state, or runtime failure submits empty frames, requests session exit once, and forces the next session to stock. OpenXR applies projection flags to the whole 4-view layer, so outer alpha and inset-edge quality remain mandatory headset checks. This mode is statically built and guarded but has not been installed or validated on Galaxy XR.
+This is a native-hook A/B of the interception boundary, not a rewrite of Valve's renderer and not proof that Valve directly renders one projection. Steam Link still produces its original three projections; the helper receives them at the renderer's final `xrEndFrame` call and reconstructs one projection without registering an implicit API layer. Native helper v1.4 retains fixed-function `GL_DITHER` isolation, uses the same guarded 3-tier output selection, and handles Android XR recommended-resolution changes. The pristine scene reference SHA-256 is `e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f`; exact size, build ID, and per-site bytes remain the operative guards so other independently guarded 5002322 edits can coexist.
 
 ---
 
@@ -187,20 +174,27 @@ The mode activates only when the runtime enumerates exactly 4 compatible views, 
 | `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nspd.so`; every sibling helper is rejected. |
 | `lib/arm64-v8a/libgxr_nspd.so` | CPU-optimized native reconstruction helper. It accepts only 6 uniform `GL_SRGB8_ALPHA8` or 6 uniform `GL_RGB10_A2` source swapchains, then uses that same format for both MSAA resolve textures and both final projection swapchains. It does not force 10-bit or add a separate precision option. |
 
-The Valve source format remains controlled by the existing Video output precision path. Mixed formats, unsupported formats, missing output-format advertisement, output allocation, EGL, GL, or synchronization failures permanently disable reconstruction for that session and safely forward Valve's original 3 layers. The helper uses high-precision samplers and adds no transfer-function conversion: sRGB8 keeps the GLES sRGB decode/encode path, while RGB10_A2 stays linear. Static validation does not prove the decoder, Valve source swapchains, final runtime swapchains, or display path are genuinely 10-bit.
+The Valve source format remains controlled by the existing Video output precision path. Mixed formats, unsupported formats, missing output-format advertisement, EGL, GL, or synchronization failures safely reject reconstruction. Output allocation instead walks the same density-preserving, panel-native, and advertised-maximum tiers and refreshes them after Android XR recommended-resolution events. The helper uses high-precision samplers and adds no transfer-function conversion: sRGB8 keeps the GLES sRGB decode/encode path, while RGB10_A2 stays linear. Static validation does not prove the decoder, Valve source swapchains, final runtime swapchains, compositor, or display path are genuinely 10-bit.
 
 ---
 
-### Experimental Native Quad Zero-Copy CPU+GPU Optimized 8/10-bit
+### Experimental Native Single-Projection Resolution + 10-bit Probe
 **Default: disabled; 5002322 only** — mutually exclusive with every other projection experiment; do not combine with `Appear on top`
 
 | Artifact | Exact guarded edit |
 |---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_quad_zero_copy_dual_v1` |
-| `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nqvd.so`; every sibling helper is rejected. |
-| `lib/arm64-v8a/libgxr_nqvd.so` | CPU+GPU-optimized native helper. It accepts only 6 uniform `GL_SRGB8_ALPHA8` or 6 uniform `GL_RGB10_A2` sources and directly maps Valve's images into 1 projection with 4 views. It imports neither EGL nor GLES, allocates no output swapchain, and performs no reconstruction pass. |
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_probe_v1` |
+| `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nspp.so`; every sibling helper, including retired quad helpers, is rejected. |
+| `lib/arm64-v8a/libgxr_nspp.so` | CPU-optimized, dual-format native stereo reconstruction plus bounded diagnostics. It records view limits and density requests, allocation-only above-cap trials, foveation capabilities, all 6 source contracts, actual GLES attachment component sizes, final rectangles/format/topology, `xrEndFrame`, decoder output-format changes, and AHardwareBuffer dimensions/format/usage/stride. It records no pixels. |
 
-Before quad-view session commitment, unsupported capability stays on the stock stereo/3-layer path. After commitment, OpenXR forbids switching the primary view configuration in-place, so a later format or topology failure submits a safe empty frame, requests session exit once, and forces the next session to stock. RGB10_A2's 2-bit alpha makes inset-edge and outer-view opacity checks mandatory on Galaxy XR. This mode is statically built and guarded but has not been installed or validated on a headset.
+The output remains 1 projection with 2 views. v1.2 first tries the density-preserving size, then panel-native 3552x3840, then the runtime-reported maximum, and re-enumerates after Android XR recommended-resolution events. Separate allocation-only candidates remain diagnostic, while the selected production tier is actually rendered and submitted. App-side 10-bit is proven only when decoder/AHardwareBuffer evidence, all 6 Valve source swapchains, reconstruction attachments, final swapchains, submitted rectangles, and matching successful `xrEndFrame` agree on 10-bit. Successful above-cap submission proves runtime acceptance but not private-compositor or panel sampling. Static validation does not replace an exact-build headset capture.
+
+---
+
+### Retired: Experimental Native Quad-View Zero-Copy Projection variants
+**Removed after low-resolution headset results; 5002322 only**
+
+Both the sRGB8-only and dual-format CPU+GPU variants submitted Valve's sources as 1 four-view projection without reconstruction GPU work, but both remained visibly low-resolution like the unpatched/no-overlay path. This rules them out as a high-resolution replacement. Their selectable patches, shared native source, and bundled `libgxr_nqv.so`/`libgxr_nqvd.so` artifacts have been removed. The mode and library identities remain reserved so active native patches reject stale decoded-APK contents.
 
 ---
 
