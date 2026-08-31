@@ -30,8 +30,11 @@ For Steam Link 2.0.22 build 5002322, select exactly one A/B candidate in Morphe:
 
 - **Experimental Single Projection Reconstruction Efficient** uses an implicit OpenXR API layer.
 - **Experimental Native Single Projection Renderer Hook** patches the exact 5002322 AArch64 scene library and routes Valve's streaming `xrEndFrame` call through the injected `libgxr_nsp.so` helper.
+- **Experimental Native Quad-View Zero-Copy Projection** submits Valve's existing sRGB8 sources as 1 four-view projection with no reconstruction GPU work.
+- **Experimental Native Reconstruction CPU Optimized 8/10-bit** auto-matches uniform sRGB8 or RGB10_A2 Valve sources and uses the same format for reconstruction scratch and final stereo output.
+- **Experimental Native Quad Zero-Copy CPU+GPU Optimized 8/10-bit** auto-matches uniform sRGB8 or RGB10_A2 Valve sources and directly submits them as 1 four-view projection without EGL/GLES work.
 
-Both run the same optimized centered-sample reconstruction. The native candidate changes the interception boundary; it does not make Valve's renderer directly generate a single projection. The unoptimized and fovea-quad patches have been removed.
+The 2 reconstruction candidates use the optimized centered-sample draw. The 2 quad candidates instead preserve Valve's images and remove the reconstruction pass. The native candidates change the interception/submission boundary; they do not make Valve's renderer directly generate a single projection. The dual-format variants do not force 10-bit: the existing Video output precision path must first make all 6 Valve source swapchains RGB10_A2. The unoptimized and fovea-quad patches have been removed.
 
 Do not select **Appear on top** or any retired resolution experiment.
 
@@ -39,7 +42,7 @@ The patch:
 
 - removes `SYSTEM_ALERT_WINDOW`;
 - adds unmanaged Full Space directly to `VRLink`;
-- installs exactly 1 of `single_projection_reconstruction_efficient_v1`, `single_projection_native_renderer_v1`, or `single_projection_native_quad_zero_copy_v1`;
+- installs exactly 1 of `single_projection_reconstruction_efficient_v1`, `single_projection_native_renderer_v1`, `single_projection_native_quad_zero_copy_v1`, `single_projection_native_renderer_dual_v1`, or `single_projection_native_quad_zero_copy_dual_v1`;
 - recognizes only the exact six-swapchain Steam Link streaming topology;
 - temporarily retains recognized source images, resolves the multisampled opaque underside and alpha-foveated images, and composites them into two private runtime-limited eye swapchains. The earlier base projection is not sampled because the later same-pose full-FOV underside is opaque and fully covers it under OpenXR ordering;
 - uses one centered bilinear foveal sample instead of the retired 4-sample box, disables fixed-function `GL_DITHER` only around its own draw, and requests quality supersampling plus quality sharpening only when `XR_FB_composition_layer_settings` is advertised;
@@ -48,6 +51,8 @@ The patch:
 - forwards the original frame after safely releasing every held image when any topology, EGL, GL, or synchronization prerequisite is missing.
 
 The new quad-view candidate is a separate native path. It first requires the runtime to enumerate OpenXR's optional 4-view foveated-inset configuration. When available, it begins that configuration, exposes the 2 outer views to Valve, and submits Valve's existing under-L/R and fovea-L/R images as 1 projection with 4 views. It contains the native CPU callsite/binding/FOV caches but creates no reconstruction swapchains and imports no EGL/GLES implementation. If capability probing fails it stays on Valve's stock 3-layer path; after a committed quad session, any safety mismatch requests exit and defers stock fallback until the next session. This is static/build evidence only until an exact 5002322 Galaxy XR capture proves support, edge blending, sharpness, and compositor policy.
+
+The dual-format variants accept only a uniform set of 6 sRGB8 or 6 RGB10_A2 source swapchains. The CPU variant creates matching-format scratch and final swapchains after confirming that the runtime advertises the selected output format. The CPU+GPU variant remains zero-copy and has no output swapchain to convert or truncate. Runtime 10-bit acceptance still requires correlated host negotiation, decoder/source-format, helper telemetry, runtime swapchain, compositor, and visual evidence; static ELF and source checks alone are not that proof.
 
 The completed two-projection discriminator, mode `two_projection_drop_base_v1`:
 

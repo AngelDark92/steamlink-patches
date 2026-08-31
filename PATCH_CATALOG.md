@@ -7,8 +7,8 @@ Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with i
 Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset, OLED color calibration,
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither.
 Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset,
-Unrestricted battery usage, Video dither, and Visual Delay Fix. Two mutually exclusive 5002322-only
-single-projection A/B patches remain optional and experimental.
+Unrestricted battery usage, Video dither, and Visual Delay Fix. Five mutually exclusive 5002322-only
+projection A/B patches remain optional and experimental.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
@@ -175,6 +175,32 @@ This is a native-hook A/B of the interception boundary, not a rewrite of Valve's
 | `lib/arm64-v8a/libgxr_nqv.so` | GLES-free native helper that probes `PRIMARY_STEREO_WITH_FOVEATED_INSET`, virtualizes Steam Link's stereo session and locate calls, and maps Valve's under-L/R plus fovea-L/R images to 1 projection with 4 views. It creates no output swapchain and performs no reconstruction resolve, draw, or `glFlush`. |
 
 The mode activates only when the runtime enumerates exactly 4 compatible views, at least 1536x1536 and MSAA2 limits, plus opaque blending. Unsupported systems remain on Valve's stock stereo/3-layer path. Once a session begins in 4-view mode it cannot legally return to stereo: any later fingerprint, pose/FOV, release-state, or runtime failure submits empty frames, requests session exit once, and forces the next session to stock. OpenXR applies projection flags to the whole 4-view layer, so outer alpha and inset-edge quality remain mandatory headset checks. This mode is statically built and guarded but has not been installed or validated on Galaxy XR.
+
+---
+
+### Experimental Native Reconstruction CPU Optimized 8/10-bit
+**Default: disabled; 5002322 only** — mutually exclusive with every other projection experiment; do not combine with `Appear on top`
+
+| Artifact | Exact guarded edit |
+|---|---|
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_renderer_dual_v1` |
+| `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nspd.so`; every sibling helper is rejected. |
+| `lib/arm64-v8a/libgxr_nspd.so` | CPU-optimized native reconstruction helper. It accepts only 6 uniform `GL_SRGB8_ALPHA8` or 6 uniform `GL_RGB10_A2` source swapchains, then uses that same format for both MSAA resolve textures and both final projection swapchains. It does not force 10-bit or add a separate precision option. |
+
+The Valve source format remains controlled by the existing Video output precision path. Mixed formats, unsupported formats, missing output-format advertisement, output allocation, EGL, GL, or synchronization failures permanently disable reconstruction for that session and safely forward Valve's original 3 layers. The helper uses high-precision samplers and adds no transfer-function conversion: sRGB8 keeps the GLES sRGB decode/encode path, while RGB10_A2 stays linear. Static validation does not prove the decoder, Valve source swapchains, final runtime swapchains, or display path are genuinely 10-bit.
+
+---
+
+### Experimental Native Quad Zero-Copy CPU+GPU Optimized 8/10-bit
+**Default: disabled; 5002322 only** — mutually exclusive with every other projection experiment; do not combine with `Appear on top`
+
+| Artifact | Exact guarded edit |
+|---|---|
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_quad_zero_copy_dual_v1` |
+| `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nqvd.so`; every sibling helper is rejected. |
+| `lib/arm64-v8a/libgxr_nqvd.so` | CPU+GPU-optimized native helper. It accepts only 6 uniform `GL_SRGB8_ALPHA8` or 6 uniform `GL_RGB10_A2` sources and directly maps Valve's images into 1 projection with 4 views. It imports neither EGL nor GLES, allocates no output swapchain, and performs no reconstruction pass. |
+
+Before quad-view session commitment, unsupported capability stays on the stock stereo/3-layer path. After commitment, OpenXR forbids switching the primary view configuration in-place, so a later format or topology failure submits a safe empty frame, requests session exit once, and forces the next session to stock. RGB10_A2's 2-bit alpha makes inset-edge and outer-view opacity checks mandatory on Galaxy XR. This mode is statically built and guarded but has not been installed or validated on a headset.
 
 ---
 

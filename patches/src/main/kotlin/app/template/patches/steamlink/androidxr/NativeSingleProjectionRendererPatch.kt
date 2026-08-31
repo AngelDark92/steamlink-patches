@@ -6,6 +6,10 @@ internal const val NATIVE_SINGLE_PROJECTION_MODE = "single_projection_native_ren
 internal const val NATIVE_SINGLE_PROJECTION_LIBRARY = "libgxr_nsp.so"
 internal const val NATIVE_QUAD_VIEW_MODE = "single_projection_native_quad_zero_copy_v1"
 internal const val NATIVE_QUAD_VIEW_LIBRARY = "libgxr_nqv.so"
+internal const val NATIVE_DUAL_SINGLE_PROJECTION_MODE = "single_projection_native_renderer_dual_v1"
+internal const val NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY = "libgxr_nspd.so"
+internal const val NATIVE_DUAL_QUAD_VIEW_MODE = "single_projection_native_quad_zero_copy_dual_v1"
+internal const val NATIVE_DUAL_QUAD_VIEW_LIBRARY = "libgxr_nqvd.so"
 internal const val NATIVE_SINGLE_PROJECTION_STOCK_SHA256 =
     "e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f"
 
@@ -24,6 +28,8 @@ private val PATCHED_STREAM_END_FRAME_CALL = byteArrayOf(0x55, 0xFE.toByte(), 0x0
 private val NATIVE_HELPER_LIBRARIES = listOf(
     NATIVE_SINGLE_PROJECTION_LIBRARY,
     NATIVE_QUAD_VIEW_LIBRARY,
+    NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY,
+    NATIVE_DUAL_QUAD_VIEW_LIBRARY,
 )
 
 private data class NativeHookSite(

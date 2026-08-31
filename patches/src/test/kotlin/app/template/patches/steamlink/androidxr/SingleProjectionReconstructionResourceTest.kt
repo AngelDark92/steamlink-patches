@@ -77,7 +77,8 @@ class SingleProjectionReconstructionResourceTest {
             """outputProjectionCount\":1""",
             """outputViewCount\":2""",
             """foveaFilter\":\"linear_center_1tap""",
-            "ci.format=kSourceFormat;ci.sampleCount=1",
+            "ci.format=kSourceFormat;",
+            "ci.sampleCount=1;ci.width=s.outputWidth",
             "qualitySettings.layerFlags=XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB",
             "XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB",
             "s.dither=glIsEnabled(GL_DITHER)",
@@ -97,34 +98,21 @@ class SingleProjectionReconstructionResourceTest {
 
     @Test
     fun `removed reconstruction modes are cleanup only`() {
-        assertTrue(
-            projectionModesConflict(
-                "single_projection_native_renderer_v1",
-                "single_projection_reconstruction_efficient_v1",
-            ),
-        )
-        assertTrue(
-            projectionModesConflict(
-                "single_projection_reconstruction_efficient_v1",
-                "single_projection_native_renderer_v1",
-            ),
-        )
-        listOf(
+        val activeModes = listOf(
             "single_projection_native_renderer_v1",
             "single_projection_reconstruction_efficient_v1",
-        ).forEach { sibling ->
-            assertTrue(
-                projectionModesConflict(
-                    "single_projection_native_quad_zero_copy_v1",
-                    sibling,
-                ),
-            )
-            assertTrue(
-                projectionModesConflict(
-                    sibling,
-                    "single_projection_native_quad_zero_copy_v1",
-                ),
-            )
+            "single_projection_native_quad_zero_copy_v1",
+            "single_projection_native_renderer_dual_v1",
+            "single_projection_native_quad_zero_copy_dual_v1",
+        )
+        activeModes.forEach { existing ->
+            activeModes.forEach { requested ->
+                assertEquals(
+                    existing != requested,
+                    projectionModesConflict(existing, requested),
+                    "$existing versus $requested",
+                )
+            }
         }
         assertFalse(
             projectionModesConflict(

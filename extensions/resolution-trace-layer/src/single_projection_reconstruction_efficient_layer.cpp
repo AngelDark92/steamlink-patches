@@ -33,7 +33,11 @@ namespace {
 
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
-#ifdef GXR_NATIVE_RENDERER_HELPER
+#if defined(GXR_NATIVE_RENDERER_HELPER) && defined(GXR_NATIVE_DUAL_FORMAT)
+constexpr char kModeName[] = "single_projection_native_renderer_dual_v1";
+constexpr char kBuildId[] = "single-projection-native-renderer-dual-v1.0-20260831";
+constexpr uint64_t kSuccessSummaryInterval = 900;
+#elif defined(GXR_NATIVE_RENDERER_HELPER)
 constexpr char kModeName[] = "single_projection_native_renderer_v1";
 constexpr char kBuildId[] = "single-projection-native-renderer-v1.2-20260831";
 constexpr uint64_t kSuccessSummaryInterval = 900;
@@ -44,6 +48,15 @@ constexpr uint64_t kSuccessSummaryInterval = 30;
 #endif
 constexpr uint32_t kSourceExtent = 1536;
 constexpr int64_t kSourceFormat = GL_SRGB8_ALPHA8;
+#ifdef GXR_NATIVE_DUAL_FORMAT
+constexpr int64_t kRgb10A2Format = GL_RGB10_A2;
+bool supportedSourceFormat(int64_t format) {
+    return format == kSourceFormat || format == kRgb10A2Format;
+}
+const char* sourcePrecision(int64_t format) {
+    return format == kRgb10A2Format ? "rgb10a2" : "srgb8";
+}
+#endif
 constexpr XrCompositionLayerFlags kFoveaFlags =
     XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT |
     XR_COMPOSITION_LAYER_UNPREMULTIPLIED_ALPHA_BIT;
@@ -56,6 +69,9 @@ struct Dispatch {
     PFN_xrEnumerateViewConfigurationViews enumerateViews{};
     PFN_xrCreateSession createSession{};
     PFN_xrDestroySession destroySession{};
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    PFN_xrEnumerateSwapchainFormats enumerateSwapchainFormats{};
+#endif
     PFN_xrCreateSwapchain createSwapchain{};
     PFN_xrDestroySwapchain destroySwapchain{};
     PFN_xrEnumerateSwapchainImages enumerateImages{};
@@ -136,6 +152,9 @@ struct SessionState {
     uint64_t nativeFastFingerprintCount{}, nativeSlowFingerprintCount{};
     uint64_t nativeSourceCacheInvalidationCount{};
     uint64_t nativeDeferredReleaseCount{}, nativeForwardedReleaseCount{}, nativeOutputReleaseCount{};
+#endif
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    int64_t sourceFormat{};
 #endif
     uint64_t successfulTransforms{}, transformsSinceSummary{};
     uint64_t freshSinceSummary{}, reusedSinceSummary{};
@@ -266,8 +285,15 @@ GLuint compile(GLenum type, const char* source, std::string& error) {
     return 0;
 }
 
+void destroyGl(GlState& gl);
+
 bool ensureGl(SessionState& s) {
     if (s.gl.ready) return true;
+#ifdef GXR_NATIVE_DUAL_FORMAT
+#define GXR_SAMPLER_DECLARATIONS "uniform highp sampler2D underTex;uniform highp sampler2D foveaTex;\n"
+#else
+#define GXR_SAMPLER_DECLARATIONS "uniform sampler2D underTex;uniform sampler2D foveaTex;\n"
+#endif
     static const char* vertex = R"(#version 310 es
 precision highp float;
 out vec2 uv;
@@ -275,8 +301,7 @@ void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);uv=p;gl_Position=vec4(
     static const char* fragment = R"(#version 310 es
 precision highp float;
 in vec2 uv;layout(location=0)out vec4 color;
-uniform sampler2D underTex;uniform sampler2D foveaTex;
-uniform vec4 fullTan;uniform vec4 foveaTan;
+)" GXR_SAMPLER_DECLARATIONS R"(uniform vec4 fullTan;uniform vec4 foveaTan;
 void main(){
  vec2 ray=vec2(mix(fullTan.x,fullTan.y,uv.x),mix(fullTan.z,fullTan.w,uv.y));
  vec2 fuv=vec2((ray.x-foveaTan.x)/(foveaTan.y-foveaTan.x),(ray.y-foveaTan.z)/(foveaTan.w-foveaTan.z));
@@ -285,6 +310,7 @@ void main(){
   vec4 inset=texture(foveaTex,clamp(fuv,vec2(0.0),vec2(1.0)));color.rgb=mix(color.rgb,inset.rgb,inset.a);
  }
 })";
+#undef GXR_SAMPLER_DECLARATIONS
     std::string error;
     GLuint vs=compile(GL_VERTEX_SHADER,vertex,error), fs=compile(GL_FRAGMENT_SHADER,fragment,error);
     if (!vs || !fs) {
@@ -308,11 +334,28 @@ void main(){
     glGenTextures(2,s.gl.resolved.data());
     for(GLuint texture:s.gl.resolved){
         glBindTexture(GL_TEXTURE_2D,texture);
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        glTexStorage2D(GL_TEXTURE_2D,1,static_cast<GLenum>(s.sourceFormat),kSourceExtent,kSourceExtent);
+#else
         glTexStorage2D(GL_TEXTURE_2D,1,GL_SRGB8_ALPHA8,kSourceExtent,kSourceExtent);
+#endif
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        GLuint framebuffer{};
+        glGenFramebuffers(1,&framebuffer);
+        glBindFramebuffer(GL_FRAMEBUFFER,framebuffer);
+        glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,texture,0);
+        const GLenum status=glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        glDeleteFramebuffers(1,&framebuffer);
+        if(status!=GL_FRAMEBUFFER_COMPLETE){
+            emit("reconstruction_gl_failure","\"stage\":\"scratch_fbo\",\"status\":"+
+                std::to_string(status)+",\"format\":"+std::to_string(s.sourceFormat));
+            destroyGl(s.gl);return false;
+        }
+#endif
     }
     s.gl.ready=true;
     return s.gl.ready;
@@ -543,8 +586,28 @@ bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,cons
     const uint32_t requestedHeight=std::max(s.recommendedHeight,static_cast<uint32_t>(std::ceil(kSourceExtent*ry)));
     s.outputWidth=requestedWidth;s.outputHeight=requestedHeight;
     if(s.maxWidth)s.outputWidth=std::min(s.outputWidth,s.maxWidth);if(s.maxHeight)s.outputHeight=std::min(s.outputHeight,s.maxHeight);
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    uint32_t formatCount{};
+    if(!g.enumerateSwapchainFormats||XR_FAILED(g.enumerateSwapchainFormats(s.session,0,&formatCount,nullptr))||!formatCount){
+        emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+
+            ",\"reason\":\"enumerate_output_formats_failed\",\"sourceFormat\":"+std::to_string(s.sourceFormat));
+        return false;
+    }
+    std::vector<int64_t> formats(formatCount);
+    if(XR_FAILED(g.enumerateSwapchainFormats(s.session,formatCount,&formatCount,formats.data()))||
+       std::find(formats.begin(),formats.end(),s.sourceFormat)==formats.end()){
+        emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+
+            ",\"reason\":\"source_format_not_supported_for_output\",\"sourceFormat\":"+std::to_string(s.sourceFormat));
+        return false;
+    }
+#endif
     for(auto& out:s.outputs){XrSwapchainCreateInfo ci{XR_TYPE_SWAPCHAIN_CREATE_INFO};ci.usageFlags=XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT|XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
-        ci.format=kSourceFormat;ci.sampleCount=1;ci.width=s.outputWidth;ci.height=s.outputHeight;ci.faceCount=1;ci.arraySize=1;ci.mipCount=1;
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        ci.format=s.sourceFormat;
+#else
+        ci.format=kSourceFormat;
+#endif
+        ci.sampleCount=1;ci.width=s.outputWidth;ci.height=s.outputHeight;ci.faceCount=1;ci.arraySize=1;ci.mipCount=1;
         if(XR_FAILED(g.createSwapchain(s.session,&ci,&out.handle))){destroyOutputs(s);return false;}uint32_t count{};
         if(XR_FAILED(g.enumerateImages(out.handle,0,&count,nullptr))||!count){destroyOutputs(s);return false;}
         out.images.assign(count,{XR_TYPE_SWAPCHAIN_IMAGE_OPENGL_ES_KHR});
@@ -553,12 +616,19 @@ bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,cons
         ",\"requestedWidth\":"+std::to_string(requestedWidth)+",\"requestedHeight\":"+std::to_string(requestedHeight)+
         ",\"widthClamped\":"+std::string(s.outputWidth<requestedWidth?"true":"false")+",\"heightClamped\":"+
         std::string(s.outputHeight<requestedHeight?"true":"false")+
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        ",\"sourceFormat\":"+std::to_string(s.sourceFormat)+",\"scratchFormat\":"+std::to_string(s.sourceFormat)+
+        ",\"outputFormat\":"+std::to_string(s.sourceFormat)+",\"sourcePrecision\":"+quote(sourcePrecision(s.sourceFormat))+
+#endif
         ",\"sampleCount\":1,\"foveaFilter\":\"linear_center_1tap\",\"fixedFunctionDitherDisabled\":true"+
         ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false")));return true;
 }
 
 struct Fingerprint{bool valid{};std::string reason;XrSession session{XR_NULL_HANDLE};
     std::array<const XrCompositionLayerProjection*,3> p{};std::array<XrSwapchain,6> handles{};
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    int64_t sourceFormat{};
+#endif
 #ifdef GXR_NATIVE_RENDERER_HELPER
     std::array<SwapchainState*,6> states{};
     std::array<uint64_t,6> generations{};
@@ -590,6 +660,9 @@ bool inspectNativeFast(const XrFrameEndInfo* info,SessionState& s,Fingerprint& f
            !sameFovBits(v.fov,s.nativeFingerprintFovs[index]))return false;
         f.states[index]=binding.state;f.generations[index]=binding.generation;
     }
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    f.sourceFormat=s.sourceFormat;
+#endif
     f.valid=true;f.session=s.session;++s.nativeFastFingerprintCount;return true;
 }
 
@@ -600,8 +673,17 @@ Fingerprint inspectSlow(const XrFrameEndInfo* info){
         if(v.next||r.offset.x||r.offset.y||r.extent.width!=kSourceExtent||r.extent.height!=kSourceExtent||v.subImage.imageArrayIndex){f.reason="subimage";return f;}
         if(!samePose(v.pose,f.p[1]->views[eye].pose)){f.reason="pose";return f;}auto it=swapchains.find(v.subImage.swapchain);
         if(it==swapchains.end()){f.reason="unknown_swapchain";return f;}auto& ci=it->second.info;
-        if(ci.width!=kSourceExtent||ci.height!=kSourceExtent||ci.arraySize!=1||ci.sampleCount!=2||ci.format!=kSourceFormat||
+        if(ci.width!=kSourceExtent||ci.height!=kSourceExtent||ci.arraySize!=1||ci.sampleCount!=2||
+#ifdef GXR_NATIVE_DUAL_FORMAT
+            !supportedSourceFormat(ci.format)||
+#else
+            ci.format!=kSourceFormat||
+#endif
             ci.usageFlags!=(XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT|XR_SWAPCHAIN_USAGE_SAMPLED_BIT)||ci.faceCount!=1||ci.mipCount!=1){f.reason="swapchain_info";return f;}
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        if(!f.sourceFormat)f.sourceFormat=ci.format;
+        else if(f.sourceFormat!=ci.format){f.reason="mixed_source_format";return f;}
+#endif
         if(!owner)owner=it->second.session;if(owner!=it->second.session){f.reason="session";return f;}
         const size_t index=static_cast<size_t>(layer*2+eye);f.handles[index]=v.subImage.swapchain;
         f.states[index]=&it->second;f.generations[index]=it->second.generation;
@@ -662,8 +744,15 @@ void learn(SessionState& s,const Fingerprint& f){
 #else
     for(size_t i=0;i<6;++i)swapchains[s.sources[i]].role=roles[i];
 #endif
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    s.sourceFormat=f.sourceFormat;
+#endif
     s.learned=true;
-    emit("reconstruction_fingerprint_learned","\"sourceProjectionCount\":3,\"sourceViewCount\":6");
+    emit("reconstruction_fingerprint_learned","\"sourceProjectionCount\":3,\"sourceViewCount\":6"
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        ",\"sourceFormat\":"+std::to_string(s.sourceFormat)+",\"sourcePrecision\":"+quote(sourcePrecision(s.sourceFormat))
+#endif
+    );
 }
 
 XrResult XRAPI_PTR layerEnumerateViews(XrInstance instance,XrSystemId system,XrViewConfigurationType type,uint32_t cap,uint32_t* count,XrViewConfigurationView* views){
@@ -739,6 +828,13 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
 #else
     Fingerprint f=inspect(info);
 #endif
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    if(sit!=sessions.end()&&!f.valid&&(f.reason=="swapchain_info"||f.reason=="mixed_source_format")){
+        sit->second.disabled=true;sit->second.active=false;
+        emit("reconstruction_disabled","\"session\":"+std::to_string(hv(handle))+
+            ",\"reason\":"+quote(f.reason));
+    }
+#endif
     if(sit==sessions.end()||!f.valid||f.session!=handle)
         return submitPassthrough(handle,sit==sessions.end()?nullptr:&sit->second,info,frame,f.reason,false);
     SessionState& s=sit->second;
@@ -763,8 +859,18 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
     if(!reusedOutput){
         if(!s.active||s.disabled)return submitPassthrough(handle,&s,info,frame,"source_not_ready",true);
         s.mapping.valid=false;
-        if(!acquireOutputs(s))return submitPassthrough(handle,&s,info,frame,"output_acquire_failed",true);
-        if(!compose(s,*f.p[1],*f.p[2]))return submitPassthrough(handle,&s,info,frame,"compose_failed",true);
+        if(!acquireOutputs(s)){
+#ifdef GXR_NATIVE_DUAL_FORMAT
+            s.disabled=true;s.active=false;
+#endif
+            return submitPassthrough(handle,&s,info,frame,"output_acquire_failed",true);
+        }
+        if(!compose(s,*f.p[1],*f.p[2])){
+#ifdef GXR_NATIVE_DUAL_FORMAT
+            s.disabled=true;s.active=false;
+#endif
+            return submitPassthrough(handle,&s,info,frame,"compose_failed",true);
+        }
         const bool sourceReleaseSuccess=flushSources(s);
         const bool outputReleaseSuccess=releaseOutputs(s);
         if(!sourceReleaseSuccess||!outputReleaseSuccess){s.active=false;s.disabled=true;
@@ -910,6 +1016,9 @@ bool initializeNativeDispatch(){
     ok=nativeResolve(loader,"xrEnumerateViewConfigurationViews",resolved.enumerateViews)&&ok;
     ok=nativeResolve(loader,"xrCreateSession",resolved.createSession)&&ok;
     ok=nativeResolve(loader,"xrDestroySession",resolved.destroySession)&&ok;
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    ok=nativeResolve(loader,"xrEnumerateSwapchainFormats",resolved.enumerateSwapchainFormats)&&ok;
+#endif
     ok=nativeResolve(loader,"xrCreateSwapchain",resolved.createSwapchain)&&ok;
     ok=nativeResolve(loader,"xrDestroySwapchain",resolved.destroySwapchain)&&ok;
     ok=nativeResolve(loader,"xrEnumerateSwapchainImages",resolved.enumerateImages)&&ok;

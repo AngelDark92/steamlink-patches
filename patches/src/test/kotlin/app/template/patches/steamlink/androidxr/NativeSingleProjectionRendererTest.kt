@@ -46,6 +46,26 @@ class NativeSingleProjectionRendererTest {
     }
 
     @Test
+    fun `all four native helpers are atomic idempotent and mutually exclusive`() {
+        val libraries = listOf(
+            NATIVE_SINGLE_PROJECTION_LIBRARY,
+            NATIVE_QUAD_VIEW_LIBRARY,
+            NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY,
+            NATIVE_DUAL_QUAD_VIEW_LIBRARY,
+        )
+        libraries.forEach { library ->
+            val patched = patchNativeSingleProjectionRenderer(stockSceneFixture(), library)
+            assertContentEquals(paddedAscii(library, 20), patched.sliceArray(0x69635 until 0x69649))
+            assertContentEquals(patched, patchNativeSingleProjectionRenderer(patched, library))
+            libraries.filterNot { it == library }.forEach { sibling ->
+                assertFailsWith<PatchException>("$library versus $sibling") {
+                    patchNativeSingleProjectionRenderer(patched, sibling)
+                }
+            }
+        }
+    }
+
+    @Test
     fun `mixed or unknown native hook layouts fail closed`() {
         val mixed = stockSceneFixture().also {
             paddedAscii("libgxr_nsp.so", 20).copyInto(it, 0x69635)
@@ -163,6 +183,49 @@ class NativeSingleProjectionRendererTest {
     }
 
     @Test
+    fun `dual-format helpers have isolated identities and expected GPU dependencies`() {
+        val cpu = bundledHelper("libgxr_nspd.so")
+        assertEquals(
+            "851e80b27b884044235660c2be3fef1483d291ce02dd1191e826ea014bef772e",
+            sha256(cpu),
+        )
+        val cpuStrings = cpu.toString(Charsets.ISO_8859_1)
+        listOf(
+            "single-projection-native-renderer-dual-v1.0-20260831",
+            "single_projection_native_renderer_dual_v1",
+            "libgxr_nspd.so",
+            "rgb10a2",
+            "mixed_source_format",
+            "source_format_not_supported_for_output",
+        ).forEach { assertTrue(cpuStrings.contains(it), it) }
+        val cpuElf = Elf64DynamicView(cpu)
+        assertEquals("libgxr_nspd.so", cpuElf.soname)
+        assertTrue("libEGL.so" in cpuElf.neededLibraries)
+        assertTrue("libGLESv3.so" in cpuElf.neededLibraries)
+        assertTrue("libopenxr_loader.so" in cpuElf.neededLibraries)
+
+        val gpu = bundledHelper("libgxr_nqvd.so")
+        assertEquals(
+            "0c81af731de716594c3b8fc3888018e7fc1a9aed7723298c761d585c45efc7e2",
+            sha256(gpu),
+        )
+        val gpuStrings = gpu.toString(Charsets.ISO_8859_1)
+        listOf(
+            "single-projection-native-quad-zero-copy-dual-v1.0-20260831",
+            "single_projection_native_quad_zero_copy_dual_v1",
+            "libgxr_nqvd.so",
+            "rgb10a2",
+            "mixed_source_format",
+            "reconstructionPasses\":0",
+        ).forEach { assertTrue(gpuStrings.contains(it), it) }
+        val gpuElf = Elf64DynamicView(gpu)
+        assertEquals("libgxr_nqvd.so", gpuElf.soname)
+        assertTrue("libopenxr_loader.so" in gpuElf.neededLibraries)
+        assertFalse("libEGL.so" in gpuElf.neededLibraries)
+        assertFalse("libGLESv3.so" in gpuElf.neededLibraries)
+    }
+
+    @Test
     fun `native source contracts retain cpu fast paths and legal quad fallback`() {
         fun source(name: String): String = listOf(
             File("extensions/resolution-trace-layer/src/$name"),
@@ -177,6 +240,13 @@ class NativeSingleProjectionRendererTest {
             "nativeCallsiteCacheMissCount",
             "nativeDispatchReady.load(std::memory_order_acquire)",
             "nativeStreamCallsite.load(std::memory_order_relaxed)",
+            "GXR_NATIVE_DUAL_FORMAT",
+            "GL_RGB10_A2",
+            "mixed_source_format",
+            "ci.format=s.sourceFormat",
+            "glTexStorage2D(GL_TEXTURE_2D,1,static_cast<GLenum>(s.sourceFormat)",
+            "uniform highp sampler2D underTex",
+            "xrEnumerateSwapchainFormats",
         ).forEach { invariant -> assertTrue(reconstruction.contains(invariant), invariant) }
 
         val quad = source("single_projection_native_quad_zero_copy.cpp")
@@ -199,6 +269,9 @@ class NativeSingleProjectionRendererTest {
             "markUnsafeAndExit",
             "forceNextSessionStock",
             "\\\"reconstructionPasses\\\":0",
+            "kRgb10A2Format = 0x8059",
+            "mixed_source_format",
+            "sourcePrecision",
         ).forEach { invariant -> assertTrue(quad.contains(invariant), invariant) }
         assertFalse(quad.contains("#include <EGL"))
         assertFalse(quad.contains("#include <GLES"))
@@ -228,6 +301,13 @@ class NativeSingleProjectionRendererTest {
 
     private fun String.hexBytes(): ByteArray =
         chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+
+    private fun bundledHelper(name: String): ByteArray =
+        checkNotNull(javaClass.getResourceAsStream("/steamlink/androidxr/$name")).use { it.readBytes() }
+
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256")
+        .digest(bytes)
+        .joinToString("") { "%02x".format(it) }
 }
 
 private class Elf64DynamicView(private val bytes: ByteArray) {

@@ -18,12 +18,27 @@
 
 namespace {
 
+#ifdef GXR_NATIVE_DUAL_FORMAT
+constexpr char kHelperName[] = "libgxr_nqvd";
+constexpr char kModeName[] = "single_projection_native_quad_zero_copy_dual_v1";
+constexpr char kBuildId[] = "single-projection-native-quad-zero-copy-dual-v1.0-20260831";
+#else
 constexpr char kHelperName[] = "libgxr_nqv";
 constexpr char kModeName[] = "single_projection_native_quad_zero_copy_v1";
 constexpr char kBuildId[] = "single-projection-native-quad-zero-copy-v1.0-20260831";
+#endif
 constexpr char kLogTag[] = "GXRResolutionTrace";
 constexpr uint32_t kSourceExtent = 1536;
 constexpr int64_t kSourceFormat = 0x8C43; // GL_SRGB8_ALPHA8, without a GLES dependency.
+#ifdef GXR_NATIVE_DUAL_FORMAT
+constexpr int64_t kRgb10A2Format = 0x8059; // GL_RGB10_A2, without a GLES dependency.
+bool supportedSourceFormat(int64_t format) {
+    return format == kSourceFormat || format == kRgb10A2Format;
+}
+const char* sourcePrecision(int64_t format) {
+    return format == kRgb10A2Format ? "rgb10a2" : "srgb8";
+}
+#endif
 constexpr uint64_t kSuccessSummaryInterval = 900;
 constexpr XrViewConfigurationType kQuadViewConfiguration =
     XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO_WITH_FOVEATED_INSET;
@@ -91,6 +106,9 @@ struct SessionState {
     std::array<SourceBinding, 6> sources{};
     std::array<XrFovf, 6> fingerprintFovs{};
     bool fingerprintReady{};
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    int64_t sourceFormat{};
+#endif
     uint64_t fastFingerprintCount{};
     uint64_t slowFingerprintCount{};
     uint64_t sourceCacheInvalidationCount{};
@@ -350,6 +368,9 @@ struct Fingerprint {
     const char* reason{"unknown"};
     std::array<const XrCompositionLayerProjection*, 3> projections{};
     std::array<XrSwapchain, 6> handles{};
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    int64_t sourceFormat{};
+#endif
 };
 
 bool sameFovBits(const XrFovf& left, const XrFovf& right) {
@@ -454,6 +475,9 @@ Fingerprint inspectFingerprint(XrSession session, const XrFrameEndInfo* info) {
                         fingerprint.projections[index / 2]->views[index % 2].fov;
             }
             ++state.fastFingerprintCount;
+#ifdef GXR_NATIVE_DUAL_FORMAT
+            fingerprint.sourceFormat = state.sourceFormat;
+#endif
             fingerprint.valid = true;
             fingerprint.reason = "valid_fast";
             return fingerprint;
@@ -472,13 +496,25 @@ Fingerprint inspectFingerprint(XrSession session, const XrFrameEndInfo* info) {
         const auto& createInfo = found->second.info;
         if (createInfo.width != kSourceExtent || createInfo.height != kSourceExtent ||
             createInfo.arraySize != 1 || createInfo.sampleCount != 2 ||
-            createInfo.format != kSourceFormat || createInfo.faceCount != 1 ||
+#ifdef GXR_NATIVE_DUAL_FORMAT
+            !supportedSourceFormat(createInfo.format) ||
+#else
+            createInfo.format != kSourceFormat ||
+#endif
+            createInfo.faceCount != 1 ||
             createInfo.mipCount != 1 ||
             createInfo.usageFlags != (XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT |
                 XR_SWAPCHAIN_USAGE_SAMPLED_BIT)) {
             fingerprint.reason = "swapchain_contract";
             return fingerprint;
         }
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        if (!fingerprint.sourceFormat) fingerprint.sourceFormat = createInfo.format;
+        else if (fingerprint.sourceFormat != createInfo.format) {
+            fingerprint.reason = "mixed_source_format";
+            return fingerprint;
+        }
+#endif
         bindings[index] = {
             fingerprint.handles[index], &found->second, found->second.generation,
         };
@@ -491,6 +527,9 @@ Fingerprint inspectFingerprint(XrSession session, const XrFrameEndInfo* info) {
     for (uint32_t index = 0; index < state.fingerprintFovs.size(); ++index)
         state.fingerprintFovs[index] = fingerprint.projections[index / 2]->views[index % 2].fov;
     state.fingerprintReady = true;
+#ifdef GXR_NATIVE_DUAL_FORMAT
+    state.sourceFormat = fingerprint.sourceFormat;
+#endif
     fingerprint.valid = true;
     fingerprint.reason = "valid_slow";
     return fingerprint;
@@ -903,7 +942,11 @@ XrResult hookEndFrame(XrSession session, const XrFrameEndInfo* info) {
         ",\"fastFingerprintCount\":" + std::to_string(fastFingerprints) +
         ",\"slowFingerprintCount\":" + std::to_string(slowFingerprints) +
         ",\"sourceCacheInvalidationCount\":" + std::to_string(invalidations) +
-        ",\"sourceProjectionCount\":3,\"outputProjectionCount\":1,\"outputViewCount\":4," 
+        ",\"sourceProjectionCount\":3,\"outputProjectionCount\":1,\"outputViewCount\":4,"
+#ifdef GXR_NATIVE_DUAL_FORMAT
+        "\"sourceFormat\":" + std::to_string(fingerprint.sourceFormat) +
+        ",\"sourcePrecision\":\"" + std::string(sourcePrecision(fingerprint.sourceFormat)) + "\","
+#endif
         "\"reconstructionPasses\":0");
     return result;
 }

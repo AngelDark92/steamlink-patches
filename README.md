@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.1-dev.16](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.10.1-dev.16)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;22 patches total
+> **[v1.10.1-dev.16](https://github.com/Rem01Gaming/morphe-patches/releases/tag/v1.10.1-dev.16)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;24 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -55,7 +55,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -66,7 +66,9 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
+| [Experimental Native Quad Zero-Copy CPU+GPU Optimized 8/10-bit](#experimental-native-quad-zero-copy-cpu-gpu-optimized-8-10-bit) | 5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and submits one 4-view projection without reconstruction GPU passes. | 5002322 |  |
 | [Experimental Native Quad-View Zero-Copy Projection](#experimental-native-quad-view-zero-copy-projection) | 5002322-only permission-free A/B. Uses a guarded native helper to submit Valve's outer and foveal images as one 4-view projection without reconstruction GPU passes. | 5002322 |  |
+| [Experimental Native Reconstruction CPU Optimized 8/10-bit](#experimental-native-reconstruction-cpu-optimized-8-10-bit) | 5002322-only permission-free A/B. Auto-matches uniform sRGB8 or RGB10_A2 Valve sources and reconstructs one stereo projection with matching scratch and output formats. | 5002322 |  |
 | [Experimental Native Single Projection Renderer Hook](#experimental-native-single-projection-renderer-hook) | 5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame through an exact-build native helper with fixed-function GLES dithering disabled. | 5002322 |  |
 | [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Reconstructs Steam Link into one stereo projection with a centered foveal sample and fixed-function GLES dithering disabled. | 5002322 |  |
 
