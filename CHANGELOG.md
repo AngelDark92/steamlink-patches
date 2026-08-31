@@ -1,3 +1,9 @@
+## [1.10.1-dev.17](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.16...v1.10.1-dev.17) (2026-08-31)
+
+### 🐛 Bug Fixes
+
+* single projection with 10 bit try ([aa80c5c](https://github.com/AngelDark92/steamlink-patches/commit/aa80c5cc5dab9a87b4abf67388d4aa58d9dfbf36))
+
 ## [1.10.1-dev.16](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.15...v1.10.1-dev.16) (2026-08-31)
 
 ### 🐛 Bug Fixes
