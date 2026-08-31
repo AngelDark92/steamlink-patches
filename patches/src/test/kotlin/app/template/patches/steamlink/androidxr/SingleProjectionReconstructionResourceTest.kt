@@ -24,11 +24,11 @@ class SingleProjectionReconstructionResourceTest {
             .digest(library)
             .joinToString("") { "%02x".format(it) }
         assertEquals(
-            "261c44dd67b868bf0ab6de51740e2dab3a5591fe69e60c325a844da32fe03a94",
+            "dd31e2907ea29506a392f5b2ddcf35019b687bf35c1d1e2da475b8c3635b6046",
             sha256,
         )
         val nativeStrings = library.toString(Charsets.ISO_8859_1)
-        assertTrue(nativeStrings.contains("single-projection-reconstruction-efficient-v1.1-20260830"))
+        assertTrue(nativeStrings.contains("single-projection-reconstruction-efficient-v1.2-20260830"))
         assertTrue(nativeStrings.contains("linear_center_1tap"))
         assertFalse(nativeStrings.contains("linear_4tap_subpixel_box"))
         assertTrue(nativeStrings.contains("single_projection_reconstruction_success_summary"))
@@ -80,6 +80,12 @@ class SingleProjectionReconstructionResourceTest {
             "ci.format=kSourceFormat;ci.sampleCount=1",
             "qualitySettings.layerFlags=XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SUPER_SAMPLING_BIT_FB",
             "XR_COMPOSITION_LAYER_SETTINGS_QUALITY_SHARPENING_BIT_FB",
+            "s.dither=glIsEnabled(GL_DITHER)",
+            "glDisable(GL_DITHER)",
+            "en(GL_DITHER,s.dither)",
+            "fixedFunctionDitherDisabled\\\":true",
+            "fixedFunctionDitherWasEnabled",
+            "reconstruction_dither_state",
         ).forEach { invariant -> assertTrue(source.contains(invariant), invariant) }
         assertEquals(1, Regex("glDrawArrays\\(GL_TRIANGLES,0,3\\)").findAll(source).count())
         assertEquals(1, Regex("glBlitFramebuffer\\(").findAll(source).count())
@@ -103,6 +109,23 @@ class SingleProjectionReconstructionResourceTest {
                 "single_projection_native_renderer_v1",
             ),
         )
+        listOf(
+            "single_projection_native_renderer_v1",
+            "single_projection_reconstruction_efficient_v1",
+        ).forEach { sibling ->
+            assertTrue(
+                projectionModesConflict(
+                    "single_projection_native_quad_zero_copy_v1",
+                    sibling,
+                ),
+            )
+            assertTrue(
+                projectionModesConflict(
+                    sibling,
+                    "single_projection_native_quad_zero_copy_v1",
+                ),
+            )
+        }
         assertFalse(
             projectionModesConflict(
                 "single_projection_reconstruction_v1",

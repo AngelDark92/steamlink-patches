@@ -55,7 +55,7 @@ To download it:
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -66,8 +66,9 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [Experimental Native Single Projection Renderer Hook](#experimental-native-single-projection-renderer-hook) | 5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame call through an exact-build AArch64 hook and bundled native reconstruction helper instead of an implicit API layer. | 5002322 |  |
-| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Reconstructs Steam Link into one stereo projection with reduced scratch memory and a sharper centered foveal sample. | 5002322 |  |
+| [Experimental Native Quad-View Zero-Copy Projection](#experimental-native-quad-view-zero-copy-projection) | 5002322-only permission-free A/B. Submits Valve's outer and foveal images as one guarded 4-view projection without reconstruction GPU passes when the runtime supports it. | 5002322 |  |
+| [Experimental Native Single Projection Renderer Hook](#experimental-native-single-projection-renderer-hook) | 5002322-only permission-free A/B. Routes Valve's streaming xrEndFrame through an exact-build native helper with fixed-function GLES dithering disabled. | 5002322 |  |
+| [Experimental Single Projection Reconstruction Efficient](#experimental-single-projection-reconstruction-efficient) | 5002322-only permission-free experiment. Reconstructs Steam Link into one stereo projection with a centered foveal sample and fixed-function GLES dithering disabled. | 5002322 |  |
 
 </details>
 

@@ -63,6 +63,25 @@ if(EXISTS "${OPENXR_LOADER_LIBRARY}")
         VISIBILITY_INLINES_HIDDEN YES
         OUTPUT_NAME gxr_nsp
     )
+
+    add_library(gxr_single_projection_native_quad_zero_copy_v1 SHARED
+        src/single_projection_native_quad_zero_copy.cpp
+    )
+    target_include_directories(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE
+        "${OPENXR_SDK_SOURCE_DIR}/include"
+    )
+    target_compile_definitions(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE
+        XR_USE_PLATFORM_ANDROID
+    )
+    target_link_options(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE "-Wl,--no-as-needed")
+    target_link_libraries(gxr_single_projection_native_quad_zero_copy_v1 PRIVATE
+        log dl "${OPENXR_LOADER_LIBRARY}"
+    )
+    set_target_properties(gxr_single_projection_native_quad_zero_copy_v1 PROPERTIES
+        CXX_VISIBILITY_PRESET hidden
+        VISIBILITY_INLINES_HIDDEN YES
+        OUTPUT_NAME gxr_nqv
+    )
 else()
     message(STATUS
         "Native 5002322 hook target disabled: set OPENXR_LOADER_LIBRARY to the exact arm64 libopenxr_loader.so"

@@ -1,12 +1,14 @@
 package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.PatchException
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -23,6 +25,24 @@ class NativeSingleProjectionRendererTest {
             patched.sliceArray(0x11AA7C until 0x11AA80),
         )
         assertContentEquals(patched, patchNativeSingleProjectionRenderer(patched))
+    }
+
+    @Test
+    fun `exact 5002322 quad hook is atomic idempotent and mutually exclusive`() {
+        val stock = stockSceneFixture()
+        val quad = patchNativeSingleProjectionRenderer(stock, NATIVE_QUAD_VIEW_LIBRARY)
+
+        assertContentEquals(paddedAscii("libgxr_nqv.so", 20), quad.sliceArray(0x69635 until 0x69649))
+        assertContentEquals(quad, patchNativeSingleProjectionRenderer(quad, NATIVE_QUAD_VIEW_LIBRARY))
+        assertFailsWith<PatchException> { patchNativeSingleProjectionRenderer(quad) }
+
+        val reconstruction = patchNativeSingleProjectionRenderer(stock)
+        assertFailsWith<PatchException> {
+            patchNativeSingleProjectionRenderer(reconstruction, NATIVE_QUAD_VIEW_LIBRARY)
+        }
+        assertFailsWith<PatchException> {
+            patchNativeSingleProjectionRenderer(stock, "libgxr_unknown.so")
+        }
     }
 
     @Test
@@ -54,12 +74,12 @@ class NativeSingleProjectionRendererTest {
             .use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "aa662cea41bf27a60ae539833c69c5de520fcb1d321b5bc546c26f5ea27cdf95",
+            "dbdf7e1a25dd088853abf7bf72d3d03afec2513925194bfeb586720ceaa530f7",
             MessageDigest.getInstance("SHA-256").digest(helper).joinToString("") { "%02x".format(it) },
         )
         val nativeStrings = helper.toString(Charsets.ISO_8859_1)
         listOf(
-            "single-projection-native-renderer-v1.0-20260830",
+            "single-projection-native-renderer-v1.2-20260831",
             "single_projection_native_renderer_v1",
             "libopenxr_loader.so",
             "libgxr_nsp.so",
@@ -69,6 +89,7 @@ class NativeSingleProjectionRendererTest {
             "xrAcquireSwapchainImage",
             "xrReleaseSwapchainImage",
             "linear_center_1tap",
+            "fastFingerprintCount",
         ).forEach { identity -> assertTrue(nativeStrings.contains(identity), identity) }
 
         val elf = Elf64DynamicView(helper)
@@ -88,6 +109,100 @@ class NativeSingleProjectionRendererTest {
             "xrWaitSwapchainImage",
             "xrReleaseSwapchainImage",
         ).forEach { symbol -> assertTrue(symbol in elf.exportedSymbols, symbol) }
+    }
+
+    @Test
+    fun `bundled quad helper is zero-copy and exports guarded virtualization`() {
+        val helper = checkNotNull(javaClass.getResourceAsStream("/steamlink/androidxr/libgxr_nqv.so"))
+            .use { it.readBytes() }
+        assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
+        assertEquals(
+            "d7cc22af0127ddd4a5a176d741afee193a598a64ebd509c858a273dc9869c8fd",
+            MessageDigest.getInstance("SHA-256").digest(helper)
+                .joinToString("") { "%02x".format(it) },
+        )
+        val nativeStrings = helper.toString(Charsets.ISO_8859_1)
+        listOf(
+            "single-projection-native-quad-zero-copy-v1.0-20260831",
+            "single_projection_native_quad_zero_copy_v1",
+            "libopenxr_loader.so",
+            "libgxr_nqv.so",
+            "native_quad_capability",
+            "native_quad_summary",
+            "reconstructionPasses\":0",
+            "fastFingerprintCount",
+        ).forEach { identity -> assertTrue(nativeStrings.contains(identity), identity) }
+
+        val elf = Elf64DynamicView(helper)
+        assertTrue("libopenxr_loader.so" in elf.neededLibraries)
+        assertFalse("libEGL.so" in elf.neededLibraries)
+        assertFalse("libGLESv3.so" in elf.neededLibraries)
+        assertEquals("libgxr_nqv.so", elf.soname)
+        listOf(
+            "gxrEndFrame",
+            "xrCreateInstance",
+            "xrGetInstanceProcAddr",
+            "xrDestroyInstance",
+            "xrGetSystem",
+            "xrEnumerateViewConfigurations",
+            "xrGetViewConfigurationProperties",
+            "xrEnumerateViewConfigurationViews",
+            "xrCreateSession",
+            "xrDestroySession",
+            "xrBeginSession",
+            "xrEndSession",
+            "xrLocateViews",
+            "xrCreateSwapchain",
+            "xrDestroySwapchain",
+            "xrAcquireSwapchainImage",
+            "xrWaitSwapchainImage",
+            "xrReleaseSwapchainImage",
+            "xrRequestExitSession",
+        ).forEach { symbol -> assertTrue(symbol in elf.exportedSymbols, symbol) }
+        assertFalse("xrEndFrame" in elf.exportedSymbols)
+    }
+
+    @Test
+    fun `native source contracts retain cpu fast paths and legal quad fallback`() {
+        fun source(name: String): String = listOf(
+            File("extensions/resolution-trace-layer/src/$name"),
+            File("../extensions/resolution-trace-layer/src/$name"),
+        ).firstOrNull(File::isFile)?.readText() ?: error("Missing native source: $name")
+
+        val reconstruction = source("single_projection_reconstruction_efficient_layer.cpp")
+        listOf(
+            "constexpr uint64_t kSuccessSummaryInterval = 900",
+            "inspectNativeFast",
+            "NativeSourceBinding",
+            "nativeCallsiteCacheMissCount",
+            "nativeDispatchReady.load(std::memory_order_acquire)",
+            "nativeStreamCallsite.load(std::memory_order_relaxed)",
+        ).forEach { invariant -> assertTrue(reconstruction.contains(invariant), invariant) }
+
+        val quad = source("single_projection_native_quad_zero_copy.cpp")
+        listOf(
+            "XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO_WITH_FOVEATED_INSET",
+            "viewCount != state.views.size()",
+            "view.maxImageRectWidth < kSourceExtent",
+            "view.maxSwapchainSampleCount < 2",
+            "patched.primaryViewConfigurationType = kQuadViewConfiguration",
+            "committed = found != sessions.end() && found->second.quadCommitted",
+            "if (capacity == 0) return XR_SUCCESS",
+            "views[0] = under->views[0]",
+            "views[1] = under->views[1]",
+            "views[2] = fovea->views[0]",
+            "views[3] = fovea->views[1]",
+            "projection.viewCount = static_cast<uint32_t>(views.size())",
+            "output.layerCount = 1",
+            "fingerprintReady",
+            "binding.state->generation == binding.generation",
+            "markUnsafeAndExit",
+            "forceNextSessionStock",
+            "\\\"reconstructionPasses\\\":0",
+        ).forEach { invariant -> assertTrue(quad.contains(invariant), invariant) }
+        assertFalse(quad.contains("#include <EGL"))
+        assertFalse(quad.contains("#include <GLES"))
+        assertFalse(Regex("\\bgl[A-Z][A-Za-z0-9_]*\\(").containsMatchIn(quad))
     }
 
     private fun stockSceneFixture(): ByteArray = ByteArray(2_283_400).also { fixture ->

@@ -15,6 +15,7 @@
 #include <deque>
 #include <iomanip>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <time.h>
@@ -34,12 +35,13 @@ constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
 #ifdef GXR_NATIVE_RENDERER_HELPER
 constexpr char kModeName[] = "single_projection_native_renderer_v1";
-constexpr char kBuildId[] = "single-projection-native-renderer-v1.0-20260830";
+constexpr char kBuildId[] = "single-projection-native-renderer-v1.2-20260831";
+constexpr uint64_t kSuccessSummaryInterval = 900;
 #else
 constexpr char kModeName[] = "single_projection_reconstruction_efficient_v1";
-constexpr char kBuildId[] = "single-projection-reconstruction-efficient-v1.1-20260830";
-#endif
+constexpr char kBuildId[] = "single-projection-reconstruction-efficient-v1.2-20260830";
 constexpr uint64_t kSuccessSummaryInterval = 30;
+#endif
 constexpr uint32_t kSourceExtent = 1536;
 constexpr int64_t kSourceFormat = GL_SRGB8_ALPHA8;
 constexpr XrCompositionLayerFlags kFoveaFlags =
@@ -76,7 +78,18 @@ struct SwapchainState {
     bool waited{};
     bool deferred{};
     Role role{Role::Unknown};
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    uint64_t generation{};
+#endif
 };
+
+#ifdef GXR_NATIVE_RENDERER_HELPER
+struct NativeSourceBinding {
+    XrSwapchain handle{XR_NULL_HANDLE};
+    SwapchainState* state{};
+    uint64_t generation{};
+};
+#endif
 
 struct OutputEye {
     XrSwapchain handle{XR_NULL_HANDLE};
@@ -95,7 +108,7 @@ struct GlState {
     GLint fullTanLocation{-1}, foveaTanLocation{-1};
     std::array<XrFovf, 2> cachedFullFovs{}, cachedFoveaFovs{};
     std::array<std::array<GLfloat, 4>, 2> cachedFullTans{}, cachedFoveaTans{};
-    bool fovCacheReady{}, ready{};
+    bool fovCacheReady{}, ready{}, ditherStateObserved{}, ditherWasEnabled{};
 };
 
 struct ReconstructionMapping {
@@ -116,6 +129,14 @@ struct SessionState {
     std::array<OutputEye, 2> outputs{};
     GlState gl;
     ReconstructionMapping mapping;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    std::array<NativeSourceBinding, 6> nativeSources{};
+    std::array<XrFovf, 6> nativeFingerprintFovs{};
+    bool nativeFingerprintReady{};
+    uint64_t nativeFastFingerprintCount{}, nativeSlowFingerprintCount{};
+    uint64_t nativeSourceCacheInvalidationCount{};
+    uint64_t nativeDeferredReleaseCount{}, nativeForwardedReleaseCount{}, nativeOutputReleaseCount{};
+#endif
     uint64_t successfulTransforms{}, transformsSinceSummary{};
     uint64_t freshSinceSummary{}, reusedSinceSummary{};
     uint64_t summaryFirstFrame{}, summaryFirstElapsedMs{};
@@ -123,6 +144,15 @@ struct SessionState {
 };
 
 Dispatch g;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+std::atomic<bool> nativeDispatchReady{false};
+std::mutex nativeDispatchMutex;
+std::atomic<uintptr_t> nativeStreamCallsite{0};
+std::atomic<uintptr_t> nativeExitCallsite{0};
+std::atomic<bool> nativeUnexpectedCallsiteLogged{false};
+std::atomic<uint64_t> nextSwapchainGeneration{1};
+std::atomic<uint64_t> nativeCallsiteCacheMissCount{0};
+#endif
 // Steam Link creates/destroys these objects outside the steady-state frame loop.
 // std::map keeps element addresses stable while different swapchain elements are
 // externally synchronized by OpenXR. No application/runtime call is made under
@@ -175,7 +205,13 @@ template <typename T> void load(const char* name, T& fn) {
         fn = reinterpret_cast<T>(address);
 }
 
-bool sample(uint64_t frame) { return frame <= 3 || frame % 90 == 0; }
+bool sample(uint64_t frame) {
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    return frame <= 3;
+#else
+    return frame <= 3 || frame % 90 == 0;
+#endif
+}
 bool close(float a, float b) { return std::fabs(a - b) <= 0.0001f; }
 bool samePose(const XrPosef& a, const XrPosef& b) {
     return close(a.orientation.x,b.orientation.x) && close(a.orientation.y,b.orientation.y) &&
@@ -292,7 +328,7 @@ void destroyGl(GlState& gl) {
 
 struct SavedGl {
     GLint program{},vao{},active{},tex0{},tex1{},sampler0{},sampler1{},readFbo{},drawFbo{},viewport[4]{},scissor[4]{};
-    GLboolean blend{},depth{},stencil{},cull{},scissorEnabled{},mask[4]{};
+    GLboolean blend{},depth{},stencil{},cull{},dither{},scissorEnabled{},mask[4]{};
 };
 SavedGl saveGl(){
     SavedGl s;glGetIntegerv(GL_CURRENT_PROGRAM,&s.program);glGetIntegerv(GL_VERTEX_ARRAY_BINDING,&s.vao);
@@ -302,7 +338,7 @@ SavedGl saveGl(){
     glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING,&s.readFbo);glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&s.drawFbo);
     glGetIntegerv(GL_VIEWPORT,s.viewport);glGetIntegerv(GL_SCISSOR_BOX,s.scissor);
     s.blend=glIsEnabled(GL_BLEND);s.depth=glIsEnabled(GL_DEPTH_TEST);s.stencil=glIsEnabled(GL_STENCIL_TEST);
-    s.cull=glIsEnabled(GL_CULL_FACE);s.scissorEnabled=glIsEnabled(GL_SCISSOR_TEST);glGetBooleanv(GL_COLOR_WRITEMASK,s.mask);return s;
+    s.cull=glIsEnabled(GL_CULL_FACE);s.dither=glIsEnabled(GL_DITHER);s.scissorEnabled=glIsEnabled(GL_SCISSOR_TEST);glGetBooleanv(GL_COLOR_WRITEMASK,s.mask);return s;
 }
 void restoreGl(const SavedGl& s){
     auto en=[](GLenum c,GLboolean v){v?glEnable(c):glDisable(c);};glUseProgram(s.program);glBindVertexArray(s.vao);
@@ -310,7 +346,7 @@ void restoreGl(const SavedGl& s){
     glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,s.tex1);glBindSampler(1,static_cast<GLuint>(s.sampler1));glActiveTexture(s.active);
     glBindFramebuffer(GL_READ_FRAMEBUFFER,s.readFbo);glBindFramebuffer(GL_DRAW_FRAMEBUFFER,s.drawFbo);
     glViewport(s.viewport[0],s.viewport[1],s.viewport[2],s.viewport[3]);glScissor(s.scissor[0],s.scissor[1],s.scissor[2],s.scissor[3]);
-    en(GL_BLEND,s.blend);en(GL_DEPTH_TEST,s.depth);en(GL_STENCIL_TEST,s.stencil);en(GL_CULL_FACE,s.cull);en(GL_SCISSOR_TEST,s.scissorEnabled);
+    en(GL_BLEND,s.blend);en(GL_DEPTH_TEST,s.depth);en(GL_STENCIL_TEST,s.stencil);en(GL_CULL_FACE,s.cull);en(GL_DITHER,s.dither);en(GL_SCISSOR_TEST,s.scissorEnabled);
     glColorMask(s.mask[0],s.mask[1],s.mask[2],s.mask[3]);
 }
 
@@ -369,26 +405,48 @@ void updateFovCache(GlState& gl,const XrCompositionLayerProjection& full,
     gl.fovCacheReady=true;
 }
 
-bool sourceTexture(XrSwapchain handle,GLuint& texture){
-    auto it=swapchains.find(handle);if(it==swapchains.end()||it->second.acquired.empty())return false;
-    uint32_t index=it->second.acquired.front();if(index>=it->second.images.size())return false;
-    texture=it->second.images[index].image;return true;
+bool sourceTextureState(const SwapchainState& state,GLuint& texture){
+    if(state.acquired.empty())return false;
+    uint32_t index=state.acquired.front();if(index>=state.images.size())return false;
+    texture=state.images[index].image;return true;
+}
+
+bool sourceTexture(SessionState& s,size_t sourceIndex,XrSwapchain handle,GLuint& texture){
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    const NativeSourceBinding& binding=s.nativeSources[sourceIndex];
+    return binding.handle==handle&&binding.state&&binding.state->generation==binding.generation&&
+        sourceTextureState(*binding.state,texture);
+#else
+    (void)s;(void)sourceIndex;
+    auto it=swapchains.find(handle);return it!=swapchains.end()&&sourceTextureState(it->second,texture);
+#endif
 }
 
 uint32_t deferredMask(const SessionState& s){
-    uint32_t mask=0;for(size_t i=0;i<s.sources.size();++i){auto it=swapchains.find(s.sources[i]);if(it!=swapchains.end()&&it->second.deferred)mask|=1u<<i;}return mask;
+    uint32_t mask=0;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    for(size_t i=0;i<s.nativeSources.size();++i){const auto& binding=s.nativeSources[i];
+        if(binding.state&&binding.state->generation==binding.generation&&binding.state->deferred)mask|=1u<<i;}
+#else
+    for(size_t i=0;i<s.sources.size();++i){auto it=swapchains.find(s.sources[i]);if(it!=swapchains.end()&&it->second.deferred)mask|=1u<<i;}
+#endif
+    return mask;
 }
 
 bool compose(SessionState& s,const XrCompositionLayerProjection& under,const XrCompositionLayerProjection& fovea){
     if(eglGetCurrentContext()!=s.context||eglGetCurrentDisplay()!=s.display){emit("reconstruction_passthrough","\"session\":"+std::to_string(hv(s.session))+",\"everActivated\":"+std::string(s.everActivated?"true":"false")+",\"reason\":\"egl_context_mismatch\"");return false;}
     SavedGl saved=saveGl();
     if(!ensureGl(s)){restoreGl(saved);return false;}bool ok=true;
-    glDisable(GL_BLEND);glDisable(GL_DEPTH_TEST);glDisable(GL_STENCIL_TEST);glDisable(GL_CULL_FACE);glDisable(GL_SCISSOR_TEST);
+    s.gl.ditherWasEnabled=saved.dither;s.gl.ditherStateObserved=true;
+    if(!s.everActivated)emit("reconstruction_dither_state","\"fixedFunctionDitherWasEnabled\":"+
+        std::string(s.gl.ditherWasEnabled?"true":"false")+",\"fixedFunctionDitherDisabledForDraw\":true");
+    glDisable(GL_BLEND);glDisable(GL_DEPTH_TEST);glDisable(GL_STENCIL_TEST);glDisable(GL_CULL_FACE);glDisable(GL_DITHER);glDisable(GL_SCISSOR_TEST);
     glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);glUseProgram(s.gl.program);glBindVertexArray(s.gl.vao);glBindSampler(0,0);glBindSampler(1,0);
     glUniform1i(s.gl.underTexLocation,0);glUniform1i(s.gl.foveaTexLocation,1);
     updateFovCache(s.gl,under,fovea);
     for(uint32_t eye=0;eye<2&&ok;++eye){
-        GLuint u{},f{};ok=sourceTexture(under.views[eye].subImage.swapchain,u)&&sourceTexture(fovea.views[eye].subImage.swapchain,f);
+        GLuint u{},f{};ok=sourceTexture(s,2+eye,under.views[eye].subImage.swapchain,u)&&
+            sourceTexture(s,4+eye,fovea.views[eye].subImage.swapchain,f);
         if(!ok)break;ok=resolve(s.gl,u,s.gl.resolved[0])&&resolve(s.gl,f,s.gl.resolved[1]);if(!ok)break;
         auto& out=s.outputs[eye];if(!out.acquired||out.index>=out.images.size()){ok=false;break;}
         GLuint outputFbo{};if(!framebufferForTexture(s.gl,out.images[out.index].image,outputFbo)){ok=false;break;}
@@ -404,15 +462,30 @@ bool compose(SessionState& s,const XrCompositionLayerProjection& under,const XrC
 }
 
 bool flushSources(SessionState& s){
-    bool ok=true;for(XrSwapchain handle:s.sources){auto it=swapchains.find(handle);if(it==swapchains.end()||!it->second.deferred)continue;
+    bool ok=true;for(size_t i=0;i<s.sources.size();++i){XrSwapchain handle=s.sources[i];SwapchainState* state{};
+#ifdef GXR_NATIVE_RENDERER_HELPER
+        const auto& binding=s.nativeSources[i];
+        if(binding.handle==handle&&binding.state&&binding.state->generation==binding.generation)state=binding.state;
+#else
+        auto it=swapchains.find(handle);if(it!=swapchains.end())state=&it->second;
+#endif
+        if(!state||!state->deferred)continue;
         XrSwapchainImageReleaseInfo ri{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};XrResult r=g.releaseImage(handle,&ri);ok&=XR_SUCCEEDED(r);
-        if(XR_SUCCEEDED(r)){it->second.deferred=false;it->second.waited=false;if(!it->second.acquired.empty())it->second.acquired.pop_front();}
+        if(XR_SUCCEEDED(r)){state->deferred=false;state->waited=false;if(!state->acquired.empty())state->acquired.pop_front();
+#ifdef GXR_NATIVE_RENDERER_HELPER
+            ++s.nativeForwardedReleaseCount;
+#endif
+        }
         if(XR_FAILED(r)||sample(frameCounter.load()))emit("source_release_forwarded","\"swapchain\":"+std::to_string(hv(handle))+",\"result\":"+std::to_string(r));}
     return ok;
 }
 bool releaseOutputs(SessionState& s){bool ok=true;for(auto& out:s.outputs)if(out.acquired){XrSwapchainImageReleaseInfo ri{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
     if(!out.waited){ok=false;emit("output_release","\"result\":"+std::to_string(XR_ERROR_CALL_ORDER_INVALID)+",\"reason\":\"not_waited\"");continue;}XrResult r=g.releaseImage(out.handle,&ri);
-    if(XR_FAILED(r)||sample(frameCounter.load()))emit("output_release","\"result\":"+std::to_string(r));ok&=XR_SUCCEEDED(r);if(XR_SUCCEEDED(r)){out.acquired=false;out.waited=false;}}return ok;}
+    if(XR_FAILED(r)||sample(frameCounter.load()))emit("output_release","\"result\":"+std::to_string(r));ok&=XR_SUCCEEDED(r);if(XR_SUCCEEDED(r)){out.acquired=false;out.waited=false;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+        ++s.nativeOutputReleaseCount;
+#endif
+    }}return ok;}
 bool acquireOutputs(SessionState& s){for(auto& out:s.outputs){XrSwapchainImageAcquireInfo ai{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
     if(XR_FAILED(g.acquireImage(out.handle,&ai,&out.index))){releaseOutputs(s);return false;}out.acquired=true;out.waited=false;
     XrSwapchainImageWaitInfo wi{XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};wi.timeout=XR_INFINITE_DURATION;if(XR_FAILED(g.waitImage(out.handle,&wi))){s.disabled=true;s.active=false;emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s.session))+",\"reason\":\"output_wait_failed\"");return false;}out.waited=true;}return true;}
@@ -433,14 +506,30 @@ void emitSuccessSummary(SessionState& s,uint64_t lastFrame,const char* reason){
         ",\"totalSuccessfulTransformCount\":"+std::to_string(s.successfulTransforms)+
         ",\"freshTransformCount\":"+std::to_string(s.freshSinceSummary)+
         ",\"reusedTransformCount\":"+std::to_string(s.reusedSinceSummary)+
+#ifdef GXR_NATIVE_RENDERER_HELPER
+        ",\"fastFingerprintCount\":"+std::to_string(s.nativeFastFingerprintCount)+
+        ",\"slowFingerprintCount\":"+std::to_string(s.nativeSlowFingerprintCount)+
+        ",\"sourceCacheInvalidationCount\":"+std::to_string(s.nativeSourceCacheInvalidationCount)+
+        ",\"nativeCallsiteCacheMissCount\":"+std::to_string(nativeCallsiteCacheMissCount.load(std::memory_order_relaxed))+
+        ",\"deferredReleaseCount\":"+std::to_string(s.nativeDeferredReleaseCount)+
+        ",\"forwardedReleaseCount\":"+std::to_string(s.nativeForwardedReleaseCount)+
+        ",\"outputReleaseCount\":"+std::to_string(s.nativeOutputReleaseCount)+
+#endif
         ",\"sourceLayerCount\":3,\"sourceProjectionCount\":3,\"forwardedLayerCount\":1,"
         "\"outputProjectionCount\":1,\"sourceViewCount\":6,\"outputViewCount\":2,"
         "\"unsafeLayerCount\":0,\"reconstructed\":true,\"changed\":true,\"releaseSuccess\":true,"
         "\"outputWidth\":"+std::to_string(s.outputWidth)+",\"outputHeight\":"+std::to_string(s.outputHeight)+
-        ",\"foveaFilter\":\"linear_center_1tap\",\"outputQualitySettingsAttached\":"+
+        ",\"foveaFilter\":\"linear_center_1tap\",\"fixedFunctionDitherDisabled\":true,\"fixedFunctionDitherWasEnabled\":"+
+        (s.gl.ditherStateObserved?(s.gl.ditherWasEnabled?std::string("true"):std::string("false")):std::string("null"))+
+        ",\"outputQualitySettingsAttached\":"+
         (qualitySettingsEnabled?std::string("true"):std::string("false"))+
         ",\"outputQualitySettingsFlags\":10,\"summaryReason\":"+quote(reason));
     s.transformsSinceSummary=0;s.freshSinceSummary=0;s.reusedSinceSummary=0;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    s.nativeFastFingerprintCount=0;s.nativeSlowFingerprintCount=0;
+    s.nativeSourceCacheInvalidationCount=0;s.nativeDeferredReleaseCount=0;
+    s.nativeForwardedReleaseCount=0;s.nativeOutputReleaseCount=0;
+#endif
     s.summaryFirstFrame=0;s.summaryFirstElapsedMs=0;
 }
 
@@ -464,19 +553,90 @@ bool createOutputs(SessionState& s,const XrCompositionLayerProjection& full,cons
         ",\"requestedWidth\":"+std::to_string(requestedWidth)+",\"requestedHeight\":"+std::to_string(requestedHeight)+
         ",\"widthClamped\":"+std::string(s.outputWidth<requestedWidth?"true":"false")+",\"heightClamped\":"+
         std::string(s.outputHeight<requestedHeight?"true":"false")+
-        ",\"sampleCount\":1,\"foveaFilter\":\"linear_center_1tap\""+
+        ",\"sampleCount\":1,\"foveaFilter\":\"linear_center_1tap\",\"fixedFunctionDitherDisabled\":true"+
         ",\"qualitySettingsEnabled\":"+(qualitySettingsEnabled?std::string("true"):std::string("false")));return true;
 }
 
 struct Fingerprint{bool valid{};std::string reason;XrSession session{XR_NULL_HANDLE};
-    std::array<const XrCompositionLayerProjection*,3> p{};std::array<XrSwapchain,6> handles{};};
+    std::array<const XrCompositionLayerProjection*,3> p{};std::array<XrSwapchain,6> handles{};
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    std::array<SwapchainState*,6> states{};
+    std::array<uint64_t,6> generations{};
+#endif
+};
+
+bool inspectShape(const XrFrameEndInfo* info,Fingerprint& f){
+    if(!info||info->layerCount!=3||!info->layers){f.reason="layer_count";return false;}
+    for(int i=0;i<3;++i){if(!info->layers[i]||info->layers[i]->type!=XR_TYPE_COMPOSITION_LAYER_PROJECTION){f.reason="non_projection";return false;}
+        f.p[i]=reinterpret_cast<const XrCompositionLayerProjection*>(info->layers[i]);if(f.p[i]->viewCount!=2||!f.p[i]->views){f.reason="view_count";return false;}
+        if(!safeProjectionNext(f.p[i]->next)){f.reason="projection_next";return false;}}
+    if(f.p[0]->layerFlags!=0||f.p[1]->layerFlags!=0||f.p[2]->layerFlags!=kFoveaFlags){f.reason="flags";return false;}
+    if(f.p[0]->space!=f.p[1]->space||f.p[1]->space!=f.p[2]->space){f.reason="space";return false;}
+    return true;
+}
+
+#ifdef GXR_NATIVE_RENDERER_HELPER
+bool inspectNativeFast(const XrFrameEndInfo* info,SessionState& s,Fingerprint& f){
+    if(!s.learned||!s.nativeFingerprintReady||!inspectShape(info,f))return false;
+    for(int layer=0;layer<3;++layer)for(int eye=0;eye<2;++eye){
+        const size_t index=static_cast<size_t>(layer*2+eye);
+        const auto& v=f.p[layer]->views[eye];const auto& r=v.subImage.imageRect;
+        const NativeSourceBinding& binding=s.nativeSources[index];
+        f.handles[index]=v.subImage.swapchain;
+        if(v.next||r.offset.x||r.offset.y||r.extent.width!=kSourceExtent||r.extent.height!=kSourceExtent||
+           v.subImage.imageArrayIndex||f.handles[index]!=s.sources[index]||binding.handle!=f.handles[index]||
+           !binding.state||binding.state->generation!=binding.generation||binding.state->session!=s.session||
+           !samePose(v.pose,f.p[1]->views[eye].pose)||
+           !sameFovBits(v.fov,s.nativeFingerprintFovs[index]))return false;
+        f.states[index]=binding.state;f.generations[index]=binding.generation;
+    }
+    f.valid=true;f.session=s.session;++s.nativeFastFingerprintCount;return true;
+}
+
+Fingerprint inspectSlow(const XrFrameEndInfo* info){
+    Fingerprint f;if(!inspectShape(info,f))return f;
+    XrSession owner=XR_NULL_HANDLE;
+    for(int layer=0;layer<3;++layer)for(int eye=0;eye<2;++eye){auto& v=f.p[layer]->views[eye];auto& r=v.subImage.imageRect;
+        if(v.next||r.offset.x||r.offset.y||r.extent.width!=kSourceExtent||r.extent.height!=kSourceExtent||v.subImage.imageArrayIndex){f.reason="subimage";return f;}
+        if(!samePose(v.pose,f.p[1]->views[eye].pose)){f.reason="pose";return f;}auto it=swapchains.find(v.subImage.swapchain);
+        if(it==swapchains.end()){f.reason="unknown_swapchain";return f;}auto& ci=it->second.info;
+        if(ci.width!=kSourceExtent||ci.height!=kSourceExtent||ci.arraySize!=1||ci.sampleCount!=2||ci.format!=kSourceFormat||
+            ci.usageFlags!=(XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT|XR_SWAPCHAIN_USAGE_SAMPLED_BIT)||ci.faceCount!=1||ci.mipCount!=1){f.reason="swapchain_info";return f;}
+        if(!owner)owner=it->second.session;if(owner!=it->second.session){f.reason="session";return f;}
+        const size_t index=static_cast<size_t>(layer*2+eye);f.handles[index]=v.subImage.swapchain;
+        f.states[index]=&it->second;f.generations[index]=it->second.generation;
+        for(size_t earlier=0;earlier<index;++earlier)if(f.handles[earlier]==f.handles[index]){f.reason="duplicate_swapchain";return f;}}
+    if(!sameFov(f.p[0]->views[0].fov,f.p[1]->views[0].fov)||!sameFov(f.p[0]->views[1].fov,f.p[1]->views[1].fov)||
+        !finitePositiveFov(f.p[1]->views[0].fov)||!finitePositiveFov(f.p[1]->views[1].fov)||!finitePositiveFov(f.p[2]->views[0].fov)||!finitePositiveFov(f.p[2]->views[1].fov)||
+        spanX(f.p[2]->views[0].fov)>=spanX(f.p[1]->views[0].fov)*.95f||spanY(f.p[2]->views[0].fov)>=spanY(f.p[1]->views[0].fov)*.95f||
+        spanX(f.p[2]->views[1].fov)>=spanX(f.p[1]->views[1].fov)*.95f||spanY(f.p[2]->views[1].fov)>=spanY(f.p[1]->views[1].fov)*.95f){f.reason="topology";return f;}
+    f.valid=true;f.session=owner;return f;
+}
+
+bool sameNativeIdentity(const SessionState& s,const Fingerprint& f){
+    for(size_t i=0;i<6;++i)if(s.sources[i]!=f.handles[i]||s.nativeSources[i].generation!=f.generations[i])return false;
+    return true;
+}
+
+void cacheNativeFingerprint(SessionState& s,const Fingerprint& f){
+    for(size_t i=0;i<6;++i){
+        s.nativeSources[i]={f.handles[i],f.states[i],f.generations[i]};
+        s.nativeFingerprintFovs[i]=f.p[i/2]->views[i%2].fov;
+    }
+    s.nativeFingerprintReady=true;
+}
+
+Fingerprint inspect(const XrFrameEndInfo* info,SessionState* s){
+    Fingerprint fast;
+    if(s&&inspectNativeFast(info,*s,fast))return fast;
+    if(s)++s->nativeSlowFingerprintCount;
+    Fingerprint slow=inspectSlow(info);
+    if(s&&slow.valid&&s->learned&&sameNativeIdentity(*s,slow))cacheNativeFingerprint(*s,slow);
+    return slow;
+}
+#else
 Fingerprint inspect(const XrFrameEndInfo* info){
-    Fingerprint f;if(!info||info->layerCount!=3||!info->layers){f.reason="layer_count";return f;}
-    for(int i=0;i<3;++i){if(!info->layers[i]||info->layers[i]->type!=XR_TYPE_COMPOSITION_LAYER_PROJECTION){f.reason="non_projection";return f;}
-        f.p[i]=reinterpret_cast<const XrCompositionLayerProjection*>(info->layers[i]);if(f.p[i]->viewCount!=2||!f.p[i]->views){f.reason="view_count";return f;}
-        if(!safeProjectionNext(f.p[i]->next)){f.reason="projection_next";return f;}}
-    if(f.p[0]->layerFlags!=0||f.p[1]->layerFlags!=0||f.p[2]->layerFlags!=kFoveaFlags){f.reason="flags";return f;}
-    if(f.p[0]->space!=f.p[1]->space||f.p[1]->space!=f.p[2]->space){f.reason="space";return f;}
+    Fingerprint f;if(!inspectShape(info,f))return f;
     std::unordered_set<XrSwapchain> unique;XrSession owner=XR_NULL_HANDLE;
     for(int layer=0;layer<3;++layer)for(int eye=0;eye<2;++eye){auto& v=f.p[layer]->views[eye];auto& r=v.subImage.imageRect;
         if(v.next||r.offset.x||r.offset.y||r.extent.width!=kSourceExtent||r.extent.height!=kSourceExtent||v.subImage.imageArrayIndex){f.reason="subimage";return f;}
@@ -491,11 +651,18 @@ Fingerprint inspect(const XrFrameEndInfo* info){
         spanX(f.p[2]->views[1].fov)>=spanX(f.p[1]->views[1].fov)*.95f||spanY(f.p[2]->views[1].fov)>=spanY(f.p[1]->views[1].fov)*.95f){f.reason="topology";return f;}
     f.valid=true;f.session=owner;return f;
 }
+#endif
 
 void learn(SessionState& s,const Fingerprint& f){
     s.mapping.valid=false;
     s.sources=f.handles;Role roles[]={Role::BaseL,Role::BaseR,Role::UnderL,Role::UnderR,Role::FoveaL,Role::FoveaR};
-    for(size_t i=0;i<6;++i)swapchains[s.sources[i]].role=roles[i];s.learned=true;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    cacheNativeFingerprint(s,f);
+    for(size_t i=0;i<6;++i)if(s.nativeSources[i].state)s.nativeSources[i].state->role=roles[i];
+#else
+    for(size_t i=0;i<6;++i)swapchains[s.sources[i]].role=roles[i];
+#endif
+    s.learned=true;
     emit("reconstruction_fingerprint_learned","\"sourceProjectionCount\":3,\"sourceViewCount\":6");
 }
 
@@ -514,6 +681,9 @@ XrResult XRAPI_PTR layerCreateSession(XrInstance instance,const XrSessionCreateI
 
 XrResult XRAPI_PTR layerCreateSwapchain(XrSession session,const XrSwapchainCreateInfo* info,XrSwapchain* handle){
     XrResult r=g.createSwapchain(session,info,handle);if(XR_SUCCEEDED(r)&&info&&handle){SwapchainState s;s.session=session;s.info=*info;s.info.next=nullptr;swapchains[*handle]=s;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+        swapchains[*handle].generation=nextSwapchainGeneration.fetch_add(1,std::memory_order_relaxed);
+#endif
         emit("create_swapchain","\"swapchain\":"+std::to_string(hv(*handle))+",\"width\":"+std::to_string(info->width)+",\"height\":"+std::to_string(info->height)+",\"sampleCount\":"+std::to_string(info->sampleCount)+",\"format\":"+std::to_string(info->format));}return r;}
 XrResult XRAPI_PTR layerEnumerateImages(XrSwapchain handle,uint32_t cap,uint32_t* count,XrSwapchainImageBaseHeader* images){
     XrResult r=g.enumerateImages(handle,cap,count,images);auto it=swapchains.find(handle);if(XR_SUCCEEDED(r)&&it!=swapchains.end()&&count&&images&&cap>=*count){it->second.images.resize(*count);
@@ -523,6 +693,9 @@ XrResult XRAPI_PTR layerAcquire(XrSwapchain handle,const XrSwapchainImageAcquire
 XrResult XRAPI_PTR layerWait(XrSwapchain handle,const XrSwapchainImageWaitInfo* info){XrResult r=g.waitImage(handle,info);auto it=swapchains.find(handle);if(XR_SUCCEEDED(r)&&it!=swapchains.end())it->second.waited=true;return r;}
 XrResult XRAPI_PTR layerRelease(XrSwapchain handle,const XrSwapchainImageReleaseInfo* info){auto it=swapchains.find(handle);if(it!=swapchains.end()&&it->second.role!=Role::Unknown){auto s=sessions.find(it->second.session);
     if(s!=sessions.end()&&s->second.active&&info&&!info->next&&it->second.waited&&it->second.acquired.size()==1&&!it->second.deferred){it->second.deferred=true;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+        ++s->second.nativeDeferredReleaseCount;
+#endif
         if(sample(frameCounter.load()+1))emit("source_release_deferred","\"swapchain\":"+std::to_string(hv(handle))+",\"imageIndex\":"+std::to_string(it->second.acquired.front()));return XR_SUCCESS;}
     if(s!=sessions.end()&&s->second.active){s->second.active=false;s->second.disabled=true;emit("reconstruction_disabled","\"session\":"+std::to_string(hv(s->second.session))+",\"reason\":\"unsupported_release_sequence\"");}}
     XrResult r=g.releaseImage(handle,info);if(XR_SUCCEEDED(r)&&it!=swapchains.end()){it->second.waited=false;if(!it->second.acquired.empty())it->second.acquired.pop_front();}return r;}
@@ -560,11 +733,21 @@ XrResult submitPassthrough(XrSession handle,SessionState* state,const XrFrameEnd
 }
 
 XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
-    uint64_t frame=++frameCounter;Fingerprint f=inspect(info);auto sit=sessions.find(handle);
+    uint64_t frame=++frameCounter;auto sit=sessions.find(handle);
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    Fingerprint f=inspect(info,sit==sessions.end()?nullptr:&sit->second);
+#else
+    Fingerprint f=inspect(info);
+#endif
     if(sit==sessions.end()||!f.valid||f.session!=handle)
         return submitPassthrough(handle,sit==sessions.end()?nullptr:&sit->second,info,frame,f.reason,false);
     SessionState& s=sit->second;
-    if(!s.learned||s.sources!=f.handles){const bool sourceIdentityChanged=s.learned&&s.sources!=f.handles;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    const bool sourceIdentityMatches=s.learned&&sameNativeIdentity(s,f);
+#else
+    const bool sourceIdentityMatches=s.learned&&s.sources==f.handles;
+#endif
+    if(!sourceIdentityMatches){const bool sourceIdentityChanged=s.learned;
         if(sourceIdentityChanged)emit("reconstruction_passthrough","\"session\":"+std::to_string(hv(handle))+
             ",\"frame\":"+std::to_string(frame)+",\"everActivated\":"+std::string(s.everActivated?"true":"false")+
             ",\"layerCount\":"+std::to_string(info?info->layerCount:0)+",\"reason\":\"source_identity_changed\"");
@@ -618,17 +801,37 @@ XrResult XRAPI_PTR layerEndFrame(XrSession handle,const XrFrameEndInfo* info){
     return r;
 }
 
+void invalidateNativeSourceBinding(SessionState& s,XrSwapchain handle){
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    bool matched=false;
+    for(auto& binding:s.nativeSources)if(binding.handle==handle){binding={};matched=true;}
+    if(matched){++s.nativeSourceCacheInvalidationCount;s.nativeFingerprintReady=false;s.learned=false;s.mapping.valid=false;s.active=false;}
+#else
+    (void)s;(void)handle;
+#endif
+}
+
 XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain handle){auto it=swapchains.find(handle);if(it!=swapchains.end()){
     auto s=sessions.find(it->second.session);if(it->second.deferred&&s!=sessions.end())flushSources(s->second);
     if(s!=sessions.end()){
         const bool canDelete=eglGetCurrentContext()==s->second.context&&eglGetCurrentDisplay()==s->second.display;
         for(const auto& image:it->second.images)forgetFramebuffer(s->second.gl,image.image,canDelete);
+        invalidateNativeSourceBinding(s->second,handle);
     }
 }swapchains.erase(handle);return g.destroySwapchain(handle);}
 XrResult XRAPI_PTR layerDestroySession(XrSession handle){auto it=sessions.find(handle);if(it!=sessions.end()){emitSuccessSummary(it->second,frameCounter.load(),"session_destroy");flushSources(it->second);destroyOutputs(it->second);sessions.erase(it);}for(auto si=swapchains.begin();si!=swapchains.end();)if(si->second.session==handle)si=swapchains.erase(si);else++si;return g.destroySession(handle);}
-XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance){for(auto& pair:sessions){emitSuccessSummary(pair.second,frameCounter.load(),"instance_destroy");flushSources(pair.second);destroyOutputs(pair.second);}sessions.clear();swapchains.clear();emit("destroy_instance");XrResult r=g.destroyInstance(instance);g={};qualitySettingsEnabled=false;return r;}
+XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance){for(auto& pair:sessions){emitSuccessSummary(pair.second,frameCounter.load(),"instance_destroy");flushSources(pair.second);destroyOutputs(pair.second);}sessions.clear();swapchains.clear();emit("destroy_instance");XrResult r=g.destroyInstance(instance);
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    nativeDispatchReady.store(false,std::memory_order_release);
+#endif
+    g={};qualitySettingsEnabled=false;
+#ifdef GXR_NATIVE_RENDERER_HELPER
+    nativeStreamCallsite.store(0,std::memory_order_release);
+    nativeExitCallsite.store(0,std::memory_order_release);nativeUnexpectedCallsiteLogged.store(false,std::memory_order_release);
+#endif
+    return r;}
 XrResult XRAPI_PTR layerPollEvent(XrInstance instance,XrEventDataBuffer* data){XrResult r=g.pollEvent(instance,data);if(XR_SUCCEEDED(r)&&data&&data->type==XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED){auto* e=reinterpret_cast<XrEventDataSessionStateChanged*>(data);emit("session_state_changed","\"state\":"+std::to_string(static_cast<int>(e->state)));}return r;}
-XrResult XRAPI_PTR layerWaitFrame(XrSession session,const XrFrameWaitInfo* info,XrFrameState* state){XrResult r=g.waitFrame(session,info,state);if(sample(frameCounter.load()))emit("wait_frame","\"result\":"+std::to_string(r)+(state?",\"predictedDisplayPeriod\":"+std::to_string(state->predictedDisplayPeriod):""));return r;}
+XrResult XRAPI_PTR layerWaitFrame(XrSession session,const XrFrameWaitInfo* info,XrFrameState* state){XrResult r=g.waitFrame(session,info,state);if(XR_FAILED(r)||sample(frameCounter.load()))emit("wait_frame","\"result\":"+std::to_string(r)+(state?",\"predictedDisplayPeriod\":"+std::to_string(state->predictedDisplayPeriod):""));return r;}
 
 XrResult XRAPI_PTR layerGetInstanceProcAddr(XrInstance instance,const char* name,PFN_xrVoidFunction* fn){
     if(!name||!fn)return XR_ERROR_VALIDATION_FAILURE;
@@ -696,10 +899,9 @@ template <typename T> bool nativeResolve(void* loader,const char* name,T& target
 }
 
 bool initializeNativeDispatch(){
-    if(g.createInstance&&g.getInstanceProcAddr&&g.destroyInstance&&g.enumerateViews&&
-        g.createSession&&g.destroySession&&g.createSwapchain&&g.destroySwapchain&&
-        g.enumerateImages&&g.acquireImage&&g.waitImage&&g.releaseImage&&g.endFrame&&
-        g.pollEvent&&g.waitFrame&&g.requestExitSession)return true;
+    if(nativeDispatchReady.load(std::memory_order_acquire))return true;
+    std::lock_guard<std::mutex> lock(nativeDispatchMutex);
+    if(nativeDispatchReady.load(std::memory_order_relaxed))return true;
     void* loader=nativeLoaderHandle();Dispatch resolved{};
     if(!loader){g={};emit("native_helper_failure","\"reason\":\"openxr_loader_unavailable\"");return false;}
     bool ok=nativeResolve(loader,"xrCreateInstance",resolved.createInstance);
@@ -719,7 +921,7 @@ bool initializeNativeDispatch(){
     ok=nativeResolve(loader,"xrWaitFrame",resolved.waitFrame)&&ok;
     ok=nativeResolve(loader,"xrRequestExitSession",resolved.requestExitSession)&&ok;
     if(!ok){g={};emit("native_helper_failure","\"reason\":\"openxr_symbol_resolution\"");return false;}
-    g=resolved;return true;
+    g=resolved;nativeDispatchReady.store(true,std::memory_order_release);return true;
 }
 
 XrResult nativeCreateInstance(const XrInstanceCreateInfo* ci,XrInstance* instance){
@@ -747,16 +949,34 @@ XrResult nativeCreateInstance(const XrInstanceCreateInfo* ci,XrInstance* instanc
     return r;
 }
 
-XrResult nativeDispatchEndFrame(XrSession session,const XrFrameEndInfo* info,const void* returnAddress){
-    if(!initializeNativeDispatch())return XR_ERROR_RUNTIME_FAILURE;
+bool initializeNativeCallsites(const void* returnAddress){
+    if(nativeStreamCallsite.load(std::memory_order_acquire))return true;
+    std::lock_guard<std::mutex> lock(nativeDispatchMutex);
+    if(nativeStreamCallsite.load(std::memory_order_relaxed))return true;
+    nativeCallsiteCacheMissCount.fetch_add(1,std::memory_order_relaxed);
     Dl_info caller{};
     if(dladdr(returnAddress,&caller)&&caller.dli_fbase){
-        const auto offset=reinterpret_cast<uintptr_t>(returnAddress)-reinterpret_cast<uintptr_t>(caller.dli_fbase);
-        if(offset==0x0011AA80u)return layerEndFrame(session,info);
-        if(offset==0x00142064u)return g.requestExitSession(session);
-        emit("native_helper_failure","\"reason\":\"unexpected_callsite\",\"returnOffset\":"+std::to_string(offset));
-    }else{
-        emit("native_helper_failure","\"reason\":\"unresolved_callsite\"");
+        const uintptr_t base=reinterpret_cast<uintptr_t>(caller.dli_fbase);
+        const uintptr_t offset=reinterpret_cast<uintptr_t>(returnAddress)-base;
+        if(offset!=0x0011AA80u&&offset!=0x00142064u){
+            emit("native_helper_failure","\"reason\":\"unexpected_callsite\",\"returnOffset\":"+std::to_string(offset));
+            return false;
+        }
+        nativeExitCallsite.store(base+0x00142064u,std::memory_order_relaxed);
+        nativeStreamCallsite.store(base+0x0011AA80u,std::memory_order_release);
+        return true;
+    }
+    emit("native_helper_failure","\"reason\":\"unresolved_callsite\"");return false;
+}
+
+XrResult nativeDispatchEndFrame(XrSession session,const XrFrameEndInfo* info,const void* returnAddress){
+    if(!initializeNativeDispatch()||!initializeNativeCallsites(returnAddress))return XR_ERROR_RUNTIME_FAILURE;
+    const uintptr_t caller=reinterpret_cast<uintptr_t>(returnAddress);
+    if(caller==nativeStreamCallsite.load(std::memory_order_relaxed))return layerEndFrame(session,info);
+    if(caller==nativeExitCallsite.load(std::memory_order_relaxed))return g.requestExitSession(session);
+    if(!nativeUnexpectedCallsiteLogged.exchange(true,std::memory_order_relaxed)){
+        const uintptr_t base=nativeStreamCallsite.load(std::memory_order_relaxed)-0x0011AA80u;
+        emit("native_helper_failure","\"reason\":\"unexpected_callsite\",\"returnOffset\":"+std::to_string(caller-base));
     }
     return XR_ERROR_RUNTIME_FAILURE;
 }
