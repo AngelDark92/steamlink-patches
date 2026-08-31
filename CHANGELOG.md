@@ -1,3 +1,9 @@
+## [1.10.1-dev.18](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.17...v1.10.1-dev.18) (2026-08-31)
+
+### 🐛 Bug Fixes
+
+* new experiment for higher res ([b0dc43e](https://github.com/AngelDark92/steamlink-patches/commit/b0dc43eb35e06e03c39c173257bb773f0b91d355))
+
 ## [1.10.1-dev.17](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.16...v1.10.1-dev.17) (2026-08-31)
 
 ### 🐛 Bug Fixes
