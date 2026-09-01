@@ -11,13 +11,15 @@ import kotlin.test.assertTrue
 
 class AndroidSurfaceTriggerResourceTest {
     @Test
-    fun `surface trigger is the only active projection experiment`() {
+    fun `surface trigger and native probe are mutually exclusive active experiments`() {
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
+        assertFalse(projectionModesConflict(NATIVE_SINGLE_PROJECTION_PROBE_MODE, NATIVE_SINGLE_PROJECTION_PROBE_MODE))
+        assertTrue(projectionModesConflict(NATIVE_SINGLE_PROJECTION_PROBE_MODE, ANDROID_SURFACE_TRIGGER_MODE))
+        assertTrue(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, NATIVE_SINGLE_PROJECTION_PROBE_MODE))
         listOf(
             "single_projection_reconstruction_v1",
             "single_projection_reconstruction_efficient_v1",
-            "single_projection_native_probe_v1",
             "single_projection_native_renderer_v1",
             "single_projection_native_renderer_dual_v1",
             "two_projection_drop_base_v1",
@@ -77,9 +79,8 @@ class AndroidSurfaceTriggerResourceTest {
         assertTrue(patchSource.contains("sceneFile.readBytes().sha256()"))
         assertTrue(patchSource.contains("permission_surface_trace_v1"))
         assertTrue(patchSource.contains("libgxr_pst.so"))
-        assertTrue(patchSource.contains("activeProjectionModes.single()"))
+        assertTrue(patchSource.contains("activeProjectionModes.first { it.mode == ANDROID_SURFACE_TRIGGER_MODE }"))
         assertFalse(patchSource.contains("patchNativeEndFrameHelper"))
-        assertFalse(patchSource.contains("sceneFile.writeBytes"))
         assertFalse(patchSource.contains("gxrEndFrame"))
     }
 
@@ -113,7 +114,6 @@ class AndroidSurfaceTriggerResourceTest {
         listOf(
             "libgxr_pst.so",
             "XR_APILAYER_local_GalaxyXR_permission_surface_trace_v1.json",
-            "libgxr_nspp.so",
             "libgxr_nqv.so",
             "libgxr_nqvd.so",
             "libgxr_nsp.so",

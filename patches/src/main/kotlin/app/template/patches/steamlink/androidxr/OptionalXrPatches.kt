@@ -101,6 +101,11 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_LIBRARY,
         ANDROID_SURFACE_TRIGGER_MANIFEST,
     ),
+    ProjectionModeResources(
+        NATIVE_SINGLE_PROJECTION_PROBE_MODE,
+        NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
+        null,
+    ),
 )
 
 internal fun projectionModesConflict(existingMode: String, requestedMode: String): Boolean =
@@ -120,7 +125,6 @@ private val retiredProjectionModes = setOf(
     "single_projection_reconstruction_efficient_v1",
     "single_projection_native_renderer_v1",
     "single_projection_native_renderer_dual_v1",
-    "single_projection_native_probe_v1",
     "single_projection_native_quad_zero_copy_v1",
     "single_projection_native_quad_zero_copy_dual_v1",
     "permission_surface_trace_v1",
@@ -129,7 +133,6 @@ private val retiredProjectionLibraries = setOf(
     "libgxr_single_projection_reconstruction_efficient_v1.so",
     "libgxr_nsp.so",
     "libgxr_nspd.so",
-    "libgxr_nspp.so",
     "libgxr_nqv.so",
     "libgxr_nqvd.so",
     "libgxr_pst.so",
@@ -245,7 +248,7 @@ private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
         installProjectionModeResources(
             libDir,
             layerDir,
-            activeProjectionModes.single(),
+            activeProjectionModes.first { it.mode == ANDROID_SURFACE_TRIGGER_MODE },
         )
     }
 }
@@ -266,6 +269,56 @@ val xrAndroidSurfaceTriggerPatch = resourcePatch(
     finalize {
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
+        }
+    }
+}
+
+private fun nativeProjectionHelperPatch(mode: String, library: String) = rawResourcePatch {
+    execute {
+        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
+            return@execute
+        }
+        val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
+        val sceneBytes = sceneFile.readBytes()
+        val patchedScene = patchNativeSingleProjectionRenderer(sceneBytes, library)
+        val helperBytes = projectionModeResource(library)
+        if (helperBytes.size < 4 || !helperBytes.copyOfRange(0, 4)
+                .contentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))) {
+            throw PatchException("Bundled native projection helper is not an ELF library: $library")
+        }
+        val libDir = sceneFile.parentFile!!
+        val apkRoot = sceneFile.parentFile!!.parentFile!!.parentFile!!
+        val layerDir = File(apkRoot, "assets/openxr/1/api_layers/implicit.d")
+        installProjectionModeResources(
+            libDir,
+            layerDir,
+            activeProjectionModes.first { it.mode == mode },
+        )
+        if (!patchedScene.contentEquals(sceneBytes)) sceneFile.writeBytes(patchedScene)
+    }
+}
+
+private val nativeSingleProjectionProbeLayerPatch = nativeProjectionHelperPatch(
+    NATIVE_SINGLE_PROJECTION_PROBE_MODE,
+    NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
+)
+
+@Suppress("unused")
+val xrNativeSingleProjectionResolutionProbePatch = resourcePatch(
+    name = "Experimental Native Single-Projection Resolution + 10-bit Probe",
+    description = "5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame.",
+    default = false,
+) {
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        nativeSingleProjectionProbeLayerPatch,
+    )
+
+    finalize {
+        document("AndroidManifest.xml").use { document ->
+            configurePermissionFreeProjectionMode(document, NATIVE_SINGLE_PROJECTION_PROBE_MODE)
         }
     }
 }

@@ -13,6 +13,7 @@ import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
 import app.template.patches.steamlink.androidxr.xrAndroidSurfaceTriggerPatch
+import app.template.patches.steamlink.androidxr.xrNativeSingleProjectionResolutionProbePatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -47,6 +48,10 @@ class PatchCompatibilityMatrixTest {
         assertFalse(xrAndroidSurfaceTriggerPatch.supports("2.0.22", 5002318))
         assertFalse(xrAndroidSurfaceTriggerPatch.supports("2.0.22", 5002244))
         assertFalse(xrAndroidSurfaceTriggerPatch.default)
+        assertTrue(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002322))
+        assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002318))
+        assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002244))
+        assertFalse(xrNativeSingleProjectionResolutionProbePatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -70,6 +75,7 @@ class PatchCompatibilityMatrixTest {
                 assertTrue(patch.supports("2.0.20", versionCode), "${patch.name} on $versionCode")
             }
             assertFalse(xrAndroidSurfaceTriggerPatch.supports("2.0.20", versionCode))
+            assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.20", versionCode))
         }
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertFalse(patch.supports("2.0.22", 5001712), "${patch.name} on wrong versionName")
@@ -108,6 +114,7 @@ class PatchCompatibilityMatrixTest {
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
             xrAndroidSurfaceTriggerPatch,
+            xrNativeSingleProjectionResolutionProbePatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -158,6 +165,7 @@ class PatchCompatibilityMatrixTest {
             oledCalibrationPatch,
         ) + listOf(
             xrAndroidSurfaceTriggerPatch,
+            xrNativeSingleProjectionResolutionProbePatch,
         )
 
         val latestExcluded = excludedNativeXr + listOf(

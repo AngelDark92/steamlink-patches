@@ -8,45 +8,43 @@ OpenXR defines deterministic composition-layer ordering. Steam Link's 3 projecti
 
 On Galaxy XR, the observed quality transition correlates with a display-ready Android/SystemUI surface: permission alone did not improve quality, while a visible type-2038 surface and the SystemUI recording indicator did. The captured public OpenXR view dimensions, 3-projection/6-view topology, host render target, and exposed policy values did not explain that transition. Decoder/transport proof in the retired 5-phase matrix remained incomplete, so vendor-private compositor policy is strongly indicated but not formally proven.
 
-The earlier claim that 3152x3682 single-projection reconstruction matched the sharp overlay control is superseded by the user's headset observation. Reconstruction lost visible density. Quad-view/native-reconstruction variants also remained soft. Those patches, their telemetry payloads, and the Appear-on-top permission/surface matrix have been retired.
+The earlier claim that 3152x3682 single-projection reconstruction matched the sharp overlay control is superseded by the user's headset observation. Reconstruction lost visible density. Quad-view variants and the older reconstruction variants remained soft and are retired. The CPU-optimized native single-projection + 10-bit probe was reinstated because it had not yet received its focused headset diagnosis.
 
-## Current experiment
+## 2026-09-01 Android-surface result
 
-The only selectable resolution experiment for Steam Link `2.0.22` build `5002322` is:
+The Android-Surface Trigger capture is a decisive negative result for the tested runtime:
 
-**Experimental Android-Surface Trigger (3-Projection Passthrough)**
+- `XR_KHR_android_surface_swapchain` was not advertised or enabled;
+- the layer correctly reported `surface_trigger_unavailable` and failed open;
+- no 2x2 Android Surface, buffer queue, terminal quad, or 4-layer submission existed;
+- Valve remained at 3 projections, 6 views, and 3 submitted layers with six 1536x1536 sRGB8 sources;
+- public view limits remained 1856x2160 recommended and 3152x3682 maximum;
+- the host retained the known 3552x3840 render target;
+- the palm result was `SOFTER -> MATCHES REFERENCE -> SOFTER`.
 
-It deliberately tests a different producer path without reconstructing Valve's image:
+Therefore the documented OpenXR Android-surface path cannot implement the desired trigger on this Galaxy XR runtime. The palm/SystemUI surface still changes quality while the observed OpenXR topology and source format remain fixed. That is direct evidence for a vendor-private SystemUI/display-compositor policy input, although the application cannot name or select that policy through documented OpenXR.
 
-- removes `SYSTEM_ALERT_WINDOW` and applies unmanaged Full Space to `VRLink`;
-- installs implicit layer `XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1` and `libgxr_ast.so`;
-- enables `XR_KHR_android_surface_swapchain` only when the runtime advertises it;
-- creates a spec-conformant `2x2` sampled Android `Surface` swapchain (`format`, `sampleCount`, `faceCount`, `arraySize`, and `mipCount` are `0`);
-- queues RGBA8888 bytes `[R,G,B,A]=[0,0,0,1]` while the session is visible/focused;
-- preserves Valve's original 3 projection pointers, 6 views, image rectangles, formats, order, and contents;
-- appends 1 terminal `1mm` source-alpha quad in VIEW space;
-- performs no GL draw, blit, copy, resampling, decoder interception, or 3-to-1 reconstruction;
-- permanently fails open to Valve's untouched frame if any capability, Surface, layer-budget, topology, buffer-post, or submission prerequisite fails.
+The Android-Surface Trigger remains selectable only as an archival negative control or to retest after a runtime update. It is not expected to improve quality today.
 
-This is technically distinct from the failed ordinary OpenGL quad because the producer is an Android `Surface` returned by `xrCreateSwapchainAndroidSurfaceKHR`. It is still an OpenXR-owned composition layer, not a WindowManager type-2038 overlay. It may therefore fail to trigger the Galaxy XR/SystemUI path; that negative result would establish that the missing input is outside documented OpenXR layer control.
+## Active experiments
 
-## Telemetry contract
+Two mutually exclusive experiments are selectable for Steam Link `2.0.22` build `5002322`. Patch separate pristine APKs; do not stack them with one another or with `Appear on top`.
 
-The layer records bounded metadata only:
+### Experimental Native Single-Projection Resolution + 10-bit Probe
 
-- extension advertised/app-enabled/appended/enabled state;
-- system `maxLayerCount`;
-- view recommended/maximum dimensions;
-- ordinary source swapchain dimensions and formats;
-- Android-surface creation, VIEW-space creation, and RGBA8888 buffer-post result;
-- exact input 3-projection/6-view fingerprint;
-- output 4-layer topology with the injected quad last;
-- original-pointer preservation, `noCopy=true`, and `noReconstruction=true`;
-- matching `xrEndFrame` result and permanent fail-open reason when applicable.
+This is the restored, still-undetermined CPU-optimized native renderer. It hooks only the exact guarded 5002322 `libvrlink_scene.so`, accepts either sRGB8 or RGB10_A2 Valve sources, reconstructs the six source views into a private stereo output, and submits exactly 1 projection with 2 views. It attempts:
 
-The focused collector also proves that the APK has no overlay permission, allowed AppOp, or Steam Link type-2038 window; captures fresh host-log deltas and SurfaceFlinger/window state; and runs the palm before/covered/after visual test. RGB10_A2 source observation is reported separately. It can prove Valve requested a 10-bit source swapchain, but it cannot prove private-compositor or panel precision.
+1. density-preserving dimensions derived from the source FOV;
+2. Galaxy XR panel-native bounds;
+3. the runtime-reported maximum as a fallback.
 
-There is no longer a test selector. Run only:
+Its collector records the accepted tier and dimensions, source/scratch/output formats, 10/10/10/2 GL attachments, 3/6-to-1/2 topology, successful `xrEndFrame`, decoder hardware-buffer hints when intercepted, host dimensions, and the palm before/during/after result. This is the experiment to run next.
+
+### Experimental Android-Surface Trigger (3-Projection Passthrough)
+
+This retains Valve's original 3 projections and tries to append a 2x2 Android-surface quad. It is now an archival negative control because the tested runtime does not expose its required extension.
+
+Run the single entry point and select the installed experiment:
 
 ```powershell
 GalaxyXR-APK\diagnostics\steamlink-resolution-ab\Capture-SteamLinkResolutionRun.ps1
@@ -54,11 +52,11 @@ GalaxyXR-APK\diagnostics\steamlink-resolution-ab\Capture-SteamLinkResolutionRun.
 
 ## Interpretation
 
-- Sharp before/during/after, matching the known 3-projection + overlay reference, with a fully validated surface-trigger frame: the OpenXR Android-surface producer is sufficient and can replace Appear on top for this exact build.
-- Soft before/during/after with a fully validated surface-trigger frame: an OpenXR Android-surface layer is insufficient; the remaining cause is likely WindowManager/SystemUI/private compositor policy unavailable through documented OpenXR.
-- A palm-triggered change: the trigger did not stabilize the high-quality path.
-- Missing extension/surface/queue/topology/submission evidence: patch activation is inconclusive, not a quality result.
-- RGB10_A2 absent: 10-bit is not proven, independently of resolution.
+- Native probe sharp before/during/after with successful 3/6-to-1/2 submission: the native single-projection path matches the overlay reference.
+- Native probe `soft -> sharp -> soft`: single projection alone does not escape the vendor-private surface policy.
+- RGB10_A2 source plus RGB10_A2 scratch/output and 10/10/10/2 attachments: 10-bit is proven through the app/OpenXR output, not through the private compositor or display panel.
+- RGB10_A2 absent: Steam Link did not supply a 10-bit source in that run.
+- Android-surface `UNSUPPORTED_BY_RUNTIME`: expected on the currently tested runtime and not an activation mystery.
 
 ## Developer rebuild
 
@@ -66,8 +64,10 @@ GalaxyXR-APK\diagnostics\steamlink-resolution-ab\Capture-SteamLinkResolutionRun.
 cmake -S extensions\resolution-trace-layer -B extensions\resolution-trace-layer\build-android-new -G Ninja `
   -DCMAKE_TOOLCHAIN_FILE="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/GalaxyXR-APK/tools-galaxyxr-native/android-ndk-r27d/build/cmake/android.toolchain.cmake" `
   -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 `
-  -DOPENXR_SDK_SOURCE_DIR="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/GalaxyXR-APK/tools-galaxyxr-native/OpenXR-SDK-1.1.61"
-cmake --build extensions\resolution-trace-layer\build-android-new --target gxr_android_surface_trigger_passthrough_v1
+  -DOPENXR_SDK_SOURCE_DIR="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/GalaxyXR-APK/tools-galaxyxr-native/OpenXR-SDK-1.1.61" `
+  -DOPENXR_LOADER_LIBRARY="C:/Users/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/decoded-apk-android-steamlinkvr-release-base-2.0.22-5002322/lib/arm64-v8a/libopenxr_loader.so"
+cmake --build extensions\resolution-trace-layer\build-android-new --target gxr_single_projection_native_probe_v1 gxr_android_surface_trigger_passthrough_v1
+Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_nspp.so patches\src\main\resources\steamlink\androidxr\
 Copy-Item extensions\resolution-trace-layer\build-android-new\libgxr_ast.so patches\src\main\resources\steamlink\androidxr\
 .\gradlew.bat :patches:test :patches:generatePatchesList -PreleaseChannel=experimental
 ```

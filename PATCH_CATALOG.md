@@ -7,7 +7,7 @@ Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with i
 Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset, OLED color calibration,
 Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither.
 Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset,
-Unrestricted battery usage, Video dither, and Visual Delay Fix. Five mutually exclusive 5002322-only
+Unrestricted battery usage, Video dither, and Visual Delay Fix. Two mutually exclusive 5002322-only
 projection A/B patches remain optional and experimental.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
@@ -139,7 +139,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Experimental Android-Surface Trigger (3-Projection Passthrough)
-**Default: disabled; 5002322 only** — sole supported projection experiment; do not combine with `Appear on top`
+**Default: disabled; 5002322 only** — retained as an archival negative control; do not combine with `Appear on top` or the native probe
 
 | Artifact | Exact guarded edit |
 |---|---|
@@ -147,9 +147,26 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | `lib/arm64-v8a/libgxr_ast.so` | Implicit OpenXR API layer. Enables `XR_KHR_android_surface_swapchain` only when advertised, queues a nonzero-alpha `2x2` RGBA8888 Android `Surface`, and appends it as a terminal quad after Valve's unchanged 3 projection pointers. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json` | Registers the surface-trigger API layer; disable environment is `GXR_DISABLE_ANDROID_SURFACE_TRIGGER`. |
 
-The output is still Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. It fails open when the extension, Surface, view space, layer budget, exact topology, or buffer post is unavailable. The collector validates the untouched source topology, the Android-surface producer, successful `xrEndFrame`, the palm hidden-visible-hidden test, and visual equality against the normal 3-projection + display-ready-overlay reference. Source RGB10_A2 is reported separately; it does not prove private-compositor or panel precision.
+The output is still Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. It fails open when the extension, Surface, view space, layer budget, exact topology, or buffer post is unavailable.
 
-The former reconstruction, native-hook, quad-view, permission-matrix, and alternate projection telemetry payloads are removed. Their identities remain reserved only for stale decoded-APK cleanup.
+The 2026-09-01 headset capture proved that this Galaxy XR runtime does **not** advertise `XR_KHR_android_surface_swapchain`. The layer therefore failed open without creating the 2x2 Surface. Valve's 3-projection/6-view topology remained unchanged while the palm SystemUI element changed quality `soft -> sharp -> soft`. This experiment cannot replace Appear on top on the tested runtime; it remains selectable only so that result can be reproduced after a runtime update.
+
+---
+
+### Experimental Native Single-Projection Resolution + 10-bit Probe
+**Default: disabled; 5002322 only** — restored CPU-optimized one-projection diagnostic; apply to a separate pristine APK and do not stack with the Android-Surface Trigger or `Appear on top`
+
+| Artifact | Exact guarded edit |
+|---|---|
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, uses unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_probe_v1`. |
+| `lib/arm64-v8a/libvrlink_scene.so` | Exact-size, build-id, ELF-structure, original-byte, and already-patched guards redirect the verified 5002322 native call sites to `libgxr_nspp.so`. |
+| `lib/arm64-v8a/libgxr_nspp.so` | CPU-optimized dual-format native reconstruction. Accepts Valve sRGB8 or RGB10_A2 sources, tries density-preserving, panel-native, then runtime-maximum output tiers, and submits one projection with two views. |
+
+The helper traces source swapchains, recommended/maximum view sizes, allocation attempts and accepted output tier, 3-projection/6-view to 1-projection/2-view submission, GL attachment precision, MediaCodec/AHardwareBuffer observations, and successful `xrEndFrame`. RGB10_A2 is proven only through the app/OpenXR output when the source, scratch, output, and attachment contracts all remain 10/10/10/2; panel and private-compositor precision are still outside app telemetry.
+
+The native probe is not yet visually adjudicated. Its focused diagnostic performs the same palm hidden-visible-hidden comparison and reports the actual accepted output dimensions. A palm-dependent `soft -> sharp -> soft` result would show that even the one-projection renderer remains subject to the same vendor-private surface policy.
+
+The former non-probe reconstruction, quad-view, permission-matrix, and alternate projection payloads remain retired. Their identities are reserved only for stale decoded-APK cleanup.
 
 ---
 
