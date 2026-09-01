@@ -139,17 +139,17 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 ---
 
 ### Experimental Android-Surface Trigger (3-Projection Passthrough)
-**Default: disabled; 5002322 only** — retained as an archival negative control; do not combine with `Appear on top` or the native probe
+**Default: disabled; 5002322 only** — forced runtime-capability probe; do not combine with `Appear on top` or the native probe
 
 | Artifact | Exact guarded edit |
 |---|---|
 | `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=android_surface_trigger_passthrough_v1` |
-| `lib/arm64-v8a/libgxr_ast.so` | Implicit OpenXR API layer. Enables `XR_KHR_android_surface_swapchain` only when advertised, queues a nonzero-alpha `2x2` RGBA8888 Android `Surface`, and appends it as a terminal quad after Valve's unchanged 3 projection pointers. |
+| `lib/arm64-v8a/libgxr_ast.so` | Implicit OpenXR API layer. Requests `XR_KHR_android_surface_swapchain` even when enumeration hides it, retries Valve's original instance create-info if rejected, and otherwise queues a nonzero-alpha `2x2` RGBA8888 Android `Surface` as a terminal quad after Valve's unchanged 3 projection pointers. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json` | Registers the surface-trigger API layer; disable environment is `GXR_DISABLE_ANDROID_SURFACE_TRIGGER`. |
 
-The output is still Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. It fails open when the extension, Surface, view space, layer budget, exact topology, or buffer post is unavailable.
+The output is still Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. It fails open when the extension, Surface, view space, layer budget, exact topology, or buffer post is unavailable. If the runtime accepts creation but rejects the first 4-layer `xrEndFrame`, that frame returns the runtime error and only subsequent frames revert to Valve's untouched submission; this is an experimental runtime risk, not a production workaround.
 
-The 2026-09-01 headset capture proved that this Galaxy XR runtime does **not** advertise `XR_KHR_android_surface_swapchain`. The layer therefore failed open without creating the 2x2 Surface. Valve's 3-projection/6-view topology remained unchanged while the palm SystemUI element changed quality `soft -> sharp -> soft`. This experiment cannot replace Appear on top on the tested runtime; it remains selectable only so that result can be reproduced after a runtime update.
+The first 2026-09-01 headset capture proved that this Galaxy XR runtime did **not** advertise `XR_KHR_android_surface_swapchain`. Valve's 3-projection/6-view topology remained unchanged while the palm SystemUI element changed quality `soft -> sharp -> soft`. Helper v1.1 now performs the missing direct capability probe: it force-requests the documented extension once, emits the exact request/function result, and fails open to Valve's untouched submission on rejection. This is intentionally outside the normal advertised-extension contract and remains runtime-unproven until a newly patched APK is captured.
 
 ---
 

@@ -86,7 +86,7 @@ internal const val ANDROID_SURFACE_TRIGGER_LIBRARY = "libgxr_ast.so"
 internal const val ANDROID_SURFACE_TRIGGER_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json"
 internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
-    "android-surface-trigger-passthrough-v1.0-20260901"
+    "android-surface-trigger-forced-probe-v1.1-20260901"
 internal const val ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256 =
     "e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f"
 private data class ProjectionModeResources(
@@ -256,7 +256,7 @@ private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
 @Suppress("unused")
 val xrAndroidSurfaceTriggerPatch = resourcePatch(
     name = "Experimental Android-Surface Trigger (3-Projection Passthrough)",
-    description = "5002322-only permission-free experiment. Preserves Valve's 3 projection layers and appends a nearly invisible 2x2 Android-surface quad to test the Galaxy XR high-quality compositor path.",
+    description = "5002322-only permission-free forced-capability probe. Requests the documented Android-surface extension even when enumeration hides it, fails open if rejected, and otherwise preserves Valve's 3 projection layers plus a 2x2 Android-surface quad.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())

@@ -47,6 +47,10 @@ class AndroidSurfaceTriggerResourceTest {
             "WINDOW_FORMAT_RGBA_8888",
             "surface_buffer_queued",
             "surface_trigger_frame",
+            "forcedExtensionAttempt",
+            "extensionRequestResult",
+            "surfaceFunctionLookupAttempted",
+            "surfaceFunctionLoaded",
             "originalPointersPreserved",
             "noCopy",
             "noReconstruction",
@@ -63,6 +67,8 @@ class AndroidSurfaceTriggerResourceTest {
         listOf("format=0", "sampleCount=0", "faceCount=0", "arraySize=0", "mipCount=0")
             .forEach { invariant -> assertTrue(source.replace(" ", "").contains(invariant), invariant) }
         assertTrue(source.replace(" ", "").contains("output.layers=layers.data()"))
+        assertTrue(source.replace(" ", "").contains("constboolappended=!appEnabled"))
+        assertTrue(source.contains("nextCreateApiLayerInstance(createInfo, &next, instance)"))
         assertTrue(source.contains("layers[index] = info->layers[index]"))
         assertFalse(source.contains("glDrawArrays"))
         assertFalse(source.contains("glBlitFramebuffer"))
@@ -91,7 +97,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "21b6c903470b00919953f2e5b72d65bc4dd3cc0b87fb9c4f5d082b2fcee0205f",
+            "1106e5f0e8c9e43a1533e02088a5607f8e2bd7d42a6054ac16dd528ce27f1571",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )

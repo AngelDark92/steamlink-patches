@@ -10,7 +10,7 @@ On Galaxy XR, the observed quality transition correlates with a display-ready An
 
 The earlier claim that 3152x3682 single-projection reconstruction matched the sharp overlay control is superseded by the user's headset observation. Reconstruction lost visible density. Quad-view variants and the older reconstruction variants remained soft and are retired. The CPU-optimized native single-projection + 10-bit probe was reinstated because it had not yet received its focused headset diagnosis.
 
-## 2026-09-01 Android-surface result
+## 2026-09-01 Android-surface v1.0 result
 
 The Android-Surface Trigger capture is a decisive negative result for the tested runtime:
 
@@ -22,9 +22,13 @@ The Android-Surface Trigger capture is a decisive negative result for the tested
 - the host retained the known 3552x3840 render target;
 - the palm result was `SOFTER -> MATCHES REFERENCE -> SOFTER`.
 
-Therefore the documented OpenXR Android-surface path cannot implement the desired trigger on this Galaxy XR runtime. The palm/SystemUI surface still changes quality while the observed OpenXR topology and source format remain fixed. That is direct evidence for a vendor-private SystemUI/display-compositor policy input, although the application cannot name or select that policy through documented OpenXR.
+That run proved the extension was hidden from enumeration, but the v1.0 helper only appended advertised extensions and therefore never made the decisive enable request. The palm/SystemUI surface still changed quality while the observed OpenXR topology and source format remained fixed. That is direct evidence for a vendor-private SystemUI/display-compositor policy input, although the application cannot name or select that policy through documented OpenXR.
 
-The Android-Surface Trigger remains selectable only as an archival negative control or to retest after a runtime update. It is not expected to improve quality today.
+## Android-surface v1.1 forced-capability probe
+
+Current Android XR documentation lists `XR_KHR_android_surface_swapchain`, while also requiring applications to check feature support on the target device. Helper v1.1 closes the remaining ambiguity by requesting the extension even when enumeration hides it. This is intentionally outside the normal advertised-extension contract. If rejected with `XR_ERROR_EXTENSION_NOT_PRESENT`, it immediately retries Valve's original instance create-info and submits the unchanged 3 projections; other create failures remain invalid evidence. If accepted, it loads `xrCreateSwapchainAndroidSurfaceKHR`, queues the 2x2 buffer, and appends the quad. The trace separates request rejection from request acceptance with a missing function. A rejected first 4-layer `xrEndFrame` can fail that one frame; later frames disable the trigger and return to Valve's submission.
+
+This probe is statically built but not yet headset-tested. A pristine APK must be repatched because the helper build ID and hash changed.
 
 ## Active experiments
 
@@ -42,7 +46,7 @@ Its collector records the accepted tier and dimensions, source/scratch/output fo
 
 ### Experimental Android-Surface Trigger (3-Projection Passthrough)
 
-This retains Valve's original 3 projections and tries to append a 2x2 Android-surface quad. It is now an archival negative control because the tested runtime does not expose its required extension.
+This retains Valve's original 3 projections and tries to append a 2x2 Android-surface quad. Version 1.1 force-requests the hidden extension once and fails open if the runtime rejects it.
 
 Run the single entry point and select the installed experiment:
 
@@ -56,7 +60,8 @@ GalaxyXR-APK\diagnostics\steamlink-resolution-ab\Capture-SteamLinkResolutionRun.
 - Native probe `soft -> sharp -> soft`: single projection alone does not escape the vendor-private surface policy.
 - RGB10_A2 source plus RGB10_A2 scratch/output and 10/10/10/2 attachments: 10-bit is proven through the app/OpenXR output, not through the private compositor or display panel.
 - RGB10_A2 absent: Steam Link did not supply a 10-bit source in that run.
-- Android-surface `UNSUPPORTED_BY_RUNTIME`: expected on the currently tested runtime and not an activation mystery.
+- Android-surface `FORCED_EXTENSION_ACCEPTED`: the hidden capability was accepted and the complete 2x2 trigger reached submission.
+- Android-surface `UNSUPPORTED_BY_RUNTIME` or `FORCED_EXTENSION_FUNCTION_UNAVAILABLE`: the direct probe closed this OpenXR route on the tested runtime while preserving Valve's original submission.
 
 ## Developer rebuild
 

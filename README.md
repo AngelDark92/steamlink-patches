@@ -66,7 +66,7 @@ To download it:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [Experimental Android-Surface Trigger (3-Projection Passthrough)](#experimental-android-surface-trigger-3-projection-passthrough) | 5002322-only permission-free experiment. Preserves Valve's 3 projection layers and appends a nearly invisible 2x2 Android-surface quad to test the Galaxy XR high-quality compositor path. | 5002322 |  |
+| [Experimental Android-Surface Trigger (3-Projection Passthrough)](#experimental-android-surface-trigger-3-projection-passthrough) | 5002322-only permission-free forced-capability probe. Requests the documented Android-surface extension even when enumeration hides it, fails open if rejected, and otherwise preserves Valve's 3 projection layers plus a 2x2 Android-surface quad. | 5002322 |  |
 | [Experimental Native Single-Projection Resolution + 10-bit Probe](#experimental-native-single-projection-resolution-10-bit-probe) | 5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame. | 5002322 |  |
 
 </details>

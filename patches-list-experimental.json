@@ -863,7 +863,7 @@
     },
     {
       "name": "Experimental Android-Surface Trigger (3-Projection Passthrough)",
-      "description": "5002322-only permission-free experiment. Preserves Valve's 3 projection layers and appends a nearly invisible 2x2 Android-surface quad to test the Galaxy XR high-quality compositor path.",
+      "description": "5002322-only permission-free forced-capability probe. Requests the documented Android-surface extension even when enumeration hides it, fails open if rejected, and otherwise preserves Valve's 3 projection layers plus a 2x2 Android-surface quad.",
       "default": false,
       "dependencies": [
         "ResourcePatch",

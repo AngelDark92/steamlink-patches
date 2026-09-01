@@ -26,7 +26,7 @@ namespace {
 constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1";
 constexpr char kModeName[] = "android_surface_trigger_passthrough_v1";
-constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.0-20260901";
+constexpr char kBuildId[] = "android-surface-trigger-forced-probe-v1.1-20260901";
 constexpr char kLogTag[] = "GXRSurfaceTrigger";
 constexpr uint32_t kTriggerWidth = 2;
 constexpr uint32_t kTriggerHeight = 2;
@@ -685,7 +685,11 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
     extensionAdvertised = runtimeAdvertisesExtension(
         layerInfo->nextInfo->nextGetInstanceProcAddr,
         XR_KHR_ANDROID_SURFACE_SWAPCHAIN_EXTENSION_NAME);
-    const bool appended = extensionAdvertised && !appEnabled;
+    // Android XR documentation lists this extension as supported, but the Galaxy XR
+    // runtime tested on 2026-09-01 did not enumerate it. Probe the runtime directly:
+    // request it once, then fail open by retrying Valve's original create-info.
+    const bool forcedExtensionAttempt = !extensionAdvertised && !appEnabled;
+    const bool appended = !appEnabled;
     std::vector<const char*> extensions;
     extensions.reserve(createInfo->enabledExtensionCount + (appended ? 1 : 0));
     for (uint32_t index = 0; index < createInfo->enabledExtensionCount; ++index) {
@@ -701,6 +705,7 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
     next.nextInfo = layerInfo->nextInfo->next;
     XrResult result = layerInfo->nextInfo->nextCreateApiLayerInstance(
         appended ? &patched : createInfo, &next, instance);
+    const XrResult extensionRequestResult = result;
     bool retriedWithoutExtension = false;
     if (XR_FAILED(result) && appended) {
         retriedWithoutExtension = true;
@@ -724,7 +729,8 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
         load("xrWaitFrame", g.waitFrame) &&
         load("xrEndFrame", g.endFrame) &&
         load("xrPollEvent", g.pollEvent);
-    const bool surfaceFunctionLoaded = extensionEnabled &&
+    const bool surfaceFunctionLookupAttempted = extensionEnabled;
+    const bool surfaceFunctionLoaded = surfaceFunctionLookupAttempted &&
         load("xrCreateSwapchainAndroidSurfaceKHR", g.createAndroidSurfaceSwapchain);
     if (!coreLoaded) {
         if (g.destroyInstance) g.destroyInstance(*instance);
@@ -739,9 +745,16 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
             (extensionAdvertised ? std::string("true") : "false") +
         ",\"extensionAppEnabled\":" + (appEnabled ? std::string("true") : "false") +
         ",\"extensionAppended\":" + (appended ? std::string("true") : "false") +
+        ",\"forcedExtensionAttempt\":" +
+            (forcedExtensionAttempt ? std::string("true") : "false") +
+        ",\"extensionRequestResult\":" + std::to_string(extensionRequestResult) +
         ",\"retriedWithoutExtension\":" +
             (retriedWithoutExtension ? std::string("true") : "false") +
         ",\"extensionEnabled\":" + (extensionEnabled ? std::string("true") : "false") +
+        ",\"surfaceFunctionLookupAttempted\":" +
+            (surfaceFunctionLookupAttempted ? std::string("true") : "false") +
+        ",\"surfaceFunctionLoaded\":" +
+            (surfaceFunctionLoaded ? std::string("true") : "false") +
         ",\"hasJavaVm\":" + (applicationVm ? std::string("true") : "false") +
         ",\"preservesValveProjectionLayers\":true," +
         "\"noCopy\":true,\"noReconstruction\":true");
