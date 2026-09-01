@@ -1,3 +1,9 @@
+## [1.11.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.0-dev.3...v1.11.0-dev.4) (2026-09-01)
+
+### ✨ New Features
+
+* final resolution patch with no appear on top needed ([fcad02f](https://github.com/AngelDark92/steamlink-patches/commit/fcad02fb0c79f6069d8eb723706ff91172e4f917))
+
 ## [1.11.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.0-dev.2...v1.11.0-dev.3) (2026-09-01)
 
 ### 🐛 Bug Fixes
