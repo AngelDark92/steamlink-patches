@@ -1,3 +1,9 @@
+## [1.11.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.19...v1.11.0-dev.1) (2026-09-01)
+
+### ✨ New Features
+
+* new 3 layers patch with Android-Surface Trigger ([0616d80](https://github.com/AngelDark92/steamlink-patches/commit/0616d8006d0bbeb8800f0b7b7b1ce88d080e9543))
+
 ## [1.10.1-dev.19](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.18...v1.10.1-dev.19) (2026-09-01)
 
 ### 🐛 Bug Fixes
