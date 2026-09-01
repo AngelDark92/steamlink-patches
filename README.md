@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.11.0-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.11.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
+> **[v1.11.0-dev.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.11.0-dev.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;19 patches</summary>
 <br>
@@ -67,7 +67,7 @@ To download it:
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
 | [Experimental Android-Surface Trigger (3-Projection Passthrough)](#experimental-android-surface-trigger-3-projection-passthrough) | 5002322-only permission-free experiment. Preserves Valve's 3 projection layers and appends a nearly invisible 2x2 Android-surface quad to test the Galaxy XR high-quality compositor path. | 5002322 |  |
-| [Experimental Native Single-Projection Resolution + 10-bit Probe](#experimental-native-single-projection-resolution--10-bit-probe) | 5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame. | 5002322 |  |
+| [Experimental Native Single-Projection Resolution + 10-bit Probe](#experimental-native-single-projection-resolution-10-bit-probe) | 5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame. | 5002322 |  |
 
 </details>
 

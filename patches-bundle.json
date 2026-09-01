@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-09-01T17:28:01",
-  "description": "## [1.11.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.19...v1.11.0-dev.1) (2026-09-01)\n\n### ✨ New Features\n\n* new 3 layers patch with Android-Surface Trigger ([0616d80](https://github.com/AngelDark92/steamlink-patches/commit/0616d8006d0bbeb8800f0b7b7b1ce88d080e9543))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.11.0-dev.1/patches-1.11.0-dev.1.mpp",
+  "created_at": "2026-09-01T20:31:47",
+  "description": "## [1.11.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.0-dev.1...v1.11.0-dev.2) (2026-09-01)\n\n### 🐛 Bug Fixes\n\n* reintroduced single projection experiment and modified 3 layer experiment ([7b1cb37](https://github.com/AngelDark92/steamlink-patches/commit/7b1cb37d706155d21ae036ed6eb059652fd20c12))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.11.0-dev.2/patches-1.11.0-dev.2.mpp",
   "signature_download_url": "",
-  "version": "1.11.0-dev.1"
+  "version": "1.11.0-dev.2"
 }

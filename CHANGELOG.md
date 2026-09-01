@@ -1,3 +1,9 @@
+## [1.11.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.0-dev.1...v1.11.0-dev.2) (2026-09-01)
+
+### 🐛 Bug Fixes
+
+* reintroduced single projection experiment and modified 3 layer experiment ([7b1cb37](https://github.com/AngelDark92/steamlink-patches/commit/7b1cb37d706155d21ae036ed6eb059652fd20c12))
+
 ## [1.11.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.19...v1.11.0-dev.1) (2026-09-01)
 
 ### ✨ New Features
