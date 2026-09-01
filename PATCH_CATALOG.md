@@ -124,13 +124,8 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
 | `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves stock 5002318/5002322 target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config |
-| Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, `GxrOverlayDiagnosticReceiver`, and `GxrResolutionProbe`; contains no SDL/controller class fragments. The receiver is manifest-exposed only on exact build 5002322. |
+| Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, and `GxrResolutionProbe`; contains no SDL/controller class fragments. |
 | `SteamLink` lifecycle methods | Adds the overlay/resolution probe calls without modifying `SDLSurface`, `SDLControllerManager`, or generic-motion routing |
-| `AndroidManifest.xml` receiver | On exact build 5002322, adds an exported receiver protected by platform `android.permission.DUMP`; privileged ADB/system senders can select removed, attached-hidden, visible-transparent, or reset diagnostic states. Ordinary apps cannot invoke it. |
-| `lib/arm64-v8a/libgxr_pst.so` | On exact build 5002322, adds a passive permission-versus-surface OpenXR trace. It never enables an extension Valve omitted, samples current view/swapchain contracts, records session state, `shouldRender`, enabled recommended-resolution events, original layer order and image rectangles, then calls downstream functions with Valve's original inputs unchanged. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_permission_surface_trace_v1.json` | On exact build 5002322, registers the passive trace; disable environment is `GXR_DISABLE_PERMISSION_SURFACE_TRACE`. |
-
-The pass-through trace and controller support the 5-phase ordinary-3-projection diagnostic. They are not selectable projection experiments and perform no reconstruction or layer-count change.
 
 ---
 
@@ -143,18 +138,18 @@ The pass-through trace and controller support the 5-phase ordinary-3-projection 
 
 ---
 
-### Experimental Native Single-Projection Resolution + 10-bit Probe
+### Experimental Android-Surface Trigger (3-Projection Passthrough)
 **Default: disabled; 5002322 only** — sole supported projection experiment; do not combine with `Appear on top`
 
 | Artifact | Exact guarded edit |
 |---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_probe_v1` |
-| `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nspp.so`; every sibling helper, including retired quad helpers, is rejected. |
-| `lib/arm64-v8a/libgxr_nspp.so` | CPU-optimized, dual-format native stereo reconstruction plus bounded diagnostics. It records view limits and density requests, allocation-only above-cap trials, foveation capabilities, all 6 source contracts, actual GLES attachment component sizes, final rectangles/format/topology, `xrEndFrame`, decoder output-format changes, and AHardwareBuffer dimensions/format/usage/stride. It records no pixels. |
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=android_surface_trigger_passthrough_v1` |
+| `lib/arm64-v8a/libgxr_ast.so` | Implicit OpenXR API layer. Enables `XR_KHR_android_surface_swapchain` only when advertised, queues a nonzero-alpha `2x2` RGBA8888 Android `Surface`, and appends it as a terminal quad after Valve's unchanged 3 projection pointers. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json` | Registers the surface-trigger API layer; disable environment is `GXR_DISABLE_ANDROID_SURFACE_TRIGGER`. |
 
-The output remains 1 projection with 2 views. v1.2 first tries the density-preserving size, then panel-native 3552x3840, then the runtime-reported maximum, and re-enumerates after Android XR recommended-resolution events. Separate allocation-only candidates remain diagnostic, while the selected production tier is actually rendered and submitted. App-to-`xrEndFrame` 10-bit is proven only when decoder/AHardwareBuffer evidence, all 6 Valve source swapchains, reconstruction attachments, final swapchains, submitted rectangles, and matching successful `xrEndFrame` agree on 10-bit. Successful above-cap submission proves runtime acceptance but not private-compositor or panel sampling. The single supported collector performs the palm hidden-visible-hidden test and records visual equality against the normal 3-projection + display-ready-overlay reference. Static validation does not replace an exact-build headset capture.
+The output is still Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. It fails open when the extension, Surface, view space, layer budget, exact topology, or buffer post is unavailable. The collector validates the untouched source topology, the Android-surface producer, successful `xrEndFrame`, the palm hidden-visible-hidden test, and visual equality against the normal 3-projection + display-ready-overlay reference. Source RGB10_A2 is reported separately; it does not prove private-compositor or panel precision.
 
-The former efficient API-layer, native sRGB-only hook, and native CPU-optimized dual-format patches are removed. Their mode and native-library identities remain reserved only for stale decoded-APK cleanup and fail-closed mixed-hook detection. Their bundled helpers and implicit-layer manifest are no longer shipped.
+The former reconstruction, native-hook, quad-view, permission-matrix, and alternate projection telemetry payloads are removed. Their identities remain reserved only for stale decoded-APK cleanup.
 
 ---
 
@@ -343,10 +338,10 @@ This intentionally preserves the native builds' requested extensions and vendor 
 
 | APK artifact | Patches that write to it |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block), `xrNativeSingleProjectionResolutionProbePatch` (exact 5002322 native hook) |
+| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrNativeSingleProjectionResolutionProbePatch`, `changePackageNamePatch` |
-| `lib/arm64-v8a/libgxr_nspp.so` | `xrNativeSingleProjectionResolutionProbePatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrAndroidSurfaceTriggerPatch`, `changePackageNamePatch` |
+| `lib/arm64-v8a/libgxr_ast.so` | `xrAndroidSurfaceTriggerPatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

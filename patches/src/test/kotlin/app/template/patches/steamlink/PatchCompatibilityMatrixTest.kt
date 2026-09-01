@@ -12,7 +12,7 @@ import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
-import app.template.patches.steamlink.androidxr.xrNativeSingleProjectionResolutionProbePatch
+import app.template.patches.steamlink.androidxr.xrAndroidSurfaceTriggerPatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -43,10 +43,10 @@ class PatchCompatibilityMatrixTest {
         latestExcluded.forEach { patch ->
             assertFalse(patch.supports("2.0.22", 5002322), "${patch.name} on 5002322")
         }
-        assertTrue(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002322))
-        assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002318))
-        assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002244))
-        assertFalse(xrNativeSingleProjectionResolutionProbePatch.default)
+        assertTrue(xrAndroidSurfaceTriggerPatch.supports("2.0.22", 5002322))
+        assertFalse(xrAndroidSurfaceTriggerPatch.supports("2.0.22", 5002318))
+        assertFalse(xrAndroidSurfaceTriggerPatch.supports("2.0.22", 5002244))
+        assertFalse(xrAndroidSurfaceTriggerPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -69,7 +69,7 @@ class PatchCompatibilityMatrixTest {
             (allowedNativeXr + excludedNativeXr).forEach { patch ->
                 assertTrue(patch.supports("2.0.20", versionCode), "${patch.name} on $versionCode")
             }
-            assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.20", versionCode))
+            assertFalse(xrAndroidSurfaceTriggerPatch.supports("2.0.20", versionCode))
         }
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertFalse(patch.supports("2.0.22", 5001712), "${patch.name} on wrong versionName")
@@ -107,7 +107,7 @@ class PatchCompatibilityMatrixTest {
         listOf(
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
-            xrNativeSingleProjectionResolutionProbePatch,
+            xrAndroidSurfaceTriggerPatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
         }
@@ -157,7 +157,7 @@ class PatchCompatibilityMatrixTest {
             deviceIdentityPatch,
             oledCalibrationPatch,
         ) + listOf(
-            xrNativeSingleProjectionResolutionProbePatch,
+            xrAndroidSurfaceTriggerPatch,
         )
 
         val latestExcluded = excludedNativeXr + listOf(

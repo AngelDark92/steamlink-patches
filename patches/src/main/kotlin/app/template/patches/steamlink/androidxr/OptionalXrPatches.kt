@@ -9,6 +9,7 @@ import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322_
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.io.File
+import java.security.MessageDigest
 
 private val unrestrictedBatteryManifestPatch = resourcePatch {
     finalize {
@@ -26,28 +27,6 @@ private val unrestrictedBatteryManifestPatch = resourcePatch {
                 manifest.insertBefore(element, app)
             }
         }
-    }
-}
-
-private val appearOnTopDiagnosticResourcesPatch = rawResourcePatch {
-    execute {
-        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
-            return@execute
-        }
-        val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
-        val libDir = sceneFile.parentFile!!
-        val apkRoot = sceneFile.parentFile!!.parentFile!!.parentFile!!
-        val layerDir = File(apkRoot, "assets/openxr/1/api_layers/implicit.d")
-        layerDir.mkdirs()
-        File(libDir, "libgxr_pst.so").writeBytes(projectionModeResource("libgxr_pst.so"))
-        File(
-            layerDir,
-            "XR_APILAYER_local_GalaxyXR_permission_surface_trace_v1.json",
-        ).writeBytes(
-            projectionModeResource(
-                "XR_APILAYER_local_GalaxyXR_permission_surface_trace_v1.json",
-            ),
-        )
     }
 }
 
@@ -83,29 +62,6 @@ private val appearOnTopManifestPatch = resourcePatch {
                 manifest.insertBefore(element, app)
             }
 
-            if (packageMetadata.versionName == "2.0.22" &&
-                packageMetadata.versionCode == "5002322"
-            ) {
-                val receiverName = "com.valvesoftware.steamlink.GxrOverlayDiagnosticReceiver"
-                val receiverExists = (0 until app.getElementsByTagName("receiver").length)
-                    .mapNotNull { app.getElementsByTagName("receiver").item(it) as? Element }
-                    .any { it.getAttribute("android:name") == receiverName }
-                if (!receiverExists) {
-                    val receiver = document.createElement("receiver")
-                    receiver.setAttribute("android:name", receiverName)
-                    receiver.setAttribute("android:exported", "true")
-                    receiver.setAttribute("android:permission", "android.permission.DUMP")
-                    val filter = document.createElement("intent-filter")
-                    val action = document.createElement("action")
-                    action.setAttribute(
-                        "android:name",
-                        "com.valvesoftware.steamlinkvr.GXR_OVERLAY_DIAGNOSTIC",
-                    )
-                    filter.appendChild(action)
-                    receiver.appendChild(filter)
-                    app.appendChild(receiver)
-                }
-            }
         }
     }
 }
@@ -113,7 +69,7 @@ private val appearOnTopManifestPatch = resourcePatch {
 @Suppress("unused")
 val appearOnTopPatch = bytecodePatch(
     name = "Appear on top",
-    description = "Adds SYSTEM_ALERT_WINDOW and the compositor signal window; build 5002322 also gets passive pass-through telemetry and shell-protected surface controls.",
+    description = "Adds SYSTEM_ALERT_WINDOW and the compositor signal window.",
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
@@ -121,11 +77,18 @@ val appearOnTopPatch = bytecodePatch(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
         appearOnTopManifestPatch,
-        appearOnTopDiagnosticResourcesPatch,
     )
 }
 
 private const val FOVEA_QUADS_MODE = "single_projection_fovea_quads_v1"
+internal const val ANDROID_SURFACE_TRIGGER_MODE = "android_surface_trigger_passthrough_v1"
+internal const val ANDROID_SURFACE_TRIGGER_LIBRARY = "libgxr_ast.so"
+internal const val ANDROID_SURFACE_TRIGGER_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json"
+internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
+    "android-surface-trigger-passthrough-v1.0-20260901"
+internal const val ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256 =
+    "e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -134,9 +97,9 @@ private data class ProjectionModeResources(
 
 private val activeProjectionModes = listOf(
     ProjectionModeResources(
-        NATIVE_SINGLE_PROJECTION_PROBE_MODE,
-        NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
-        null,
+        ANDROID_SURFACE_TRIGGER_MODE,
+        ANDROID_SURFACE_TRIGGER_LIBRARY,
+        ANDROID_SURFACE_TRIGGER_MANIFEST,
     ),
 )
 
@@ -157,16 +120,23 @@ private val retiredProjectionModes = setOf(
     "single_projection_reconstruction_efficient_v1",
     "single_projection_native_renderer_v1",
     "single_projection_native_renderer_dual_v1",
-    NATIVE_QUAD_VIEW_MODE,
-    NATIVE_DUAL_QUAD_VIEW_MODE,
+    "single_projection_native_probe_v1",
+    "single_projection_native_quad_zero_copy_v1",
+    "single_projection_native_quad_zero_copy_dual_v1",
+    "permission_surface_trace_v1",
 )
 private val retiredProjectionLibraries = setOf(
     "libgxr_single_projection_reconstruction_efficient_v1.so",
     "libgxr_nsp.so",
     "libgxr_nspd.so",
-    NATIVE_QUAD_VIEW_LIBRARY,
-    NATIVE_DUAL_QUAD_VIEW_LIBRARY,
+    "libgxr_nspp.so",
+    "libgxr_nqv.so",
+    "libgxr_nqvd.so",
+    "libgxr_pst.so",
 )
+
+private fun ByteArray.sha256(): String =
+    MessageDigest.getInstance("SHA-256").digest(this).joinToString("") { "%02x".format(it) }
 
 private fun projectionModeResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
@@ -246,18 +216,28 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
     metadata.setAttribute("android:value", requestedMode)
 }
 
-private fun nativeProjectionHelperPatch(mode: String, library: String) = rawResourcePatch {
+private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
     execute {
         if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
             return@execute
         }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
-        val sceneBytes = sceneFile.readBytes()
-        val patchedScene = patchNativeSingleProjectionRenderer(sceneBytes, library)
-        val helperBytes = projectionModeResource(library)
+        val sceneSha256 = sceneFile.readBytes().sha256()
+        if (sceneSha256 != ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256) {
+            throw PatchException(
+                "Android-surface trigger requires pristine Steam Link 5002322 " +
+                    "libvrlink_scene.so sha256=$ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256, " +
+                    "found=$sceneSha256. Rebuild from the original APK; retired native-hook " +
+                    "patches cannot be migrated safely in place.",
+            )
+        }
+        val helperBytes = projectionModeResource(ANDROID_SURFACE_TRIGGER_LIBRARY)
         if (helperBytes.size < 4 || !helperBytes.copyOfRange(0, 4)
                 .contentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))) {
-            throw PatchException("Bundled native projection helper is not an ELF library: $library")
+            throw PatchException(
+                "Bundled Android-surface trigger is not an ELF library: " +
+                    ANDROID_SURFACE_TRIGGER_LIBRARY,
+            )
         }
         val libDir = sceneFile.parentFile!!
         val apkRoot = sceneFile.parentFile!!.parentFile!!.parentFile!!
@@ -265,33 +245,27 @@ private fun nativeProjectionHelperPatch(mode: String, library: String) = rawReso
         installProjectionModeResources(
             libDir,
             layerDir,
-            activeProjectionModes.first { it.mode == mode },
+            activeProjectionModes.single(),
         )
-        if (!patchedScene.contentEquals(sceneBytes)) sceneFile.writeBytes(patchedScene)
     }
 }
 
-private val nativeSingleProjectionProbeLayerPatch = nativeProjectionHelperPatch(
-    NATIVE_SINGLE_PROJECTION_PROBE_MODE,
-    NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
-)
-
 @Suppress("unused")
-val xrNativeSingleProjectionResolutionProbePatch = resourcePatch(
-    name = "Experimental Native Single-Projection Resolution + 10-bit Probe",
-    description = "5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame.",
+val xrAndroidSurfaceTriggerPatch = resourcePatch(
+    name = "Experimental Android-Surface Trigger (3-Projection Passthrough)",
+    description = "5002322-only permission-free experiment. Preserves Valve's 3 projection layers and appends a nearly invisible 2x2 Android-surface quad to test the Galaxy XR high-quality compositor path.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
-        nativeSingleProjectionProbeLayerPatch,
+        androidSurfaceTriggerResourcesPatch,
     )
 
     finalize {
         document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, NATIVE_SINGLE_PROJECTION_PROBE_MODE)
+            configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
         }
     }
 }
