@@ -1,3 +1,9 @@
+## [1.10.1-dev.19](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.18...v1.10.1-dev.19) (2026-09-01)
+
+### 🐛 Bug Fixes
+
+* new diagnostics patched into apks ([1c476a9](https://github.com/AngelDark92/steamlink-patches/commit/1c476a9fedddfe33dae5a3b3effa3d61c112be1a))
+
 ## [1.10.1-dev.18](https://github.com/AngelDark92/steamlink-patches/compare/v1.10.1-dev.17...v1.10.1-dev.18) (2026-08-31)
 
 ### 🐛 Bug Fixes
