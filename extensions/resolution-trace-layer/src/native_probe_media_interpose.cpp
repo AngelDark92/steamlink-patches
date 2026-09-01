@@ -20,7 +20,7 @@ namespace {
 
 constexpr char kLogTag[] = "GXRResolutionTrace";
 constexpr char kModeName[] = "single_projection_native_probe_v1";
-constexpr char kBuildId[] = "single-projection-native-probe-v1.0-20260831";
+constexpr char kBuildId[] = "single-projection-native-probe-v1.2-20260831";
 
 std::atomic<uint64_t> configureCalls{0};
 std::atomic<uint64_t> dequeueCalls{0};

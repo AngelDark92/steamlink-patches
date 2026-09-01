@@ -124,8 +124,13 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
 | `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves stock 5002318/5002322 target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config |
-| Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, and `GxrResolutionProbe`; contains no SDL/controller class fragments |
+| Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, `GxrOverlayDiagnosticReceiver`, and `GxrResolutionProbe`; contains no SDL/controller class fragments. The receiver is manifest-exposed only on exact build 5002322. |
 | `SteamLink` lifecycle methods | Adds the overlay/resolution probe calls without modifying `SDLSurface`, `SDLControllerManager`, or generic-motion routing |
+| `AndroidManifest.xml` receiver | On exact build 5002322, adds an exported receiver protected by platform `android.permission.DUMP`; privileged ADB/system senders can select removed, attached-hidden, visible-transparent, or reset diagnostic states. Ordinary apps cannot invoke it. |
+| `lib/arm64-v8a/libgxr_pst.so` | On exact build 5002322, adds a passive permission-versus-surface OpenXR trace. It never enables an extension Valve omitted, samples current view/swapchain contracts, records session state, `shouldRender`, enabled recommended-resolution events, original layer order and image rectangles, then calls downstream functions with Valve's original inputs unchanged. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_permission_surface_trace_v1.json` | On exact build 5002322, registers the passive trace; disable environment is `GXR_DISABLE_PERMISSION_SURFACE_TRACE`. |
+
+The pass-through trace and controller support the 5-phase ordinary-3-projection diagnostic. They are not selectable projection experiments and perform no reconstruction or layer-count change.
 
 ---
 
@@ -138,48 +143,8 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 
 ---
 
-### Experimental Single Projection Reconstruction Efficient
-**Default: disabled; 5002322 only** — do not combine with `Appear on top`
-
-| Artifact | Edit |
-|---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds one direct `VRLink` unmanaged Full Space property, and sets `GXR_RESOLUTION_MODE=single_projection_reconstruction_efficient_v1` |
-| `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` | Recognizes Steam Link's exact three-projection stream and submits 1 opaque stereo sRGB projection. v1.1 replaced the earlier 4-sample box with 1 centered bilinear foveal sample. v1.2 saves, disables, and restores fixed-function `GL_DITHER` around reconstruction so the new draw cannot add GLES fixed-function dithering independently of Valve's Video dither option; telemetry records whether the inherited bit was actually enabled. When `XR_FB_composition_layer_settings` is advertised, it requests both quality supersampling and quality sharpening. It retains 2 scratch textures, cached immutable GL/FOV state, synchronization, repeated-image reuse, and 30-frame success summaries. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json` | Registers the efficient reconstruction layer with a separate v1 identity |
-
-The accepted capture requested about 3745x4048 per eye to preserve the 1536-square foveal source density, but Galaxy XR advertised a maximum submitted view rectangle of 3152x3682. The user now reports that this lower resolution is plainly visible against the granted-overlay control. v1.4 therefore tries 3 guarded output tiers: density-preserving request, Galaxy XR panel-native 3552x3840, then the advertised maximum. Allocation/enumeration rejection falls through atomically. A recoverable oversized `xrEndFrame` rejection discards that frame, permanently advances to the next tier for the session, and never retries the same frame. The first 2 tiers intentionally probe behavior beyond the advertised OpenXR view-rectangle maximum; successful submission is required before either can be treated as accepted. When available, `XR_ANDROID_recommended_resolution` is enabled; its event re-enumerates view limits and safely recreates outputs on the next frame, but it cannot request a higher maximum.
-
----
-
-### Experimental Native Single Projection Renderer Hook
-**Default: disabled; 5002322 only** — mutually exclusive with the efficient API-layer patch; do not combine with `Appear on top`
-
-| Artifact | Exact guarded edit |
-|---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` | Requires the 2,283,400-byte 5002322 layout and unique build ID `585d88d646a8c6efe94bdd9fc6c9dbbc68fc13ba`. At file offset `0x69635`, replaces the 20-byte `libopenxr_loader.so` dependency string with padded `libgxr_nsp.so`; the helper retains a real `DT_NEEDED` on the original loader. |
-| `libvrlink_scene.so` dynamic symbol at `0x3EB5E` | Replaces the unique padded `xrRequestExitSession` name with `gxrEndFrame`, repurposing that import slot without changing ELF table sizes. |
-| `libvrlink_scene.so` instruction at `0x11AA7C` | Replaces stock AArch64 `f1 f9 03 94` with `55 fe 03 94`, routing only the streaming `xrEndFrame` call to the repurposed PLT entry. All three sites must be uniformly stock or uniformly patched; mixed and unknown layouts fail closed. |
-| `lib/arm64-v8a/libgxr_nsp.so` | Injected helper that interposes the OpenXR calls needed to observe swapchain contents and runs the same centered-sample reconstruction at the exact streaming return address. v1.2 resolves loader symbols and scene callsites once, uses generation-checked fixed source bindings, caches validated FOV topology, and aggregates normal telemetry every 900 frames. The original request-exit caller at return offset `0x142064` is forwarded to the real loader; unexpected callsites fail closed. |
-
-This is a native-hook A/B of the interception boundary, not a rewrite of Valve's renderer and not proof that Valve directly renders one projection. Steam Link still produces its original three projections; the helper receives them at the renderer's final `xrEndFrame` call and reconstructs one projection without registering an implicit API layer. Native helper v1.4 retains fixed-function `GL_DITHER` isolation, uses the same guarded 3-tier output selection, and handles Android XR recommended-resolution changes. The pristine scene reference SHA-256 is `e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f`; exact size, build ID, and per-site bytes remain the operative guards so other independently guarded 5002322 edits can coexist.
-
----
-
-### Experimental Native Reconstruction CPU Optimized 8/10-bit
-**Default: disabled; 5002322 only** — mutually exclusive with every other projection experiment; do not combine with `Appear on top`
-
-| Artifact | Exact guarded edit |
-|---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=single_projection_native_renderer_dual_v1` |
-| `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nspd.so`; every sibling helper is rejected. |
-| `lib/arm64-v8a/libgxr_nspd.so` | CPU-optimized native reconstruction helper. It accepts only 6 uniform `GL_SRGB8_ALPHA8` or 6 uniform `GL_RGB10_A2` source swapchains, then uses that same format for both MSAA resolve textures and both final projection swapchains. It does not force 10-bit or add a separate precision option. |
-
-The Valve source format remains controlled by the existing Video output precision path. Mixed formats, unsupported formats, missing output-format advertisement, EGL, GL, or synchronization failures safely reject reconstruction. Output allocation instead walks the same density-preserving, panel-native, and advertised-maximum tiers and refreshes them after Android XR recommended-resolution events. The helper uses high-precision samplers and adds no transfer-function conversion: sRGB8 keeps the GLES sRGB decode/encode path, while RGB10_A2 stays linear. Static validation does not prove the decoder, Valve source swapchains, final runtime swapchains, compositor, or display path are genuinely 10-bit.
-
----
-
 ### Experimental Native Single-Projection Resolution + 10-bit Probe
-**Default: disabled; 5002322 only** — mutually exclusive with every other projection experiment; do not combine with `Appear on top`
+**Default: disabled; 5002322 only** — sole supported projection experiment; do not combine with `Appear on top`
 
 | Artifact | Exact guarded edit |
 |---|---|
@@ -187,7 +152,9 @@ The Valve source format remains controlled by the existing Video output precisio
 | `lib/arm64-v8a/libvrlink_scene.so` | Reuses the exact 5002322 atomic native-hook guards and selects padded `libgxr_nspp.so`; every sibling helper, including retired quad helpers, is rejected. |
 | `lib/arm64-v8a/libgxr_nspp.so` | CPU-optimized, dual-format native stereo reconstruction plus bounded diagnostics. It records view limits and density requests, allocation-only above-cap trials, foveation capabilities, all 6 source contracts, actual GLES attachment component sizes, final rectangles/format/topology, `xrEndFrame`, decoder output-format changes, and AHardwareBuffer dimensions/format/usage/stride. It records no pixels. |
 
-The output remains 1 projection with 2 views. v1.2 first tries the density-preserving size, then panel-native 3552x3840, then the runtime-reported maximum, and re-enumerates after Android XR recommended-resolution events. Separate allocation-only candidates remain diagnostic, while the selected production tier is actually rendered and submitted. App-side 10-bit is proven only when decoder/AHardwareBuffer evidence, all 6 Valve source swapchains, reconstruction attachments, final swapchains, submitted rectangles, and matching successful `xrEndFrame` agree on 10-bit. Successful above-cap submission proves runtime acceptance but not private-compositor or panel sampling. Static validation does not replace an exact-build headset capture.
+The output remains 1 projection with 2 views. v1.2 first tries the density-preserving size, then panel-native 3552x3840, then the runtime-reported maximum, and re-enumerates after Android XR recommended-resolution events. Separate allocation-only candidates remain diagnostic, while the selected production tier is actually rendered and submitted. App-to-`xrEndFrame` 10-bit is proven only when decoder/AHardwareBuffer evidence, all 6 Valve source swapchains, reconstruction attachments, final swapchains, submitted rectangles, and matching successful `xrEndFrame` agree on 10-bit. Successful above-cap submission proves runtime acceptance but not private-compositor or panel sampling. The single supported collector performs the palm hidden-visible-hidden test and records visual equality against the normal 3-projection + display-ready-overlay reference. Static validation does not replace an exact-build headset capture.
+
+The former efficient API-layer, native sRGB-only hook, and native CPU-optimized dual-format patches are removed. Their mode and native-library identities remain reserved only for stale decoded-APK cleanup and fail-closed mixed-hook detection. Their bundled helpers and implicit-layer manifest are no longer shipped.
 
 ---
 
@@ -376,10 +343,10 @@ This intentionally preserves the native builds' requested extensions and vendor 
 
 | APK artifact | Patches that write to it |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
+| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block), `xrNativeSingleProjectionResolutionProbePatch` (exact 5002322 native hook) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrEfficientSingleProjectionReconstructionPatch`, `changePackageNamePatch` |
-| `lib/arm64-v8a/libgxr_single_projection_reconstruction_efficient_v1.so` + matching implicit-layer JSON | `xrEfficientSingleProjectionReconstructionPatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrNativeSingleProjectionResolutionProbePatch`, `changePackageNamePatch` |
+| `lib/arm64-v8a/libgxr_nspp.so` | `xrNativeSingleProjectionResolutionProbePatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

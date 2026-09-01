@@ -28,30 +28,19 @@
 
 #define GXR_EXPORT extern "C" __attribute__((visibility("default")))
 #ifndef GXR_LAYER_NAME
-#define GXR_LAYER_NAME "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1"
+#define GXR_LAYER_NAME "libgxr_nspp"
+#endif
+#if !defined(GXR_NATIVE_RENDERER_HELPER) || !defined(GXR_NATIVE_DUAL_FORMAT) || !defined(GXR_DIAGNOSTIC_PROBE)
+#error "This source now builds only the native single-projection resolution and 10-bit Probe"
 #endif
 
 namespace {
 
 constexpr char kLayerName[] = GXR_LAYER_NAME;
 constexpr char kLogTag[] = "GXRResolutionTrace";
-#if defined(GXR_NATIVE_RENDERER_HELPER) && defined(GXR_NATIVE_DUAL_FORMAT) && defined(GXR_DIAGNOSTIC_PROBE)
 constexpr char kModeName[] = "single_projection_native_probe_v1";
 constexpr char kBuildId[] = "single-projection-native-probe-v1.2-20260831";
 constexpr uint64_t kSuccessSummaryInterval = 900;
-#elif defined(GXR_NATIVE_RENDERER_HELPER) && defined(GXR_NATIVE_DUAL_FORMAT)
-constexpr char kModeName[] = "single_projection_native_renderer_dual_v1";
-constexpr char kBuildId[] = "single-projection-native-renderer-dual-v1.2-20260831";
-constexpr uint64_t kSuccessSummaryInterval = 900;
-#elif defined(GXR_NATIVE_RENDERER_HELPER)
-constexpr char kModeName[] = "single_projection_native_renderer_v1";
-constexpr char kBuildId[] = "single-projection-native-renderer-v1.4-20260831";
-constexpr uint64_t kSuccessSummaryInterval = 900;
-#else
-constexpr char kModeName[] = "single_projection_reconstruction_efficient_v1";
-constexpr char kBuildId[] = "single-projection-reconstruction-efficient-v1.4-20260831";
-constexpr uint64_t kSuccessSummaryInterval = 30;
-#endif
 constexpr uint32_t kSourceExtent = 1536;
 constexpr uint32_t kGalaxyXrPanelWidth = 3552;
 constexpr uint32_t kGalaxyXrPanelHeight = 3840;

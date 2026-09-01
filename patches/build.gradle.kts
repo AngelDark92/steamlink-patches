@@ -98,6 +98,7 @@ val assembleMinimalExtension by tasks.registering(JavaExec::class) {
     val smaliSources = fileTree(smaliSrcDir) {
         include("com/valvesoftware/steamlink/GalaxyXRPermissionActivity.smali")
         include("com/valvesoftware/steamlink/GxrOverlayBridge.smali")
+        include("com/valvesoftware/steamlink/GxrOverlayDiagnosticReceiver.smali")
         include("com/valvesoftware/steamlink/GxrResolutionProbe.smali")
     }
     val outputFile = minimalExtensionOutputDir.map { it.file("extensions/minimal-extension.mpe") }

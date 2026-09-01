@@ -9,13 +9,10 @@ import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.xrDirectInputFixPatch
 import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
-import app.template.patches.steamlink.androidxr.xrEfficientSingleProjectionReconstructionPatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
-import app.template.patches.steamlink.androidxr.xrNativeDualFormatSingleProjectionRendererPatch
 import app.template.patches.steamlink.androidxr.xrNativeSingleProjectionResolutionProbePatch
-import app.template.patches.steamlink.androidxr.xrNativeSingleProjectionRendererPatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
 import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
@@ -46,23 +43,10 @@ class PatchCompatibilityMatrixTest {
         latestExcluded.forEach { patch ->
             assertFalse(patch.supports("2.0.22", 5002322), "${patch.name} on 5002322")
         }
-        assertTrue(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002322))
-        assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002318))
-        assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.22", 5002244))
-        assertFalse(xrEfficientSingleProjectionReconstructionPatch.default)
-        assertTrue(xrNativeSingleProjectionRendererPatch.supports("2.0.22", 5002322))
-        assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.22", 5002318))
-        assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.22", 5002244))
-        assertFalse(xrNativeSingleProjectionRendererPatch.default)
-        listOf(
-            xrNativeDualFormatSingleProjectionRendererPatch,
-            xrNativeSingleProjectionResolutionProbePatch,
-        ).forEach { patch ->
-            assertTrue(patch.supports("2.0.22", 5002322), patch.name)
-            assertFalse(patch.supports("2.0.22", 5002318), patch.name)
-            assertFalse(patch.supports("2.0.22", 5002244), patch.name)
-            assertFalse(patch.default, patch.name)
-        }
+        assertTrue(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002322))
+        assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002318))
+        assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.22", 5002244))
+        assertFalse(xrNativeSingleProjectionResolutionProbePatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,
@@ -85,9 +69,6 @@ class PatchCompatibilityMatrixTest {
             (allowedNativeXr + excludedNativeXr).forEach { patch ->
                 assertTrue(patch.supports("2.0.20", versionCode), "${patch.name} on $versionCode")
             }
-            assertFalse(xrEfficientSingleProjectionReconstructionPatch.supports("2.0.20", versionCode))
-            assertFalse(xrNativeSingleProjectionRendererPatch.supports("2.0.20", versionCode))
-            assertFalse(xrNativeDualFormatSingleProjectionRendererPatch.supports("2.0.20", versionCode))
             assertFalse(xrNativeSingleProjectionResolutionProbePatch.supports("2.0.20", versionCode))
         }
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
@@ -126,9 +107,6 @@ class PatchCompatibilityMatrixTest {
         listOf(
             appearOnTopPatch,
             unrestrictedBatteryUsagePatch,
-            xrEfficientSingleProjectionReconstructionPatch,
-            xrNativeSingleProjectionRendererPatch,
-            xrNativeDualFormatSingleProjectionRendererPatch,
             xrNativeSingleProjectionResolutionProbePatch,
         ).forEach { patch ->
             assertTrue(xrLauncherBootstrapPatch in patch.dependencyClosure(), patch.name)
@@ -179,9 +157,6 @@ class PatchCompatibilityMatrixTest {
             deviceIdentityPatch,
             oledCalibrationPatch,
         ) + listOf(
-            xrEfficientSingleProjectionReconstructionPatch,
-            xrNativeSingleProjectionRendererPatch,
-            xrNativeDualFormatSingleProjectionRendererPatch,
             xrNativeSingleProjectionResolutionProbePatch,
         )
 

@@ -146,12 +146,13 @@
     },
     {
       "name": "Appear on top",
-      "description": "Adds SYSTEM_ALERT_WINDOW to the manifest so GalaxyXRPermissionActivity can request overlay permission at startup.",
+      "description": "Adds SYSTEM_ALERT_WINDOW and the compositor signal window; build 5002322 also gets passive pass-through telemetry and shell-protected surface controls.",
       "default": true,
       "dependencies": [
         "ResourcePatch",
         "ResourcePatch",
-        "ResourcePatch"
+        "ResourcePatch",
+        "RawResourcePatch"
       ],
       "compatiblePackages": [
         {

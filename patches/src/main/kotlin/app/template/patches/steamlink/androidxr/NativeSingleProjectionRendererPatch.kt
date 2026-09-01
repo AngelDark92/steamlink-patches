@@ -2,12 +2,8 @@ package app.template.patches.steamlink.androidxr
 
 import app.morphe.patcher.patch.PatchException
 
-internal const val NATIVE_SINGLE_PROJECTION_MODE = "single_projection_native_renderer_v1"
-internal const val NATIVE_SINGLE_PROJECTION_LIBRARY = "libgxr_nsp.so"
 internal const val NATIVE_QUAD_VIEW_MODE = "single_projection_native_quad_zero_copy_v1"
 internal const val NATIVE_QUAD_VIEW_LIBRARY = "libgxr_nqv.so"
-internal const val NATIVE_DUAL_SINGLE_PROJECTION_MODE = "single_projection_native_renderer_dual_v1"
-internal const val NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY = "libgxr_nspd.so"
 internal const val NATIVE_DUAL_QUAD_VIEW_MODE = "single_projection_native_quad_zero_copy_dual_v1"
 internal const val NATIVE_DUAL_QUAD_VIEW_LIBRARY = "libgxr_nqvd.so"
 internal const val NATIVE_SINGLE_PROJECTION_PROBE_MODE = "single_projection_native_probe_v1"
@@ -30,11 +26,11 @@ private val PATCHED_REQUEST_EXIT_SYMBOL = paddedAscii("gxrEndFrame", STOCK_REQUE
 private val STOCK_STREAM_END_FRAME_CALL = byteArrayOf(0xF1.toByte(), 0xF9.toByte(), 0x03, 0x94.toByte())
 private val PATCHED_STREAM_END_FRAME_CALL = byteArrayOf(0x55, 0xFE.toByte(), 0x03, 0x94.toByte())
 private val ACTIVE_NATIVE_HELPER_LIBRARIES = listOf(
-    NATIVE_SINGLE_PROJECTION_LIBRARY,
-    NATIVE_DUAL_SINGLE_PROJECTION_LIBRARY,
     NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
 )
 private val RETIRED_NATIVE_HELPER_LIBRARIES = listOf(
+    "libgxr_nsp.so",
+    "libgxr_nspd.so",
     NATIVE_QUAD_VIEW_LIBRARY,
     NATIVE_DUAL_QUAD_VIEW_LIBRARY,
 )
@@ -99,7 +95,7 @@ private val NATIVE_HOOK_STRUCTURAL_GUARDS = listOf(
 
 internal fun patchNativeSingleProjectionRenderer(
     bytes: ByteArray,
-    targetLibrary: String = NATIVE_SINGLE_PROJECTION_LIBRARY,
+    targetLibrary: String,
 ): ByteArray {
     if (targetLibrary !in ACTIVE_NATIVE_HELPER_LIBRARIES) {
         throw PatchException("Unsupported native projection helper: $targetLibrary")

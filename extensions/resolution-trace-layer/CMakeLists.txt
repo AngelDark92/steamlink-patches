@@ -17,22 +17,20 @@ if(NOT EXISTS "${OPENXR_SDK_SOURCE_DIR}/include/openxr/openxr.h")
     message(FATAL_ERROR "Set OPENXR_SDK_SOURCE_DIR to the bundled OpenXR-SDK 1.1.61 checkout")
 endif()
 
-add_library(gxr_single_projection_reconstruction_efficient_v1 SHARED
-    src/single_projection_reconstruction_efficient_layer.cpp
+add_library(gxr_permission_surface_trace_v1 SHARED
+    src/permission_surface_trace_layer.cpp
 )
-target_include_directories(gxr_single_projection_reconstruction_efficient_v1 PRIVATE
+target_include_directories(gxr_permission_surface_trace_v1 PRIVATE
     "${OPENXR_SDK_SOURCE_DIR}/include"
 )
-target_compile_definitions(gxr_single_projection_reconstruction_efficient_v1 PRIVATE
+target_compile_definitions(gxr_permission_surface_trace_v1 PRIVATE
     XR_USE_PLATFORM_ANDROID
-    XR_USE_GRAPHICS_API_OPENGL_ES
-    GXR_LAYER_NAME="XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1"
 )
-target_link_libraries(gxr_single_projection_reconstruction_efficient_v1 PRIVATE log EGL GLESv3)
-set_target_properties(gxr_single_projection_reconstruction_efficient_v1 PROPERTIES
+target_link_libraries(gxr_permission_surface_trace_v1 PRIVATE log)
+set_target_properties(gxr_permission_surface_trace_v1 PROPERTIES
     CXX_VISIBILITY_PRESET hidden
     VISIBILITY_INLINES_HIDDEN YES
-    OUTPUT_NAME gxr_single_projection_reconstruction_efficient_v1
+    OUTPUT_NAME gxr_pst
 )
 
 if(NOT OPENXR_LOADER_LIBRARY)
@@ -42,51 +40,6 @@ if(NOT OPENXR_LOADER_LIBRARY)
     endif()
 endif()
 if(EXISTS "${OPENXR_LOADER_LIBRARY}")
-    add_library(gxr_single_projection_native_renderer_v1 SHARED
-        src/single_projection_reconstruction_efficient_layer.cpp
-    )
-    target_include_directories(gxr_single_projection_native_renderer_v1 PRIVATE
-        "${OPENXR_SDK_SOURCE_DIR}/include"
-    )
-    target_compile_definitions(gxr_single_projection_native_renderer_v1 PRIVATE
-        XR_USE_PLATFORM_ANDROID
-        XR_USE_GRAPHICS_API_OPENGL_ES
-        GXR_NATIVE_RENDERER_HELPER
-        GXR_LAYER_NAME="libgxr_nsp"
-    )
-    target_link_options(gxr_single_projection_native_renderer_v1 PRIVATE "-Wl,--no-as-needed")
-    target_link_libraries(gxr_single_projection_native_renderer_v1 PRIVATE
-        log EGL GLESv3 dl "${OPENXR_LOADER_LIBRARY}"
-    )
-    set_target_properties(gxr_single_projection_native_renderer_v1 PROPERTIES
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN YES
-        OUTPUT_NAME gxr_nsp
-    )
-
-    add_library(gxr_single_projection_native_renderer_dual_v1 SHARED
-        src/single_projection_reconstruction_efficient_layer.cpp
-    )
-    target_include_directories(gxr_single_projection_native_renderer_dual_v1 PRIVATE
-        "${OPENXR_SDK_SOURCE_DIR}/include"
-    )
-    target_compile_definitions(gxr_single_projection_native_renderer_dual_v1 PRIVATE
-        XR_USE_PLATFORM_ANDROID
-        XR_USE_GRAPHICS_API_OPENGL_ES
-        GXR_NATIVE_RENDERER_HELPER
-        GXR_NATIVE_DUAL_FORMAT
-        GXR_LAYER_NAME="libgxr_nspd"
-    )
-    target_link_options(gxr_single_projection_native_renderer_dual_v1 PRIVATE "-Wl,--no-as-needed")
-    target_link_libraries(gxr_single_projection_native_renderer_dual_v1 PRIVATE
-        log EGL GLESv3 dl "${OPENXR_LOADER_LIBRARY}"
-    )
-    set_target_properties(gxr_single_projection_native_renderer_dual_v1 PROPERTIES
-        CXX_VISIBILITY_PRESET hidden
-        VISIBILITY_INLINES_HIDDEN YES
-        OUTPUT_NAME gxr_nspd
-    )
-
     add_library(gxr_single_projection_native_probe_v1 SHARED
         src/single_projection_reconstruction_efficient_layer.cpp
         src/native_probe_media_interpose.cpp
@@ -116,18 +69,3 @@ else()
         "Native 5002322 hook target disabled: set OPENXR_LOADER_LIBRARY to the exact arm64 libopenxr_loader.so"
     )
 endif()
-
-add_library(gxr_single_projection_fovea_quads_v1 SHARED src/single_projection_fovea_quads_layer.cpp)
-target_include_directories(gxr_single_projection_fovea_quads_v1 PRIVATE
-    "${OPENXR_SDK_SOURCE_DIR}/include"
-)
-target_compile_definitions(gxr_single_projection_fovea_quads_v1 PRIVATE
-    XR_USE_PLATFORM_ANDROID
-    GXR_LAYER_NAME="XR_APILAYER_local_GalaxyXR_single_projection_fovea_quads_v1"
-)
-target_link_libraries(gxr_single_projection_fovea_quads_v1 PRIVATE log)
-set_target_properties(gxr_single_projection_fovea_quads_v1 PROPERTIES
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN YES
-    OUTPUT_NAME gxr_single_projection_fovea_quads_v1
-)

@@ -1,7 +1,6 @@
 package app.template.patches.steamlink.androidxr
 
 import java.io.File
-import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -10,42 +9,7 @@ import kotlin.test.assertTrue
 
 class SingleProjectionReconstructionResourceTest {
     @Test
-    fun `bundled efficient reconstruction preserves its guarded identity and sharp sample`() {
-        val library = checkNotNull(
-            javaClass.getResourceAsStream(
-                "/steamlink/androidxr/libgxr_single_projection_reconstruction_efficient_v1.so",
-            ),
-        ) { "Missing bundled efficient single-projection reconstruction layer" }.use { it.readBytes() }
-        assertTrue(
-            library.size > 4 &&
-                library.copyOfRange(0, 4).contentEquals(byteArrayOf(0x7f, 0x45, 0x4c, 0x46)),
-        )
-        val sha256 = MessageDigest.getInstance("SHA-256")
-            .digest(library)
-            .joinToString("") { "%02x".format(it) }
-        assertEquals(
-            "3028a667223774c6dd62f17dee6c07c5f0f67aed205effd3cd133122d291a319",
-            sha256,
-        )
-        val nativeStrings = library.toString(Charsets.ISO_8859_1)
-        assertTrue(nativeStrings.contains("single-projection-reconstruction-efficient-v1.4-20260831"))
-        assertTrue(nativeStrings.contains("linear_center_1tap"))
-        assertFalse(nativeStrings.contains("linear_4tap_subpixel_box"))
-        assertTrue(nativeStrings.contains("single_projection_reconstruction_success_summary"))
-        assertTrue(nativeStrings.contains("summaryReason"))
-
-        val manifest = checkNotNull(
-            javaClass.getResourceAsStream(
-                "/steamlink/androidxr/XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json",
-            ),
-        ).bufferedReader().use { it.readText() }
-        assertTrue(
-            manifest.contains(
-                "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1",
-            ),
-        )
-        assertTrue(manifest.contains("libgxr_single_projection_reconstruction_efficient_v1.so"))
-
+    fun `probe reconstruction source preserves mapping tiers and sharp sample`() {
         val source = listOf(
             File("extensions/resolution-trace-layer/src/single_projection_reconstruction_efficient_layer.cpp"),
             File("../extensions/resolution-trace-layer/src/single_projection_reconstruction_efficient_layer.cpp"),
@@ -109,40 +73,20 @@ class SingleProjectionReconstructionResourceTest {
     }
 
     @Test
-    fun `removed reconstruction modes are cleanup only`() {
-        val activeModes = listOf(
-            "single_projection_native_renderer_v1",
+    fun `probe is the only active projection mode`() {
+        val probe = "single_projection_native_probe_v1"
+        assertFalse(projectionModesConflict("", probe))
+        assertFalse(projectionModesConflict(probe, probe))
+        listOf(
+            "single_projection_reconstruction_v1",
             "single_projection_reconstruction_efficient_v1",
+            "single_projection_native_renderer_v1",
             "single_projection_native_renderer_dual_v1",
-            "single_projection_native_probe_v1",
-        )
-        activeModes.forEach { existing ->
-            activeModes.forEach { requested ->
-                assertEquals(
-                    existing != requested,
-                    projectionModesConflict(existing, requested),
-                    "$existing versus $requested",
-                )
-            }
+            "two_projection_drop_base_v1",
+            "three_projection_sampler_proxy_v1",
+        ).forEach { retired ->
+            assertFalse(projectionModesConflict(retired, probe), retired)
         }
-        assertFalse(
-            projectionModesConflict(
-                "single_projection_reconstruction_v1",
-                "single_projection_reconstruction_efficient_v1",
-            ),
-        )
-        assertFalse(
-            projectionModesConflict(
-                "two_projection_drop_base_v1",
-                "single_projection_reconstruction_efficient_v1",
-            ),
-        )
-        assertFalse(
-            projectionModesConflict(
-                "three_projection_sampler_proxy_v1",
-                "single_projection_reconstruction_efficient_v1",
-            ),
-        )
     }
 
     @Test
@@ -168,6 +112,10 @@ class SingleProjectionReconstructionResourceTest {
             "XR_APILAYER_local_GalaxyXR_three_projection_sampler_proxy_v1.json",
             "libgxr_nqv.so",
             "libgxr_nqvd.so",
+            "libgxr_nsp.so",
+            "libgxr_nspd.so",
+            "libgxr_single_projection_reconstruction_efficient_v1.so",
+            "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json",
         ).forEach { resource ->
             assertNull(javaClass.getResourceAsStream("/steamlink/androidxr/$resource"), resource)
         }

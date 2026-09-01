@@ -5,6 +5,10 @@
 
 .field private static sWindowManager:Landroid/view/WindowManager;
 
+.field private static sDiagnosticControl:Z
+
+.field private static sCreateVisibility:I
+
 .method public constructor <init>()V
     .locals 0
 
@@ -76,6 +80,18 @@
 
     if-eqz v0, :failed
 
+    sget-boolean v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sDiagnosticControl:Z
+
+    if-eqz v0, :normal_permission_check
+
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->isOverlayAttached()Z
+
+    move-result v0
+
+    return v0
+
+    :normal_permission_check
+
     invoke-static {p0}, Landroid/provider/Settings;->canDrawOverlays(Landroid/content/Context;)Z
 
     move-result v0
@@ -94,6 +110,10 @@
     new-instance v1, Landroid/view/View;
 
     invoke-direct {v1, p0}, Landroid/view/View;-><init>(Landroid/content/Context;)V
+
+    sget v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sCreateVisibility:I
+
+    invoke-virtual {v1, v0}, Landroid/view/View;->setVisibility(I)V
 
     const/high16 v0, 0x1000000
 
@@ -240,6 +260,138 @@
 
     invoke-static {v0, v1}, Landroid/util/Log;->w(Ljava/lang/String;Ljava/lang/String;)I
 
+    const/4 v0, 0x0
+
+    return v0
+.end method
+
+.method public static setDiagnosticState(Landroid/content/Context;Ljava/lang/String;)Z
+    .locals 3
+
+    if-eqz p1, :failed
+
+    const-string v0, "remove"
+
+    invoke-virtual {v0, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v0
+
+    if-eqz v0, :hidden
+
+    const/4 v0, 0x1
+
+    sput-boolean v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sDiagnosticControl:Z
+
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->removeOverlay()Z
+
+    const-string v1, "SteamLinkGXR"
+
+    const-string v2, "Diagnostic overlay state: removed"
+
+    invoke-static {v1, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    return v0
+
+    :hidden
+    const-string v0, "hidden"
+
+    invoke-virtual {v0, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v0
+
+    if-eqz v0, :visible
+
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->removeOverlay()Z
+
+    const/4 v0, 0x4
+
+    sput v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sCreateVisibility:I
+
+    const/4 v0, 0x0
+
+    sput-boolean v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sDiagnosticControl:Z
+
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
+
+    move-result v1
+
+    const/4 v0, 0x1
+
+    sput-boolean v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sDiagnosticControl:Z
+
+    const-string v0, "SteamLinkGXR"
+
+    const-string v2, "Diagnostic overlay state: attached hidden"
+
+    invoke-static {v0, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    return v1
+
+    :visible
+    const-string v0, "visible"
+
+    invoke-virtual {v0, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v0
+
+    if-eqz v0, :reset
+
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->removeOverlay()Z
+
+    const/4 v0, 0x0
+
+    sput v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sCreateVisibility:I
+
+    sput-boolean v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sDiagnosticControl:Z
+
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
+
+    move-result v1
+
+    const/4 v0, 0x1
+
+    sput-boolean v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sDiagnosticControl:Z
+
+    const-string v0, "SteamLinkGXR"
+
+    const-string v2, "Diagnostic overlay state: visible transparent"
+
+    invoke-static {v0, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    return v1
+
+    :reset
+    const-string v0, "reset"
+
+    invoke-virtual {v0, p1}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v0
+
+    if-eqz v0, :failed
+
+    const/4 v0, 0x0
+
+    sput v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sCreateVisibility:I
+
+    sput-boolean v0, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->sDiagnosticControl:Z
+
+    invoke-static {}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->removeOverlay()Z
+
+    invoke-static {p0}, Lcom/valvesoftware/steamlink/GxrOverlayBridge;->ensureOverlay(Landroid/content/Context;)Z
+
+    move-result v0
+
+    const/4 v0, 0x1
+
+    const-string v1, "SteamLinkGXR"
+
+    const-string v2, "Diagnostic overlay state: reset"
+
+    invoke-static {v1, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    return v0
+
+    :failed
     const/4 v0, 0x0
 
     return v0
