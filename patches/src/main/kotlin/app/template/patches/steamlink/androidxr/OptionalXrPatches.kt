@@ -5,11 +5,11 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.io.File
-import java.security.MessageDigest
 
 private val unrestrictedBatteryManifestPatch = resourcePatch {
     finalize {
@@ -68,11 +68,14 @@ private val appearOnTopManifestPatch = resourcePatch {
 
 @Suppress("unused")
 val appearOnTopPatch = bytecodePatch(
-    name = "Appear on top",
-    description = "Adds SYSTEM_ALERT_WINDOW and the compositor signal window.",
-    default = true,
+    name = "Appear on top (legacy)",
+    description = "Legacy overlay-permission fallback retained for older Steam Link builds. Adds SYSTEM_ALERT_WINDOW and the compositor signal window.",
+    default = false,
 ) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
+    // 5002322 uses the recommended permission-free Android-surface trigger instead. Older
+    // exact builds retain this selectable TYPE_APPLICATION_OVERLAY fallback, but it is no
+    // longer recommended by default.
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
@@ -87,8 +90,6 @@ internal const val ANDROID_SURFACE_TRIGGER_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json"
 internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
     "android-surface-trigger-forced-probe-v1.1-20260901"
-internal const val ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256 =
-    "e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -100,11 +101,6 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_MODE,
         ANDROID_SURFACE_TRIGGER_LIBRARY,
         ANDROID_SURFACE_TRIGGER_MANIFEST,
-    ),
-    ProjectionModeResources(
-        NATIVE_SINGLE_PROJECTION_PROBE_MODE,
-        NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
-        null,
     ),
 )
 
@@ -128,6 +124,7 @@ private val retiredProjectionModes = setOf(
     "single_projection_native_quad_zero_copy_v1",
     "single_projection_native_quad_zero_copy_dual_v1",
     "permission_surface_trace_v1",
+    "single_projection_native_probe_v1",
 )
 private val retiredProjectionLibraries = setOf(
     "libgxr_single_projection_reconstruction_efficient_v1.so",
@@ -136,10 +133,19 @@ private val retiredProjectionLibraries = setOf(
     "libgxr_nqv.so",
     "libgxr_nqvd.so",
     "libgxr_pst.so",
+    "libgxr_nspp.so",
 )
 
-private fun ByteArray.sha256(): String =
-    MessageDigest.getInstance("SHA-256").digest(this).joinToString("") { "%02x".format(it) }
+private fun ByteArray.containsAscii(value: String): Boolean {
+    val needle = value.toByteArray(Charsets.US_ASCII)
+    if (needle.isEmpty() || size < needle.size) return false
+    return (0..(size - needle.size)).any { offset ->
+        needle.indices.all { index -> this[offset + index] == needle[index] }
+    }
+}
+
+internal fun retiredNativeProjectionHook(sceneBytes: ByteArray): String? =
+    retiredProjectionLibraries.firstOrNull(sceneBytes::containsAscii)
 
 private fun projectionModeResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
@@ -155,7 +161,7 @@ private fun installProjectionModeResources(
         val siblingManifestExists = sibling.manifest?.let { File(layerDir, it).exists() } == true
         if (File(libDir, sibling.library).exists() || siblingManifestExists) {
             throw PatchException(
-                "Experimental XR projection modes are mutually exclusive: " +
+                "Galaxy XR resolution modes are mutually exclusive: " +
                     "${requested.mode} conflicts with ${sibling.mode}",
             )
         }
@@ -210,7 +216,7 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
     val existingMode = existingMetadata?.getAttribute("android:value").orEmpty()
     if (projectionModesConflict(existingMode, requestedMode)) {
         throw PatchException(
-            "Experimental XR projection modes are mutually exclusive: " +
+            "Galaxy XR resolution modes are mutually exclusive: " +
                 "$requestedMode conflicts with $existingMode",
         )
     }
@@ -225,13 +231,14 @@ private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
             return@execute
         }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
-        val sceneSha256 = sceneFile.readBytes().sha256()
-        if (sceneSha256 != ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256) {
+        // This final API-layer fix does not patch libvrlink_scene.so. Accept the guarded
+        // changes made by the other recommended patches in any execution order, but fail
+        // closed if a retired renderer left an explicit native helper dependency behind.
+        retiredNativeProjectionHook(sceneFile.readBytes())?.let { retiredLibrary ->
             throw PatchException(
-                "Android-surface trigger requires pristine Steam Link 5002322 " +
-                    "libvrlink_scene.so sha256=$ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256, " +
-                    "found=$sceneSha256. Rebuild from the original APK; retired native-hook " +
-                    "patches cannot be migrated safely in place.",
+                "Galaxy XR high-resolution fix found retired native projection hook " +
+                    "$retiredLibrary in libvrlink_scene.so. Rebuild from the original APK; " +
+                    "retired renderer hooks cannot be migrated safely in place.",
             )
         }
         val helperBytes = projectionModeResource(ANDROID_SURFACE_TRIGGER_LIBRARY)
@@ -254,12 +261,12 @@ private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
 }
 
 @Suppress("unused")
-val xrAndroidSurfaceTriggerPatch = resourcePatch(
-    name = "Experimental Android-Surface Trigger (3-Projection Passthrough)",
-    description = "5002322-only permission-free forced-capability probe. Requests the documented Android-surface extension even when enumeration hides it, fails open if rejected, and otherwise preserves Valve's 3 projection layers plus a 2x2 Android-surface quad.",
-    default = false,
+val xrGalaxyXrHighResolutionPatch = resourcePatch(
+    name = "Galaxy XR high-resolution 3-projection fix",
+    description = "Recommended 5002322-only permission-free resolution fix. Preserves Valve's native 3 projections and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
+    default = true,
 ) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
@@ -269,56 +276,6 @@ val xrAndroidSurfaceTriggerPatch = resourcePatch(
     finalize {
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
-        }
-    }
-}
-
-private fun nativeProjectionHelperPatch(mode: String, library: String) = rawResourcePatch {
-    execute {
-        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
-            return@execute
-        }
-        val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
-        val sceneBytes = sceneFile.readBytes()
-        val patchedScene = patchNativeSingleProjectionRenderer(sceneBytes, library)
-        val helperBytes = projectionModeResource(library)
-        if (helperBytes.size < 4 || !helperBytes.copyOfRange(0, 4)
-                .contentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))) {
-            throw PatchException("Bundled native projection helper is not an ELF library: $library")
-        }
-        val libDir = sceneFile.parentFile!!
-        val apkRoot = sceneFile.parentFile!!.parentFile!!.parentFile!!
-        val layerDir = File(apkRoot, "assets/openxr/1/api_layers/implicit.d")
-        installProjectionModeResources(
-            libDir,
-            layerDir,
-            activeProjectionModes.first { it.mode == mode },
-        )
-        if (!patchedScene.contentEquals(sceneBytes)) sceneFile.writeBytes(patchedScene)
-    }
-}
-
-private val nativeSingleProjectionProbeLayerPatch = nativeProjectionHelperPatch(
-    NATIVE_SINGLE_PROJECTION_PROBE_MODE,
-    NATIVE_SINGLE_PROJECTION_PROBE_LIBRARY,
-)
-
-@Suppress("unused")
-val xrNativeSingleProjectionResolutionProbePatch = resourcePatch(
-    name = "Experimental Native Single-Projection Resolution + 10-bit Probe",
-    description = "5002322-only permission-free diagnostic. Submits density-preserving, panel-native, then runtime-maximum output tiers and traces the accepted tier, decoder/source/output precision, topology, and xrEndFrame.",
-    default = false,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
-    dependsOn(
-        xrLauncherBootstrapPatch,
-        xrPermissionSettingsBootstrapPatch,
-        nativeSingleProjectionProbeLayerPatch,
-    )
-
-    finalize {
-        document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, NATIVE_SINGLE_PROJECTION_PROBE_MODE)
         }
     }
 }

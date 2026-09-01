@@ -5,17 +5,17 @@ Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
 Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with its own guarded native layout. Its available source is a reconstruction from a malformed hybrid APK; pristine-APK Morphe patching, installation, and headset runtime validation remain pending.
 Steam Link 2.0.22 build 5002318 exposes Device identity, Microphone input preset, OLED color calibration,
-Appear on top, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither.
-Build 5002322 recommends only Appear on top, GXR face bridge, Microphone input preset,
-Unrestricted battery usage, Video dither, and Visual Delay Fix. Two mutually exclusive 5002322-only
-projection A/B patches remain optional and experimental.
+the legacy Appear on top fallback, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither.
+Build 5002322 recommends the Galaxy XR high-resolution 3-projection fix, GXR face bridge,
+Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. Appear on
+top is excluded from this build, and the single-projection reconstruction experiments are retired.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
 still display incompatible patches by design. Morphe has only a global patch `default` flag, so exact
-compatibility filtering excludes Device identity and the standalone OLED patch from 5002322 while
-preserving their historical recommendation on older builds. Video dither still executes its coupled
-OLED calibration dependency. Experimental and legacy-only patches default off.
+compatibility filtering excludes Appear on top, Device identity, and the standalone OLED patch from
+5002322. Appear on top remains selectable through 5002318 but is no longer recommended on any build.
+Video dither still executes its coupled OLED calibration dependency. Legacy-only patches default off.
 
 ---
 
@@ -118,12 +118,12 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 
 ---
 
-### Appear On Top (`appearOnTopPatch`)
-**Default: enabled** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
+### Appear On Top (legacy) (`appearOnTopPatch`)
+**Default: disabled; compatible only through build 5002318** — retained as an overlay-based fallback
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
-| `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves stock 5002318/5002322 target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config |
+| `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves the stock target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config on supported builds through 5002318. Build 5002322 uses the final high-resolution fix instead. |
 | Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, and `GxrResolutionProbe`; contains no SDL/controller class fragments. |
 | `SteamLink` lifecycle methods | Adds the overlay/resolution probe calls without modifying `SDLSurface`, `SDLControllerManager`, or generic-motion routing |
 
@@ -138,8 +138,8 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 
 ---
 
-### Experimental Android-Surface Trigger (3-Projection Passthrough)
-**Default: disabled; 5002322 only** — forced runtime-capability probe; do not combine with `Appear on top` or the native probe
+### Galaxy XR high-resolution 3-projection fix (`xrGalaxyXrHighResolutionPatch`)
+**Recommended/default enabled; stable exact 2.0.22/5002322 only** — replaces legacy `Appear on top`
 
 | Artifact | Exact guarded edit |
 |---|---|
@@ -147,14 +147,21 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 | `lib/arm64-v8a/libgxr_ast.so` | Implicit OpenXR API layer. Requests `XR_KHR_android_surface_swapchain` even when enumeration hides it, retries Valve's original instance create-info if rejected, and otherwise queues a nonzero-alpha `2x2` RGBA8888 Android `Surface` as a terminal quad after Valve's unchanged 3 projection pointers. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json` | Registers the surface-trigger API layer; disable environment is `GXR_DISABLE_ANDROID_SURFACE_TRIGGER`. |
 
-The output is still Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. It fails open when the extension, Surface, view space, layer budget, exact topology, or buffer post is unavailable. If the runtime accepts creation but rejects the first 4-layer `xrEndFrame`, that frame returns the runtime error and only subsequent frames revert to Valve's untouched submission; this is an experimental runtime risk, not a production workaround.
+The output remains Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. The independent trigger Surface does not alter Valve's source handles or formats, so future RGB10_A2 projection sources remain reserved for unchanged passthrough.
 
-The first 2026-09-01 headset capture proved that this Galaxy XR runtime did **not** advertise `XR_KHR_android_surface_swapchain`. Valve's 3-projection/6-view topology remained unchanged while the palm SystemUI element changed quality `soft -> sharp -> soft`. Helper v1.1 now performs the missing direct capability probe: it force-requests the documented extension once, emits the exact request/function result, and fails open to Valve's untouched submission on rejection. This is intentionally outside the normal advertised-extension contract and remains runtime-unproven until a newly patched APK is captured.
+#### Headset validation
+
+The 2026-09-01 accepted capture showed that the extension was hidden from enumeration but accepted
+when explicitly requested: the function loaded, a 2x2 Surface was created and queued, and 4 sampled
+`xrEndFrame` submissions preserved the original 3 projection pointers while successfully adding 1
+terminal quad. No overlay permission, type-2038 Steam Link window, or recording contamination
+existed. The headset palm A/B/A result was `MATCHES REFERENCE -> MATCHES REFERENCE -> MATCHES
+REFERENCE`, establishing perceived parity with Valve's native 3-projection APK with Appear on top.
 
 ---
 
-### Experimental Native Single-Projection Resolution + 10-bit Probe
-**Default: disabled; 5002322 only** — restored CPU-optimized one-projection diagnostic; apply to a separate pristine APK and do not stack with the Android-Surface Trigger or `Appear on top`
+### Retired: Experimental Native Single-Projection Resolution + 10-bit Probe
+**Removed after the 3-projection fix passed; historical implementation below**
 
 | Artifact | Exact guarded edit |
 |---|---|
@@ -164,9 +171,9 @@ The first 2026-09-01 headset capture proved that this Galaxy XR runtime did **no
 
 The helper traces source swapchains, recommended/maximum view sizes, allocation attempts and accepted output tier, 3-projection/6-view to 1-projection/2-view submission, GL attachment precision, MediaCodec/AHardwareBuffer observations, and successful `xrEndFrame`. RGB10_A2 is proven only through the app/OpenXR output when the source, scratch, output, and attachment contracts all remain 10/10/10/2; panel and private-compositor precision are still outside app telemetry.
 
-The native probe is not yet visually adjudicated. Its focused diagnostic performs the same palm hidden-visible-hidden comparison and reports the actual accepted output dimensions. A palm-dependent `soft -> sharp -> soft` result would show that even the one-projection renderer remains subject to the same vendor-private surface policy.
+The native probe is retired without further headset adjudication because the accepted 3-projection fix preserves Valve's renderer and avoids this experiment's full-resolution GPU reconstruction, private stereo allocation, synchronization, and CPU bookkeeping.
 
-The former non-probe reconstruction, quad-view, permission-matrix, and alternate projection payloads remain retired. Their identities are reserved only for stale decoded-APK cleanup.
+Its selectable patch, native hook implementation, CMake target, focused diagnostic, tests, and bundled `libgxr_nspp.so` are removed. Its mode and library identities remain reserved only for stale decoded-APK cleanup.
 
 ---
 
@@ -357,8 +364,8 @@ This intentionally preserves the native builds' requested extensions and vendor 
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `oledCalibrationPatch` (1087-byte GLSL block plus three guarded swapchain instructions), `videoDitherPatch` (dither-state marker inside GLSL block) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrAndroidSurfaceTriggerPatch`, `changePackageNamePatch` |
-| `lib/arm64-v8a/libgxr_ast.so` | `xrAndroidSurfaceTriggerPatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `gxrFacebridgePatch`, `appearOnTopPatch`, `xrGalaxyXrHighResolutionPatch`, `changePackageNamePatch` |
+| `lib/arm64-v8a/libgxr_ast.so` | `xrGalaxyXrHighResolutionPatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
 **Known intentional coupling:** `oledCalibrationPatch` rewrites the full GLSL block first; `videoDitherPatch` depends on it and then toggles the generated highp dither state. Its byte helper still recognises stock and legacy-calibrated states for guarded compatibility tests.

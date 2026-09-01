@@ -60,12 +60,12 @@ object Constants {
             steamLinkBuildCompatibility(
                 build = build,
                 description = if (build.versionCode == 5002322) {
-                    "Build 5002322 recommends only Appear on top, GXR face bridge, " +
+                    "Build 5002322 recommends Galaxy XR high-resolution 3-projection fix, GXR face bridge, " +
                         "Microphone input preset, Unrestricted battery usage, Video dither, " +
-                        "and Visual Delay Fix. Single-projection reconstruction remains experimental."
+                        "and Visual Delay Fix. The retired single-projection reconstruction is excluded."
                 } else {
                     "Build ${build.versionCode} supports Device identity, Microphone input preset, OLED color " +
-                        "calibration, Appear on top, GXR face bridge, Visual Delay Fix, " +
+                        "calibration, the legacy Appear on top option, GXR face bridge, Visual Delay Fix, " +
                         "Unrestricted battery usage, and Video dither."
                 },
             )
@@ -79,6 +79,13 @@ object Constants {
     // while preventing that patch from being recommended for 5002322.
     val COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST =
         COMPATIBILITIES_STEAM_LINK.filterNot { compatibility ->
+            compatibility.targets.any { target ->
+                target.version == "2.0.22" && target.versionCodes?.values?.contains(5002322) == true
+            }
+        }
+
+    val COMPATIBILITIES_STEAM_LINK_5002322 =
+        COMPATIBILITIES_STEAM_LINK_NATIVE_XR.filter { compatibility ->
             compatibility.targets.any { target ->
                 target.version == "2.0.22" && target.versionCodes?.values?.contains(5002322) == true
             }

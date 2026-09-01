@@ -11,17 +11,15 @@ import kotlin.test.assertTrue
 
 class AndroidSurfaceTriggerResourceTest {
     @Test
-    fun `surface trigger and native probe are mutually exclusive active experiments`() {
+    fun `surface trigger is the sole active resolution mode`() {
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
-        assertFalse(projectionModesConflict(NATIVE_SINGLE_PROJECTION_PROBE_MODE, NATIVE_SINGLE_PROJECTION_PROBE_MODE))
-        assertTrue(projectionModesConflict(NATIVE_SINGLE_PROJECTION_PROBE_MODE, ANDROID_SURFACE_TRIGGER_MODE))
-        assertTrue(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, NATIVE_SINGLE_PROJECTION_PROBE_MODE))
         listOf(
             "single_projection_reconstruction_v1",
             "single_projection_reconstruction_efficient_v1",
             "single_projection_native_renderer_v1",
             "single_projection_native_renderer_dual_v1",
+            "single_projection_native_probe_v1",
             "two_projection_drop_base_v1",
             "three_projection_sampler_proxy_v1",
         ).forEach { retired ->
@@ -51,6 +49,7 @@ class AndroidSurfaceTriggerResourceTest {
             "extensionRequestResult",
             "surfaceFunctionLookupAttempted",
             "surfaceFunctionLoaded",
+            "future RGB10_A2 Valve swapchain passes through unchanged",
             "originalPointersPreserved",
             "noCopy",
             "noReconstruction",
@@ -81,13 +80,29 @@ class AndroidSurfaceTriggerResourceTest {
             "patches/src/main/kotlin/app/template/patches/steamlink/androidxr/OptionalXrPatches.kt",
         )
         assertTrue(patchSource.contains("ANDROID_SURFACE_TRIGGER_MANIFEST"))
-        assertTrue(patchSource.contains("ANDROID_SURFACE_TRIGGER_STOCK_SCENE_SHA256"))
-        assertTrue(patchSource.contains("sceneFile.readBytes().sha256()"))
+        assertTrue(patchSource.contains("retiredNativeProjectionHook(sceneFile.readBytes())"))
+        assertFalse(patchSource.contains("STOCK_SCENE_SHA256"))
         assertTrue(patchSource.contains("permission_surface_trace_v1"))
         assertTrue(patchSource.contains("libgxr_pst.so"))
+        assertTrue(patchSource.contains("libgxr_nspp.so"))
+        assertTrue(patchSource.contains("future RGB10_A2"))
         assertTrue(patchSource.contains("activeProjectionModes.first { it.mode == ANDROID_SURFACE_TRIGGER_MODE }"))
+        assertFalse(patchSource.contains("nativeProjectionHelperPatch"))
         assertFalse(patchSource.contains("patchNativeEndFrameHelper"))
         assertFalse(patchSource.contains("gxrEndFrame"))
+    }
+
+    @Test
+    fun `final patch accepts ordinary scene mutations but rejects retired native hooks`() {
+        assertNull(retiredNativeProjectionHook("ordinary guarded scene mutation".toByteArray()))
+        assertEquals(
+            "libgxr_nspp.so",
+            retiredNativeProjectionHook("prefix libgxr_nspp.so suffix".toByteArray()),
+        )
+        assertEquals(
+            "libgxr_nqvd.so",
+            retiredNativeProjectionHook("prefix libgxr_nqvd.so suffix".toByteArray()),
+        )
     }
 
     @Test
@@ -97,7 +112,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "1106e5f0e8c9e43a1533e02088a5607f8e2bd7d42a6054ac16dd528ce27f1571",
+            "22fb08d0f300337c0cc22088cbf34b494b3d7b5fa507c4593eb64c65e6b1b7c9",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
@@ -124,6 +139,7 @@ class AndroidSurfaceTriggerResourceTest {
             "libgxr_nqvd.so",
             "libgxr_nsp.so",
             "libgxr_nspd.so",
+            "libgxr_nspp.so",
             "libgxr_single_projection_reconstruction_efficient_v1.so",
             "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json",
         ).forEach { resource ->

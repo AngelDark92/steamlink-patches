@@ -35,6 +35,10 @@ class ConstantsTest {
             listOf(5002322),
             Constants.COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.versionCodes(),
         )
+        assertEquals(
+            listOf(5002322),
+            Constants.COMPATIBILITIES_STEAM_LINK_5002322.versionCodes(),
+        )
     }
 
     private fun List<app.morphe.patcher.patch.Compatibility>.versionCodes() = map { compatibility ->

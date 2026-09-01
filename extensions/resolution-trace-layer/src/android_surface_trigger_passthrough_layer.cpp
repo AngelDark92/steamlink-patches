@@ -23,6 +23,12 @@
 
 namespace {
 
+// This API layer is intentionally append-only. Steam Link continues to render its
+// native 3 projection layers (6 views) into Valve-owned swapchains. We neither sample
+// nor rewrite those images. The only added composition work is a static 2x2 Android
+// Surface quad that activates the Galaxy XR compositor path observed to retain full
+// sharpness without SYSTEM_ALERT_WINDOW.
+
 constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1";
 constexpr char kModeName[] = "android_surface_trigger_passthrough_v1";
@@ -52,6 +58,9 @@ struct Dispatch {
 };
 
 struct SwapchainContract {
+    // Retain the application's exact format for diagnostics only. In particular, a
+    // future RGB10_A2 Valve swapchain passes through unchanged; this helper never
+    // substitutes an 8-bit projection swapchain or converts projection pixels.
     int64_t format{};
     uint32_t width{};
     uint32_t height{};
@@ -241,6 +250,9 @@ bool createTrigger(SessionState& state) {
     swapchainInfo.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
     swapchainInfo.createFlags = 0;
     swapchainInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
+    // XR_KHR_android_surface_swapchain requires format/sample/face/array/mip to be 0.
+    // This describes only the independent 2x2 trigger Surface. It does not constrain
+    // or alter the format (sRGB8 today, potentially RGB10_A2 later) of Valve's views.
     swapchainInfo.format = 0;
     swapchainInfo.sampleCount = 0;
     swapchainInfo.width = kTriggerWidth;
@@ -539,6 +551,9 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     quad.pose.position.z = -1.0f;
     quad.size = {0.001f, 0.001f};
 
+    // Preserve Valve's layer objects and order byte-for-byte. Appending the terminal
+    // quad changes compositor topology from 3 to 4 layers, but it performs no image
+    // reconstruction, resampling, blit, shader pass, or private stereo allocation.
     std::array<const XrCompositionLayerBaseHeader*, kRequiredLayerCount> layers{};
     for (uint32_t index = 0; index < 3; ++index) layers[index] = info->layers[index];
     layers[3] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
@@ -569,6 +584,8 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
             "\"quadDistanceMeters\":1.0,\"result\":" + std::to_string(result));
     }
     if (XR_FAILED(result)) {
+        // xrEndFrame is not replayable. Return this frame's runtime error, disable the
+        // trigger, and let later frames use Valve's untouched 3-layer submission.
         bool logFailure = false;
         {
             std::lock_guard<std::mutex> lock(state->mutex);
@@ -685,9 +702,10 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
     extensionAdvertised = runtimeAdvertisesExtension(
         layerInfo->nextInfo->nextGetInstanceProcAddr,
         XR_KHR_ANDROID_SURFACE_SWAPCHAIN_EXTENSION_NAME);
-    // Android XR documentation lists this extension as supported, but the Galaxy XR
-    // runtime tested on 2026-09-01 did not enumerate it. Probe the runtime directly:
-    // request it once, then fail open by retrying Valve's original create-info.
+    // Android XR documentation lists this extension as supported, but Galaxy XR did
+    // not enumerate it. The validated runtime nevertheless accepts it when requested.
+    // Keep the guarded direct request for that exact behavior; if another runtime
+    // rejects it, retry once with Valve's original create-info and change nothing.
     const bool forcedExtensionAttempt = !extensionAdvertised && !appEnabled;
     const bool appended = !appEnabled;
     std::vector<const char*> extensions;
