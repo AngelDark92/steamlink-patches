@@ -1,3 +1,9 @@
+## [1.11.1-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.4...v1.11.1-dev.5) (2026-09-02)
+
+### 🐛 Bug Fixes
+
+* CPU optimizations on resolution patch and fixes for 2.0.20 ([d3038c6](https://github.com/AngelDark92/steamlink-patches/commit/d3038c6f29c3771591cd6f7702a0c9d9b5f4c9e3))
+
 ## [1.11.1-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.3...v1.11.1-dev.4) (2026-09-02)
 
 ### 🐛 Bug Fixes
