@@ -1,3 +1,9 @@
+## [1.11.1-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.2...v1.11.1-dev.3) (2026-09-02)
+
+### 🐛 Bug Fixes
+
+* compatibility with 2.0.20 and another surface test for 2.0.22 GPU Optimization ([c7bddec](https://github.com/AngelDark92/steamlink-patches/commit/c7bddecbea9ab962c626a0a73d4df3f0f0bcab29))
+
 ## [1.11.1-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.1...v1.11.1-dev.2) (2026-09-02)
 
 ### 🐛 Bug Fixes
