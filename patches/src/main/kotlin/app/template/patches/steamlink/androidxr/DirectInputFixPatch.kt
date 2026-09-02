@@ -3,7 +3,7 @@ package app.template.patches.steamlink.androidxr
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
-import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
+import app.template.patches.shared.Constants.isLegacyXrFoundationSteamLinkBuild
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
@@ -61,9 +61,12 @@ internal val xrDirectInputFixPatch = bytecodePatch {
     dependsOn(androidXrUiExtensionPatch)
 
     execute {
-        // Dependencies execute even when their own compatibility excludes this build. Valve's
-        // Native-XR SDL/controller paths already support hands, so leave them byte-for-byte.
-        if (isNativeXrSteamLinkBuild(packageMetadata.versionName, packageMetadata.versionCode)) return@execute
+        // Dependencies execute even when their own compatibility excludes this build. Mutate only
+        // exact decoded legacy layouts; native/unknown SDL and controller paths remain untouched.
+        if (!isLegacyXrFoundationSteamLinkBuild(
+                packageMetadata.versionName,
+                packageMetadata.versionCode,
+            )) return@execute
 
         val surfaceChanged = mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
             .first { it.name == "surfaceChanged" && it.parameterTypes.size == 4 }

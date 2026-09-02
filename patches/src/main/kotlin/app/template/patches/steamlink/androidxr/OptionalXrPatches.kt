@@ -5,8 +5,9 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
+import app.template.patches.shared.Constants.isHighResolutionSteamLinkBuild
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.io.File
@@ -204,7 +205,7 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
     matchingPermissions.forEach { manifest.removeChild(it) }
 
     if (!upsertVrLinkUnmanagedFullSpace(document, app)) {
-        throw PatchException("Steam Link 5002322 VRLink activity was not found")
+        throw PatchException("Supported Steam Link VRLink activity was not found")
     }
 
     val metadataName = "com.valvesoftware.steamlink.GXR_RESOLUTION_MODE"
@@ -227,7 +228,10 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
 
 private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
     execute {
-        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
+        if (!isHighResolutionSteamLinkBuild(
+                packageMetadata.versionName,
+                packageMetadata.versionCode,
+            )) {
             return@execute
         }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
@@ -263,10 +267,10 @@ private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
 @Suppress("unused")
 val xrGalaxyXrHighResolutionPatch = resourcePatch(
     name = "Galaxy XR high-resolution 3-projection fix",
-    description = "Recommended 5002322-only permission-free resolution fix. Preserves Valve's native 3 projections and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
+    description = "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves Valve's native 3 projections and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
     default = true,
 ) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322.toTypedArray())
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,

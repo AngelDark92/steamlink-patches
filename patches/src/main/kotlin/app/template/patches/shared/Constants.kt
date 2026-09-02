@@ -23,9 +23,29 @@ object Constants {
         SteamLinkBuild("2.0.22", 5002318),
         SteamLinkBuild("2.0.22", 5002322),
     )
+    private val HIGH_RESOLUTION_STEAM_LINK_BUILDS = listOf(
+        SteamLinkBuild("2.0.20", 5001712),
+        SteamLinkBuild("2.0.22", 5002244),
+        SteamLinkBuild("2.0.22", 5002296),
+        SteamLinkBuild("2.0.22", 5002313),
+        SteamLinkBuild("2.0.22", 5002318),
+        SteamLinkBuild("2.0.22", 5002322),
+    )
+    private val LEGACY_XR_FOUNDATION_STEAM_LINK_BUILDS =
+        LEGACY_STEAM_LINK_BUILDS + SteamLinkBuild("2.0.22", 5002296)
 
     fun isNativeXrSteamLinkBuild(version: String, versionCode: String): Boolean =
         NATIVE_XR_STEAM_LINK_BUILDS.any {
+            it.version == version && it.versionCode.toString() == versionCode
+        }
+
+    fun isHighResolutionSteamLinkBuild(version: String, versionCode: String): Boolean =
+        HIGH_RESOLUTION_STEAM_LINK_BUILDS.any {
+            it.version == version && it.versionCode.toString() == versionCode
+        }
+
+    fun isLegacyXrFoundationSteamLinkBuild(version: String, versionCode: String): Boolean =
+        LEGACY_XR_FOUNDATION_STEAM_LINK_BUILDS.any {
             it.version == version && it.versionCode.toString() == versionCode
         }
 
@@ -89,6 +109,20 @@ object Constants {
             compatibility.targets.any { target ->
                 target.version == "2.0.22" && target.versionCodes?.values?.contains(5002322) == true
             }
+        }
+
+    val COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION =
+        HIGH_RESOLUTION_STEAM_LINK_BUILDS.map { build ->
+            steamLinkBuildCompatibility(
+                build = build,
+                description = if (build.versionCode == 5002322) {
+                    "Headset-validated Galaxy XR high-resolution patch target for exact Steam Link " +
+                        "${build.version} build ${build.versionCode}."
+                } else {
+                    "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact " +
+                        "Steam Link ${build.version} build ${build.versionCode}; headset validation pending."
+                },
+            )
         }
 
     val COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL =

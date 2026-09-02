@@ -44,8 +44,8 @@ class PatchCompatibilityMatrixTest {
             assertFalse(patch.supports("2.0.22", 5002322), "${patch.name} on 5002322")
         }
         assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5002322))
-        assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5002318))
-        assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5002244))
+        assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5002318))
+        assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5002244))
         assertTrue(xrGalaxyXrHighResolutionPatch.default)
         assertFalse(appearOnTopPatch.supports("2.0.22", 5002322))
         assertEquals("Appear on top (legacy)", appearOnTopPatch.name)
@@ -64,19 +64,34 @@ class PatchCompatibilityMatrixTest {
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertTrue(patch.supports("2.0.22", 5002313), patch.name)
         }
+        assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5002313))
     }
 
     @Test
-    fun `all legacy patches support exact 2_0_20 builds`() {
+    fun `high resolution patch adds only the requested exact builds`() {
+        listOf(5002244, 5002296, 5002313, 5002318, 5002322).forEach { versionCode ->
+            assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.22", versionCode), "$versionCode")
+        }
+        assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.20", 5001712))
+        assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5001712))
+        assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.20", 5002296))
+        assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5002243))
+        assertFalse(xrCoreRuntimePatch.supports("2.0.22", 5002296))
+    }
+
+    @Test
+    fun `all patches support exact 2_0_20 build 5001712 without broadening 5001740`() {
         listOf(5001712, 5001740).forEach { versionCode ->
             (allowedNativeXr + excludedNativeXr).forEach { patch ->
                 assertTrue(patch.supports("2.0.20", versionCode), "${patch.name} on $versionCode")
             }
-            assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.20", versionCode))
         }
+        assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.20", 5001712))
+        assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.20", 5001740))
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertFalse(patch.supports("2.0.22", 5001712), "${patch.name} on wrong versionName")
         }
+        assertFalse(xrGalaxyXrHighResolutionPatch.supports("2.0.22", 5001712))
     }
 
     @Test

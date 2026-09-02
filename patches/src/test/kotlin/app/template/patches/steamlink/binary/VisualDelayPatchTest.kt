@@ -101,6 +101,18 @@ class VisualDelayPatchTest {
 
         val nativeLayouts = listOf(
             TestLayout(
+                5001712,
+                2_221_072,
+                0x1014E8,
+                listOf(
+                    Triple(0x101514, 28, true),
+                    Triple(0x101530, 36, false),
+                    Triple(0x101610, 40, false),
+                    Triple(0x101614, 44, false),
+                    Triple(0x101620, 48, false),
+                ),
+            ),
+            TestLayout(
                 5001740,
                 2_220_528,
                 0x101378,

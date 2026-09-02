@@ -5,7 +5,7 @@
   "patches": [
     {
       "name": "Android XR native permission names",
-      "description": "Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR.",
+      "description": "Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR, including the verified Steam Link 5001712 layout.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
@@ -841,7 +841,7 @@
     },
     {
       "name": "Force HMD initialization gates",
-      "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5001740, 5002244, and 5002313.",
+      "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5001712, 5001740, 5002244, and 5002313.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
@@ -982,7 +982,7 @@
     },
     {
       "name": "Force lobby permission-state gate",
-      "description": "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5001740, 5002244, and 5002313.",
+      "description": "Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5001712, 5001740, 5002244, and 5002313.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
@@ -1123,7 +1123,7 @@
     },
     {
       "name": "Force stream XR gates",
-      "description": "Bypasses the three verified XR gates in builds 5001740 and 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
+      "description": "Bypasses the three verified XR gates in builds 5001712, 5001740, and 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged.",
       "default": false,
       "dependencies": [],
       "compatiblePackages": [
@@ -1453,7 +1453,7 @@
     },
     {
       "name": "Galaxy XR high-resolution 3-projection fix",
-      "description": "Recommended 5002322-only permission-free resolution fix. Preserves Valve's native 3 projections and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
+      "description": "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves Valve's native 3 projections and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
       "default": true,
       "dependencies": [
         "ResourcePatch",
@@ -1461,6 +1461,116 @@
         "RawResourcePatch"
       ],
       "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001712,
+                "ARMEABI_V7A": 5001712,
+                "X86_64": 5001712,
+                "X86": 5001712
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.20 build 5001712; headset validation pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002244,
+                "ARMEABI_V7A": 5002244,
+                "X86_64": 5002244,
+                "X86": 5002244
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002244; headset validation pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002296,
+                "ARMEABI_V7A": 5002296,
+                "X86_64": 5002296,
+                "X86": 5002296
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002296; headset validation pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002313,
+                "ARMEABI_V7A": 5002313,
+                "X86_64": 5002313,
+                "X86": 5002313
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002313; headset validation pending."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002318,
+                "ARMEABI_V7A": 5002318,
+                "X86_64": 5002318,
+                "X86": 5002318
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002318; headset validation pending."
+            }
+          ]
+        },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
           "name": "Steam Link",
@@ -1479,7 +1589,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Build 5002322 recommends Galaxy XR high-resolution 3-projection fix, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The retired single-projection reconstruction is excluded."
+              "description": "Headset-validated Galaxy XR high-resolution patch target for exact Steam Link 2.0.22 build 5002322."
             }
           ]
         }
@@ -1688,7 +1798,7 @@
     },
     {
       "name": "OLED color calibration",
-      "description": "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5001740, 5002244, 5002313, 5002318, and 5002322.",
+      "description": "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5001712, 5001740, 5002244, 5002313, 5002318, and 5002322.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -2479,7 +2589,7 @@
       "description": "Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches.",
       "default": false,
       "dependencies": [
-        "RawResourcePatch",
+        "ResourcePatch",
         "BytecodePatch",
         "BytecodePatch"
       ],
