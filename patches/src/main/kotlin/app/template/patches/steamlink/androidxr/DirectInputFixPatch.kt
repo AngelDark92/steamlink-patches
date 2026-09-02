@@ -57,6 +57,27 @@ private fun MutableMethod.fieldAccessIndex(
     require(index >= 0) { "Missing field access $definingClass->$fieldName in $name" }
 }
 
+internal data class XrPointerRouteMethods(
+    val touch: String,
+    val generic: String,
+)
+
+internal fun xrPointerRouteMethodsFor(
+    versionName: String,
+    versionCode: String,
+): XrPointerRouteMethods =
+    if (versionName == "2.0.20" && versionCode == "5001712") {
+        XrPointerRouteMethods(
+            touch = "routeXrPointerAsMouse5001712",
+            generic = "routeXrPointerAsMouseGeneric5001712",
+        )
+    } else {
+        XrPointerRouteMethods(
+            touch = "routeXrPointerAsMouse",
+            generic = "routeXrPointerAsMouseGeneric",
+        )
+    }
+
 internal val xrDirectInputFixPatch = bytecodePatch {
     dependsOn(androidXrUiExtensionPatch)
 
@@ -68,18 +89,12 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                 packageMetadata.versionCode,
             )) return@execute
 
-        val uses5001712SdlApi =
-            packageMetadata.versionName == "2.0.20" && packageMetadata.versionCode == "5001712"
-        val pointerRouteMethod = if (uses5001712SdlApi) {
-            "routeXrPointerAsMouse5001712"
-        } else {
-            "routeXrPointerAsMouse"
-        }
-        val genericPointerRouteMethod = if (uses5001712SdlApi) {
-            "routeXrPointerAsMouseGeneric5001712"
-        } else {
-            "routeXrPointerAsMouseGeneric"
-        }
+        // 5001712 uses exact mouse-only wrappers. Its synthetic PAD_A event runs on Android's
+        // UI thread and can activate Connect before the pointed-at PC is selected.
+        val pointerRoutes = xrPointerRouteMethodsFor(
+            packageMetadata.versionName,
+            packageMetadata.versionCode,
+        )
 
         val surfaceChanged = mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
             .first { it.name == "surfaceChanged" && it.parameterTypes.size == 4 }
@@ -114,7 +129,7 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                     0,
                     invokeStaticRange(
                         "Lorg/libsdl/app/GxrSdlBridge;",
-                        pointerRouteMethod,
+                        pointerRoutes.touch,
                         listOf("Landroid/view/MotionEvent;"),
                         "V",
                         pRegister(2),
@@ -130,7 +145,7 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                     0,
                     invokeStaticRange(
                         "Lorg/libsdl/app/GxrSdlBridge;",
-                        genericPointerRouteMethod,
+                        pointerRoutes.generic,
                         listOf("Landroid/view/MotionEvent;"),
                         "V",
                         pRegister(2),

@@ -4,26 +4,29 @@ Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
 Steam Link 2.0.20 build 5001712 has an independently decoded base and exact guarded layouts for the permission prompt, legacy native gates, OLED/output precision, controller cadence, and Visual Delay Fix. These adaptations are statically validated; APK installation and headset runtime validation remain pending. Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with its own guarded native layout. Its available source is a reconstruction from a malformed hybrid APK; pristine-APK Morphe patching, installation, and headset runtime validation remain pending.
-Steam Link 2.0.22 build 5002318 keeps its native-XR-safe 8-patch recommendation, while build
+Steam Link 2.0.20 build 5001712 now has its own exact recommendation bundle: the legacy conversion
+foundation plus the permission-free high-resolution fix and final feature set. Steam Link 2.0.22
+build 5002318 keeps its native-XR-safe 8-patch recommendation, while build
 5002322 recommends the 7-patch final set: Galaxy XR high-resolution 3-projection fix, GXR face
 bridge, Microphone input preset, Unrestricted battery usage, Video dither, Visual Delay Fix, and
 OLED color calibration with the `final-balanced` profile. Appear on top is excluded from 5002322.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
-still display incompatible patches by design. Morphe has only a global patch `default` flag, so 3
+still display incompatible patches by design. Morphe has only a global patch `default` flag, so 4
 exact-build dependency bundles own all defaults while the individual patches remain default-off and
 selectable wherever their verified compatibility permits. The legacy foundation bundle covers exact
-builds 5001712, 5001740, 5002172, 5002206, and 5002244. Builds 5002296 and 5002313 have no automatic
+builds 5001740, 5002172, 5002206, and 5002244. Builds 5002296 and 5002313 have no automatic
 bundle. Appear on top and Change package name remain optional and are never recommended.
 
 ### Recommendation bundles
 
 | Bundle | Exact targets | Direct patch set |
 |---|---|---|
+| `Galaxy XR recommended set (2.0.20/5001712)` | 2.0.20/5001712 | Legacy conversion foundation plus high-resolution fix, face bridge, microphone, battery, dither, Visual Delay, and OLED calibration |
 | `Galaxy XR recommended set (2.0.22/5002322)` | 2.0.22/5002322 | Final 7-patch set, including standalone OLED calibration |
 | `Galaxy XR recommended set (2.0.22/5002318)` | 2.0.22/5002318 | Existing native-XR-safe set plus Device identity |
-| `Galaxy XR legacy foundation (through 2.0.22/5002244)` | 2.0.20/5001712, 2.0.20/5001740, 2.0.22/5002172, 2.0.22/5002206, 2.0.22/5002244 | Permission names, identity/config, runtime, manifest, launcher, and input-routing foundation |
+| `Galaxy XR legacy foundation (through 2.0.22/5002244)` | 2.0.20/5001740, 2.0.22/5002172, 2.0.22/5002206, 2.0.22/5002244 | Permission names, identity/config, runtime, manifest, launcher, and input-routing foundation |
 
 ---
 
@@ -119,7 +122,7 @@ Selection uses exact `(versionName, versionCode)` before checking the pinned lib
 ---
 
 ### GXR Face Bridge (`gxrFacebridgePatch`)
-**Default: disabled individually; selected by the 5002318 and 5002322 recommendation bundles** — depends on the guarded permission bootstrap
+**Default: disabled individually; selected by the 5001712, 5002318, and 5002322 recommendation bundles** — depends on the guarded permission bootstrap
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_face_bridge.so` | New file (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) |
@@ -140,7 +143,7 @@ Selection uses exact `(versionName, versionCode)` before checking the pinned lib
 ---
 
 ### Unrestricted Battery Usage (`unrestrictedBatteryUsagePatch`)
-**Default: disabled individually; selected by the 5002318 and 5002322 recommendation bundles** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
+**Default: disabled individually; selected by the 5001712, 5002318, and 5002322 recommendation bundles** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
@@ -149,7 +152,7 @@ Selection uses exact `(versionName, versionCode)` before checking the pinned lib
 ---
 
 ### Galaxy XR high-resolution 3-projection fix (`xrGalaxyXrHighResolutionPatch`)
-**Default: disabled individually; selected by the 5002318 and 5002322 recommendation bundles** — exact 2.0.20/5001712 and 2.0.22 builds 5002244, 5002296, 5002313, 5002318, and 5002322 only
+**Default: disabled individually; selected by the 5001712, 5002318, and 5002322 recommendation bundles** — exact 2.0.20/5001712 and 2.0.22 builds 5002244, 5002296, 5002313, 5002318, and 5002322 only
 
 | Artifact | Exact guarded edit |
 |---|---|
@@ -245,7 +248,7 @@ The mode preserved all 3 projections and replaced only the 6 source swapchain ha
 ## binary group
 
 ### Microphone Input Preset (`microphoneInputPresetPatch`)
-**Default: disabled individually; selected by the 5002318 and 5002322 recommendation bundles**
+**Default: disabled individually; selected by the 5001712, 5002318, and 5002322 recommendation bundles**
 
 | Artifact | Edit |
 |---|---|
@@ -260,7 +263,7 @@ existing unique semantic signature matcher.
 ---
 
 ### Visual Delay Fix (`hmdOnlyPatch`)
-**Default: disabled individually; selected by the 5002318 and 5002322 recommendation bundles**
+**Default: disabled individually; selected by the 5001712, 5002318, and 5002322 recommendation bundles**
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` @ hook vaddr (version-specific) | 4 bytes: `ldr x2,[sp,#8]` → AArch64 unconditional branch to the mapped trampoline |
@@ -297,7 +300,7 @@ The independently decoded 5001712 layout is 2,221,072 bytes with stock SHA-256 `
 ---
 
 ### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
-**Default: disabled individually; selected by the 5002318 and 5002322 recommendation bundles and directly compatible with 5002322**
+**Default: disabled individually; selected by the 5001712, 5002318, and 5002322 recommendation bundles and directly compatible with 5002322**
 > ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `videoDitherPatch`. Dependency ordering runs OLED calibration first so dither selection cannot be overwritten. Swapchain-format editing is guarded by exact version/build metadata and size for ARM64 versionCodes 5001712, 5001740, 5002244, 5002313, 5002318, and 5002322.
 
 | Artifact | Edit |
@@ -332,7 +335,7 @@ Static tests validate GLSL structure, fixed size, and binary placement but do no
 ---
 
 ### Video Dither (`videoDitherPatch`)
-**Default: disabled individually; selected by the 5002318 and 5002322 recommendation bundles**
+**Default: disabled individually; selected by the 5001712, 5002318, and 5002322 recommendation bundles**
 > ⚠️ Shares the GLSL shader block in `libvrlink_scene.so` with `oledCalibrationPatch`. Handles both stock and calibrated variants automatically.
 
 | Artifact | Edit |
@@ -348,7 +351,7 @@ Static tests validate GLSL structure, fixed size, and binary placement but do no
 ## identity group
 
 ### Device Identity (`deviceIdentityPatch`)
-**Default: disabled individually; selected by the legacy-foundation and 5002318 recommendation bundles; not compatible with 5002322** — retains the legacy XR Core/device-config dependency, whose mutations are guarded off on native-XR builds
+**Default: disabled individually; selected by the 5001712, legacy-foundation, and 5002318 recommendation bundles; not compatible with 5002322** — retains the legacy XR Core/device-config dependency, whose mutations are guarded off on native-XR builds
 
 | Artifact | Edit |
 |---|---|

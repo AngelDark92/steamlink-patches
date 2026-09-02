@@ -55,7 +55,11 @@ class ConstantsTest {
             Constants.COMPATIBILITIES_STEAM_LINK_5002318.versionCodes(),
         )
         assertEquals(
-            listOf(5001740, 5001712, 5002172, 5002206, 5002244),
+            listOf(5001712),
+            Constants.COMPATIBILITIES_STEAM_LINK_5001712.versionCodes(),
+        )
+        assertEquals(
+            listOf(5001740, 5002172, 5002206, 5002244),
             Constants.COMPATIBILITIES_STEAM_LINK_LEGACY_RECOMMENDED.versionCodes(),
         )
         assertEquals(

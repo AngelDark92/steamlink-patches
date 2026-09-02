@@ -1,6 +1,7 @@
 package app.template.patches.steamlink
 
 import app.morphe.patcher.patch.rawResourcePatch
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5001712
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002318
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY_RECOMMENDED
@@ -22,6 +23,31 @@ import app.template.patches.steamlink.identity.deviceIdentityPatch
 // Patch.default belongs to the patch object rather than to an AppTarget. These exact-build
 // bundles keep every individual patch available in Expert mode while giving Simple mode a
 // deterministic recommendation set for the selected Steam Link version and build code.
+
+@Suppress("unused")
+val galaxyXrRecommended5001712Patch = rawResourcePatch(
+    name = "Galaxy XR recommended set (2.0.20/5001712)",
+    description = "Applies the exact-build Galaxy XR conversion and permission-free high-resolution set for Steam Link 2.0.20 build 5001712, including the Final balanced tested OLED profile.",
+    default = true,
+) {
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5001712.toTypedArray())
+    dependsOn(
+        androidXrNativePermissionNamesPatch,
+        deviceIdentityPatch,
+        xrCoreRuntimePatch,
+        xrDeviceConfigBaselinePatch,
+        xrManifestCapabilityPackPatch,
+        xrLauncherBootstrapPatch,
+        xrInputRoutingConfigPatch,
+        xrGalaxyXrHighResolutionPatch,
+        gxrFacebridgePatch,
+        microphoneInputPresetPatch,
+        unrestrictedBatteryUsagePatch,
+        videoDitherPatch,
+        hmdOnlyPatch,
+        oledCalibrationPatch,
+    )
+}
 
 @Suppress("unused")
 val galaxyXrRecommended5002322Patch = rawResourcePatch(

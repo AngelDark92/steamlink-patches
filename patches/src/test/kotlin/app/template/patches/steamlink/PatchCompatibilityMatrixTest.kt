@@ -43,6 +43,10 @@ class PatchCompatibilityMatrixTest {
     @Test
     fun exact_builds_select_one_recommendation_bundle() {
         assertEquals(
+            listOf(galaxyXrRecommended5001712Patch),
+            recommendedFor("2.0.20", 5001712),
+        )
+        assertEquals(
             listOf(galaxyXrRecommended5002322Patch),
             recommendedFor("2.0.22", 5002322),
         )
@@ -52,7 +56,6 @@ class PatchCompatibilityMatrixTest {
         )
         listOf(
             "2.0.20" to 5001740,
-            "2.0.20" to 5001712,
             "2.0.22" to 5002172,
             "2.0.22" to 5002206,
             "2.0.22" to 5002244,
@@ -125,6 +128,24 @@ class PatchCompatibilityMatrixTest {
     }
 
     @Test
+    fun build_5001712_bundle_contains_the_conversion_and_final_feature_set() {
+        assertEquals(
+            (legacyFoundationPatches + listOf(
+                xrGalaxyXrHighResolutionPatch,
+                gxrFacebridgePatch,
+                microphoneInputPresetPatch,
+                unrestrictedBatteryUsagePatch,
+                videoDitherPatch,
+                hmdOnlyPatch,
+                oledCalibrationPatch,
+            )).toSet(),
+            galaxyXrRecommended5001712Patch.dependencies.toSet(),
+        )
+        assertFalse(appearOnTopPatch in galaxyXrRecommended5001712Patch.dependencies)
+        assertFalse(changePackageNamePatch in galaxyXrRecommended5001712Patch.dependencies)
+    }
+
+    @Test
     fun previous_verified_compatibility_is_preserved() {
         listOf(5002244, 5002296, 5002313, 5002318, 5002322).forEach { versionCode ->
             assertTrue(xrGalaxyXrHighResolutionPatch.supports("2.0.22", versionCode), "$versionCode")
@@ -194,6 +215,7 @@ class PatchCompatibilityMatrixTest {
 
     private companion object {
         val recommendedBundles = listOf(
+            galaxyXrRecommended5001712Patch,
             galaxyXrRecommended5002322Patch,
             galaxyXrRecommended5002318Patch,
             galaxyXrLegacyFoundationPatch,

@@ -27,6 +27,7 @@ import app.template.patches.steamlink.binary.microphoneInputPresetPatch
 import app.template.patches.steamlink.binary.oledCalibrationPatch
 import app.template.patches.steamlink.binary.videoDitherPatch
 import app.template.patches.steamlink.galaxyXrLegacyFoundationPatch
+import app.template.patches.steamlink.galaxyXrRecommended5001712Patch
 import app.template.patches.steamlink.galaxyXrRecommended5002318Patch
 import app.template.patches.steamlink.galaxyXrRecommended5002322Patch
 import app.template.patches.steamlink.identity.changePackageNamePatch
@@ -65,7 +66,7 @@ private val visualDelayFixtures = highResolutionFixtures.filter { it.versionCode
 private val recommendedBundleFixtures = listOf(
     RecommendedBundleFixture(
         highResolutionFixtures.single { it.versionCode == "5001712" },
-        galaxyXrLegacyFoundationPatch,
+        galaxyXrRecommended5001712Patch,
     ),
     RecommendedBundleFixture(
         highResolutionFixtures.single { it.versionCode == "5002244" },
@@ -109,7 +110,7 @@ private val publicPatchesFor5001712: List<Patch<*>> = listOf(
  *
  * This deliberately does not sign, install, deploy, or contact a device. It executes every
  * compatible public patch independently on 2.0.20/5001712, produces 6 unsigned high-resolution
- * APKs, checks Visual Delay on 5 native layouts, and applies the 3 recommendation bundles to the
+ * APKs, checks Visual Delay on 5 native layouts, and applies the 4 recommendation bundles to the
  * 4 decoded bases that are available. It does not turn decoded-fixture success into runtime proof.
  */
 object DecodedSteamLinkPatchAudit {

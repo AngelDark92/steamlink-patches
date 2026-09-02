@@ -33,7 +33,6 @@ object Constants {
     )
     private val LEGACY_RECOMMENDED_STEAM_LINK_BUILDS = listOf(
         SteamLinkBuild("2.0.20", 5001740),
-        SteamLinkBuild("2.0.20", 5001712),
         SteamLinkBuild("2.0.22", 5002172),
         SteamLinkBuild("2.0.22", 5002206),
         SteamLinkBuild("2.0.22", 5002244),
@@ -122,6 +121,13 @@ object Constants {
         COMPATIBILITIES_STEAM_LINK_NATIVE_XR.filter { compatibility ->
             compatibility.targets.any { target ->
                 target.version == "2.0.22" && target.versionCodes?.values?.contains(5002318) == true
+            }
+        }
+
+    val COMPATIBILITIES_STEAM_LINK_5001712 =
+        COMPATIBILITIES_STEAM_LINK_LEGACY.filter { compatibility ->
+            compatibility.targets.any { target ->
+                target.version == "2.0.20" && target.versionCodes?.values?.contains(5001712) == true
             }
         }
 

@@ -1641,28 +1641,6 @@
           "signatures": null,
           "targets": [
             {
-              "version": "2.0.20",
-              "versionCodes": {
-                "ARM64_V8A": 5001712,
-                "ARMEABI_V7A": 5001712,
-                "X86_64": 5001712,
-                "X86": 5001712
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Verified Steam Link 2.0.20 build 5001712."
-            }
-          ]
-        },
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
               "version": "2.0.22",
               "versionCodes": {
                 "ARM64_V8A": 5002172,
@@ -1717,6 +1695,52 @@
               "isExperimental": false,
               "minSdk": null,
               "description": "Verified Steam Link 2.0.22 build 5002244."
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Galaxy XR recommended set (2.0.20/5001712)",
+      "description": "Applies the exact-build Galaxy XR conversion and permission-free high-resolution set for Steam Link 2.0.20 build 5001712, including the Final balanced tested OLED profile.",
+      "default": true,
+      "dependencies": [
+        "RawResourcePatch",
+        "RawResourcePatch",
+        "BytecodePatch",
+        "RawResourcePatch",
+        "ResourcePatch",
+        "ResourcePatch",
+        "RawResourcePatch",
+        "ResourcePatch",
+        "RawResourcePatch",
+        "RawResourcePatch",
+        "BytecodePatch",
+        "RawResourcePatch",
+        "RawResourcePatch",
+        "RawResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001712,
+                "ARMEABI_V7A": 5001712,
+                "X86_64": 5001712,
+                "X86": 5001712
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Verified Steam Link 2.0.20 build 5001712."
             }
           ]
         }
