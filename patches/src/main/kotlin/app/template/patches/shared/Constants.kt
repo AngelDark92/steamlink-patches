@@ -87,14 +87,14 @@ object Constants {
                 build = build,
                 description = if (build.versionCode == 5002322) {
                     "Build 5002322 recommends Galaxy XR high-resolution 3-projection fix, GXR face bridge, " +
-                        "Microphone input preset, Unrestricted battery usage, Video dither, " +
-                        "Visual Delay Fix, and OLED color calibration with the Final balanced tested profile. " +
+                        "Microphone input preset (Voice Recognition), Unrestricted battery usage, " +
+                        "Visual Delay Fix (60 ms), and OLED color calibration with the Final balanced tested profile. " +
                         "The retired projection experiments are excluded."
                 } else {
                     "Build ${build.versionCode} recommends its native-Android-XR-safe set: Galaxy XR " +
                         "high-resolution 3-projection fix, Device identity, Microphone input preset, OLED color " +
-                        "calibration, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video " +
-                        "dither. Appear on top remains an optional legacy fallback."
+                        "calibration, GXR face bridge, Visual Delay Fix, and Unrestricted battery usage. " +
+                        "Appear on top remains an optional legacy fallback."
                 },
             )
         }

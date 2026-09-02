@@ -20,7 +20,6 @@ import app.template.patches.steamlink.binary.forceStreamXrGatesPatch
 import app.template.patches.steamlink.binary.hmdOnlyPatch
 import app.template.patches.steamlink.binary.microphoneInputPresetPatch
 import app.template.patches.steamlink.binary.oledCalibrationPatch
-import app.template.patches.steamlink.binary.videoDitherPatch
 import app.template.patches.steamlink.identity.changePackageNamePatch
 import app.template.patches.steamlink.identity.deviceIdentityPatch
 import kotlin.test.Test
@@ -74,21 +73,26 @@ class PatchCompatibilityMatrixTest {
     }
 
     @Test
-    fun latest_bundle_contains_the_final_seven_patches() {
+    fun latest_bundle_contains_only_the_requested_six_patches() {
         assertEquals(
             setOf(
                 xrGalaxyXrHighResolutionPatch,
                 gxrFacebridgePatch,
                 microphoneInputPresetPatch,
                 unrestrictedBatteryUsagePatch,
-                videoDitherPatch,
                 hmdOnlyPatch,
                 oledCalibrationPatch,
             ),
             galaxyXrRecommended5002322Patch.dependencies.toSet(),
         )
         assertTrue(oledCalibrationPatch.supports("2.0.22", 5002322))
-        assertTrue(oledCalibrationPatch in videoDitherPatch.dependencyClosure())
+        assertEquals("voice-recognition", microphoneInputPresetPatch.options["preset"].default)
+        assertEquals(60, hmdOnlyPatch.options["offsetMs"].default)
+        assertEquals("final-balanced", oledCalibrationPatch.options["profile"].default)
+        assertEquals("srgb8-highp", oledCalibrationPatch.options["outputPrecision"].default)
+        assertFalse(deviceIdentityPatch in galaxyXrRecommended5002322Patch.dependencyClosure())
+        listOf(forceHmdInitializationGatesPatch, forceLobbyPermissionStateGatePatch, forceStreamXrGatesPatch)
+            .forEach { assertFalse(it in galaxyXrRecommended5002322Patch.dependencyClosure()) }
     }
 
     @Test
@@ -99,7 +103,6 @@ class PatchCompatibilityMatrixTest {
                 gxrFacebridgePatch,
                 microphoneInputPresetPatch,
                 unrestrictedBatteryUsagePatch,
-                videoDitherPatch,
                 hmdOnlyPatch,
                 oledCalibrationPatch,
                 deviceIdentityPatch,
@@ -114,35 +117,36 @@ class PatchCompatibilityMatrixTest {
     }
 
     @Test
-    fun legacy_bundle_contains_only_the_conversion_foundation() {
-        assertEquals(
-            legacyFoundationPatches.toSet(),
-            galaxyXrLegacyFoundationPatch.dependencies.toSet(),
+    fun both_legacy_bundles_contain_exactly_the_requested_fifteen_patches() {
+        val expected = setOf(
+            androidXrNativePermissionNamesPatch,
+            forceHmdInitializationGatesPatch,
+            forceLobbyPermissionStateGatePatch,
+            forceStreamXrGatesPatch,
+            gxrFacebridgePatch,
+            xrGalaxyXrHighResolutionPatch,
+            microphoneInputPresetPatch,
+            oledCalibrationPatch,
+            unrestrictedBatteryUsagePatch,
+            hmdOnlyPatch,
+            xrCoreRuntimePatch,
+            xrDeviceConfigBaselinePatch,
+            xrInputRoutingConfigPatch,
+            xrLauncherBootstrapPatch,
+            xrManifestCapabilityPackPatch,
         )
+        listOf(galaxyXrRecommended5001712Patch, galaxyXrLegacyFoundationPatch).forEach { bundle ->
+            assertEquals(expected, bundle.dependencies.toSet(), bundle.name)
+            val closure = bundle.dependencyClosure()
+            listOf(deviceIdentityPatch, appearOnTopPatch, changePackageNamePatch, controllerVelocityPatch)
+                .forEach { assertFalse(it in closure, "${bundle.name} unexpectedly includes ${it.name}") }
+        }
         assertFalse(forceHmdInitializationGatesPatch.default)
         assertFalse(forceLobbyPermissionStateGatePatch.default)
         assertFalse(forceStreamXrGatesPatch.default)
         assertFalse(controllerVelocityPatch.default)
         assertFalse(changePackageNamePatch.default)
         assertFalse(appearOnTopPatch.default)
-    }
-
-    @Test
-    fun build_5001712_bundle_contains_the_conversion_and_final_feature_set() {
-        assertEquals(
-            (legacyFoundationPatches + listOf(
-                xrGalaxyXrHighResolutionPatch,
-                gxrFacebridgePatch,
-                microphoneInputPresetPatch,
-                unrestrictedBatteryUsagePatch,
-                videoDitherPatch,
-                hmdOnlyPatch,
-                oledCalibrationPatch,
-            )).toSet(),
-            galaxyXrRecommended5001712Patch.dependencies.toSet(),
-        )
-        assertFalse(appearOnTopPatch in galaxyXrRecommended5001712Patch.dependencies)
-        assertFalse(changePackageNamePatch in galaxyXrRecommended5001712Patch.dependencies)
     }
 
     @Test
@@ -161,7 +165,6 @@ class PatchCompatibilityMatrixTest {
             oledCalibrationPatch,
             gxrFacebridgePatch,
             unrestrictedBatteryUsagePatch,
-            videoDitherPatch,
         )
         listOf(5001712, 5001740).forEach { versionCode ->
             legacyCommon.forEach { patch ->
@@ -245,7 +248,6 @@ class PatchCompatibilityMatrixTest {
             microphoneInputPresetPatch,
             oledCalibrationPatch,
             unrestrictedBatteryUsagePatch,
-            videoDitherPatch,
             hmdOnlyPatch,
             xrCoreRuntimePatch,
             xrDeviceConfigBaselinePatch,

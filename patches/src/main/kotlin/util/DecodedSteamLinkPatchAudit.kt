@@ -25,7 +25,6 @@ import app.template.patches.steamlink.binary.forceStreamXrGatesPatch
 import app.template.patches.steamlink.binary.hmdOnlyPatch
 import app.template.patches.steamlink.binary.microphoneInputPresetPatch
 import app.template.patches.steamlink.binary.oledCalibrationPatch
-import app.template.patches.steamlink.binary.videoDitherPatch
 import app.template.patches.steamlink.galaxyXrLegacyFoundationPatch
 import app.template.patches.steamlink.galaxyXrRecommended5001712Patch
 import app.template.patches.steamlink.galaxyXrRecommended5002318Patch
@@ -96,7 +95,6 @@ private val publicPatchesFor5001712: List<Patch<*>> = listOf(
     microphoneInputPresetPatch,
     oledCalibrationPatch,
     unrestrictedBatteryUsagePatch,
-    videoDitherPatch,
     hmdOnlyPatch,
     xrCoreRuntimePatch,
     xrDeviceConfigBaselinePatch,
@@ -212,6 +210,7 @@ private suspend fun runSingleAudit(args: Array<String>) {
             output.parentFile.mkdirs()
             executePatch(input, selection.patch, File(caseDirectory, "temporary"), output)
             verifyRecommendedBundleOutput(output, fixture)
+            verifyVisualDelayOutput(input, output, fixture)
             println("PASS ${fixture.versionName}/${fixture.versionCode} recommended bundle output: $output")
         }
 
@@ -223,7 +222,6 @@ private fun configurePublicAuditOptions(patch: Patch<*>) {
     when (patch) {
         controllerVelocityPatch -> patch.options["poseSendCadence"] = "half-2x"
         deviceIdentityPatch -> patch.options["profile"] = "meta-quest-pro"
-        videoDitherPatch -> patch.options["enable"] = false
         else -> Unit
     }
 }
@@ -288,9 +286,7 @@ private fun verifyPublicPatchOutput(outputApk: File, patch: Patch<*>) {
 
             microphoneInputPresetPatch -> scene.requireBytesAt(0xF4584, "c1008052".hexBytes())
 
-            oledCalibrationPatch -> scene.requireEncodedString("const float DITHER_ENABLE=1.;")
-
-            videoDitherPatch -> scene.requireEncodedString("const float DITHER_ENABLE=0.;")
+            oledCalibrationPatch -> scene.requireEncodedString("const float DITHER_ENABLE=0.;")
 
             unrestrictedBatteryUsagePatch -> {
                 manifest.requireEncodedString("android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
@@ -419,25 +415,44 @@ private fun verifyVisualDelayOutput(
 private fun verifyRecommendedBundleOutput(outputApk: File, fixture: HighResolutionFixture) {
     ZipFile(outputApk).use { apk ->
         val manifest = apk.requireEntryBytes("AndroidManifest.xml")
+        val scene = apk.requireEntryBytes("lib/arm64-v8a/libvrlink_scene.so")
         manifest.requireEncodedString("org.khronos.openxr.permission.OPENXR")
         manifest.requireEncodedString("android.permission.HAND_TRACKING")
-        if (fixture.versionCode in setOf("5002318", "5002322")) {
-            apk.requireEntryBytes("lib/arm64-v8a/libgxr_ast.so")
-            apk.requireEntryBytes("lib/arm64-v8a/libgxr_face_bridge.so")
-            check(!manifest.containsEncodedString("android.permission.SYSTEM_ALERT_WINDOW")) {
-                "${fixture.versionCode}: recommended native-XR bundle requested SYSTEM_ALERT_WINDOW"
-            }
-        } else {
+        manifest.requireEncodedString("android.permission.FACE_TRACKING")
+        manifest.requireEncodedString("android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
+        apk.requireElf("lib/arm64-v8a/libgxr_face_bridge.so")
+        check(!manifest.containsEncodedString("android.permission.SYSTEM_ALERT_WINDOW")) {
+            "${fixture.versionCode}: recommended bundle requested SYSTEM_ALERT_WINDOW"
+        }
+        // Check emitted shader/preset bytes, not just the bundle membership. OLED must not
+        // re-enable dithering after removal of the public Video dither patch.
+        scene.requireEncodedString("const float DITHER_ENABLE=0.;")
+        scene.requireEncodedString("vec3(1.20)")
+        scene.requireEncodedString("c,1.45)")
+        check(scene.containsSubsequence("e00b40f9c1008052".hexBytes())) {
+            "${fixture.versionCode}: Voice Recognition AAudio preset not found"
+        }
+        // Original pose load followed by MOVZ/MOVK X16 for exactly 60,000,000 ns, ADD X2.
+        check(scene.containsSubsequence("e20740f910e090d27072a0f24200108b".hexBytes())) {
+            "${fixture.versionCode}: 60 ms Visual Delay trampoline not found"
+        }
+        if (fixture.versionCode == "5002322") scene.requireBytesAt(0xF37E0, "c1008052".hexBytes())
+        if (fixture.versionCode !in setOf("5002318", "5002322")) {
             apk.requireEntryBytes("lib/arm64-v8a/libgxr_xr_bridge.so")
             apk.requireEntryBytes("assets/config/ui_config.json")
             val hmdConfig = apk.requireEntryBytes("assets/config/hmd_config.json")
             hmdConfig.requireEncodedString("\"sModelNumber\": \"Galaxy XR\"")
             if (fixture.versionCode == "5001712") hmdConfig.require5001712RequestedExtensionsObject()
+            scene.requireEncodedString("android.permission.EYE_TRACKING_FINE")
+            val gateOffsets = when (fixture.versionCode) {
+                "5001712" -> listOf(0xFFE20, 0xFFE28, 0x10DB10, 0x116564, 0x11656C, 0x116620)
+                "5002244" -> listOf(0xFD040, 0xFD048, 0x10B658, 0x1140AC, 0x1140B4, 0x114168)
+                else -> error("Missing legacy gate audit for ${fixture.versionCode}")
+            }
+            gateOffsets.forEach { scene.requireBytesAt(it, "1f2003d5".hexBytes()) }
         }
     }
-    if (fixture.versionCode in setOf("5002318", "5002322")) {
-        verifyHighResolutionOutput(outputApk, fixture)
-    }
+    verifyHighResolutionOutput(outputApk, fixture)
 }
 
 private fun verifyHighResolutionZip(apk: ZipFile, fixture: HighResolutionFixture) {

@@ -14,15 +14,38 @@ import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
 import app.template.patches.steamlink.binary.androidXrNativePermissionNamesPatch
+import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
+import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
+import app.template.patches.steamlink.binary.forceStreamXrGatesPatch
 import app.template.patches.steamlink.binary.hmdOnlyPatch
 import app.template.patches.steamlink.binary.microphoneInputPresetPatch
 import app.template.patches.steamlink.binary.oledCalibrationPatch
-import app.template.patches.steamlink.binary.videoDitherPatch
 import app.template.patches.steamlink.identity.deviceIdentityPatch
 
 // Patch.default belongs to the patch object rather than to an AppTarget. These exact-build
 // bundles keep every individual patch available in Expert mode while giving Simple mode a
 // deterministic recommendation set for the selected Steam Link version and build code.
+
+// Both legacy bundles intentionally select the same 15 public patches. Device identity is
+// optional: XR Device Config Baseline already installs the Galaxy XR config. Individual native
+// edits still obey their exact-build guards; selecting a bundle does not verify a new layout.
+private val legacyRecommendedPatches = arrayOf(
+    androidXrNativePermissionNamesPatch,
+    forceHmdInitializationGatesPatch,
+    forceLobbyPermissionStateGatePatch,
+    forceStreamXrGatesPatch,
+    gxrFacebridgePatch,
+    xrGalaxyXrHighResolutionPatch,
+    microphoneInputPresetPatch,
+    oledCalibrationPatch,
+    unrestrictedBatteryUsagePatch,
+    hmdOnlyPatch,
+    xrCoreRuntimePatch,
+    xrDeviceConfigBaselinePatch,
+    xrInputRoutingConfigPatch,
+    xrLauncherBootstrapPatch,
+    xrManifestCapabilityPackPatch,
+)
 
 @Suppress("unused")
 val galaxyXrRecommended5001712Patch = rawResourcePatch(
@@ -31,22 +54,7 @@ val galaxyXrRecommended5001712Patch = rawResourcePatch(
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5001712.toTypedArray())
-    dependsOn(
-        androidXrNativePermissionNamesPatch,
-        deviceIdentityPatch,
-        xrCoreRuntimePatch,
-        xrDeviceConfigBaselinePatch,
-        xrManifestCapabilityPackPatch,
-        xrLauncherBootstrapPatch,
-        xrInputRoutingConfigPatch,
-        xrGalaxyXrHighResolutionPatch,
-        gxrFacebridgePatch,
-        microphoneInputPresetPatch,
-        unrestrictedBatteryUsagePatch,
-        videoDitherPatch,
-        hmdOnlyPatch,
-        oledCalibrationPatch,
-    )
+    dependsOn(*legacyRecommendedPatches)
 }
 
 @Suppress("unused")
@@ -61,7 +69,6 @@ val galaxyXrRecommended5002322Patch = rawResourcePatch(
         gxrFacebridgePatch,
         microphoneInputPresetPatch,
         unrestrictedBatteryUsagePatch,
-        videoDitherPatch,
         hmdOnlyPatch,
         oledCalibrationPatch,
     )
@@ -79,7 +86,6 @@ val galaxyXrRecommended5002318Patch = rawResourcePatch(
         gxrFacebridgePatch,
         microphoneInputPresetPatch,
         unrestrictedBatteryUsagePatch,
-        videoDitherPatch,
         hmdOnlyPatch,
         oledCalibrationPatch,
         deviceIdentityPatch,
@@ -89,17 +95,9 @@ val galaxyXrRecommended5002318Patch = rawResourcePatch(
 @Suppress("unused")
 val galaxyXrLegacyFoundationPatch = rawResourcePatch(
     name = "Galaxy XR legacy foundation (through 2.0.22/5002244)",
-    description = "Applies the Galaxy XR conversion foundation to the exact supported Steam Link builds through 2.0.22 build 5002244. Diagnostic force gates and controller tuning remain optional.",
+    description = "Selects the 15-patch Galaxy XR legacy set, including native gates, face bridge, OLED calibration, microphone, battery, Visual Delay, and XR foundation. High-resolution output is guarded to verified layouts; unavailable on 5001740, 5002172, and 5002206.",
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY_RECOMMENDED.toTypedArray())
-    dependsOn(
-        androidXrNativePermissionNamesPatch,
-        deviceIdentityPatch,
-        xrCoreRuntimePatch,
-        xrDeviceConfigBaselinePatch,
-        xrManifestCapabilityPackPatch,
-        xrLauncherBootstrapPatch,
-        xrInputRoutingConfigPatch,
-    )
+    dependsOn(*legacyRecommendedPatches)
 }

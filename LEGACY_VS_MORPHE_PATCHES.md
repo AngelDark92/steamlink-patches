@@ -1,5 +1,35 @@
 # Legacy vs Morphe APK Patch Audit
 
+## Current release policy (2026-09-02)
+
+The comparison below is historical evidence about the 2 named APK artifacts, not a description of
+the current generated patch bundle. Its enabled dithering, `78` ms pose offset, and missing-hook
+findings must not be read as current release defaults or fresh runtime results.
+
+Both legacy recommendation bundles now directly select the same 15 public patches: Android XR
+native permission names; Force HMD initialization gates; Force lobby permission-state gate; Force
+stream XR gates; GXR face bridge; Galaxy XR high-resolution 3-projection fix; Microphone input
+preset; OLED color calibration; Unrestricted battery usage; Visual Delay Fix; XR Core Runtime;
+XR Device Config Baseline; XR Input Routing Config; XR Launcher Bootstrap (Home Space); and XR
+Manifest Capability Pack. Device identity is optional there because the config baseline supplies
+the legacy Galaxy identity.
+
+The exact 2.0.22/5002322 bundle selects only face bridge, high-resolution fix, microphone
+`voice-recognition`, OLED `final-balanced` with safe `srgb8-highp`, battery usage, and Visual Delay
+`60` ms. Native-XR build 5002318 retains that 6-patch set plus Device identity. Neither native
+bundle enables legacy conversion mutations.
+
+The standalone Video dither patch is removed, and new OLED shaders use `DITHER_ENABLE=0.`.
+Developer-only source opt-in and historical byte-state information are retained in
+[the patch catalog](PATCH_CATALOG.md#video-dither-retired-developer-opt-in); this is not
+a Morphe checkbox. Its unregistered helper is now
+`patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt`.
+
+Bundle membership does not broaden native guards: high-resolution adaptation is unavailable on
+5001740/5002172/5002206, and the 3 force-gate edits are unavailable on 5002172/5002206. Those
+mutations remain no-ops rather than assuming a neighboring build's topology or offsets. See the
+[current recommendation catalog](PATCH_CATALOG.md#recommendation-bundles) for exact scope.
+
 ## Scope
 
 This report compares these decoded APK trees:
@@ -83,13 +113,13 @@ Both `libvrlink_scene.so` files contain the replacement 1087-byte video fragment
 - Saturation: `c, 1.45`
 - Zero-centered dither expression
 
-This corresponds to the current `OLED color calibration` patch's **Final balanced** profile, not its default `Initial` profile.
+At the time of this comparison, this matched the `OLED color calibration` patch's **Final balanced** profile rather than its then-default `Initial` profile. The current default is `final-balanced`, with highp output and dithering disabled; the archived shaders remain unchanged.
 
 Relevant current implementation:
 
 - `patches/src/main/kotlin/app/template/patches/steamlink/binary/OledCalibrationPatch.kt`
 
-### Video dithering enabled
+### Historical video dithering enabled
 
 Both calibrated shaders contain:
 
@@ -97,11 +127,12 @@ Both calibrated shaders contain:
 ) - .5) * .00292;
 ```
 
-Neither contains the disabled `*.00000` variant. Calibrated dithering is enabled in both APKs.
+Neither contains the disabled `*.00000` variant. Calibrated dithering is enabled in both archived APKs, not in the current default OLED shader.
 
-Relevant current implementation:
+Retained historical-state helper (not a registered Morphe patch):
 
-- `patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDitherPatch.kt`
+- `patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt`
+- [Developer-only local opt-in instructions](PATCH_CATALOG.md#video-dither-retired-developer-opt-in)
 
 ### Native permission prompt bypass
 
@@ -497,7 +528,10 @@ This history is stronger evidence than source comments: the missing hook was alr
 
 ## Validation Checklist for Recreated Patches
 
-### Static checks after patching
+### Historical parity checks after patching
+
+These checks reproduce the archived comparison, including its dither and `78` ms settings. They
+do not replace current release tests, which require disabled OLED dithering and default `60` ms.
 
 - `SDLSurface.onTouch` contains a call to `GxrSdlBridge.routeXrPointerAsMouse`.
 - `SDLGenericMotionListener_API14.onGenericMotion` contains a call to `routeXrPointerAsMouseGeneric`.

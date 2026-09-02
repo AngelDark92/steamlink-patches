@@ -118,6 +118,8 @@ internal enum class VideoOutputPrecision(val optionValue: String) {
     }
 }
 
+// Dithering is retired from the patch catalog. Keep the reversible shader marker disabled;
+// PATCH_CATALOG.md documents the explicit local opt-in without changing output precision.
 private val HIGHP_SHADER_TEMPLATE = """#version 300 es
 #extension GL_OES_EGL_image_external_essl3 : enable
 precision highp float;
@@ -130,7 +132,7 @@ layout(location=4) uniform vec3 UniReserved1;
 layout(location=5) uniform vec4 UniReserved2;
 layout(location=6) uniform vec4 UniDitherOffsets;
 const float DITHER_SCALE=DITHER_SCALE_VALUE;
-const float DITHER_ENABLE=1.;
+const float DITHER_ENABLE=0.;
 void main()
 {
 color=texture(tex0,uv);

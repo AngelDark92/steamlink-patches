@@ -108,6 +108,13 @@ class AndroidSurfaceTriggerResourceTest {
         assertFalse(patchSource.contains("nativeProjectionHelperPatch"))
         assertFalse(patchSource.contains("patchNativeEndFrameHelper"))
         assertFalse(patchSource.contains("gxrEndFrame"))
+        // Legacy bundles also select this dependency on older unverified topologies. The
+        // finalizer must skip before reading/mutating the manifest, just like resource setup.
+        val finalizer = patchSource.substringAfter("val xrGalaxyXrHighResolutionPatch")
+            .substringAfter("finalize {")
+        val guard = finalizer.indexOf("if (!isHighResolutionSteamLinkBuild(")
+        assertTrue(guard >= 0 && guard < finalizer.indexOf("document(\"AndroidManifest.xml\")"))
+        assertTrue(finalizer.contains("return@finalize"))
     }
 
     @Test

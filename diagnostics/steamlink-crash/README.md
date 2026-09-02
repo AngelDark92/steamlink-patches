@@ -71,7 +71,7 @@ Build every row from the same pristine 5001712 APK, signing identity, and packag
 4. `Galaxy XR high-resolution 3-projection fix` only. This recursively includes Launcher and Core. If row 3 passes and row 4 fails at XR creation or first frame, inspect `libgxr_ast.so`/OpenXR negotiation first.
 5. Add `Device identity`.
 6. Add native changes individually: permission names, HMD gates, lobby gate, then stream gates. The first regression maps the native phase and exact `libvrlink_scene.so` function.
-7. Add OLED plus Video dither, then Visual Delay, then Microphone separately. These isolate first-frame shader/swapchain, first-pose, and audio-start failures.
+7. Add OLED, then Visual Delay, then Microphone separately. These isolate first-frame shader/swapchain, first-pose, and audio-start failures. Video dither is retired; OLED-generated shaders now default to dithering off.
 8. Add GXR face bridge, then Controller velocity. These isolate the implicit face layer and controller layer/cadence.
 9. Reproduce the full current defaults as the final anchor. Test Change package name and Appear on top only as separate side branches because they change identity or launcher policy.
 

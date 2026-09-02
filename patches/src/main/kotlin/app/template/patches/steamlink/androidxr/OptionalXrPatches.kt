@@ -314,6 +314,11 @@ val xrGalaxyXrHighResolutionPatch = resourcePatch(
     )
 
     finalize {
+        // Dependencies bypass compatibility checks. Never advertise a resolution mode whose
+        // matching helper was deliberately skipped for an unverified legacy projection layout.
+        if (!isHighResolutionSteamLinkBuild(packageMetadata.versionName, packageMetadata.versionCode)) {
+            return@finalize
+        }
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
         }

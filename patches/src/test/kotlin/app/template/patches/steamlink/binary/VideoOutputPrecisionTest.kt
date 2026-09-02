@@ -26,7 +26,7 @@ class VideoOutputPrecisionTest {
     )
 
     @Test
-    fun `srgb8 control shader is highp and uses 8-bit-scaled vector dither`() {
+    fun `srgb8 control shader is highp and retains disabled 8-bit-scaled vector dither`() {
         val shader = paddedVideoShader(1.06f, 1.12f, VideoOutputPrecision.SRGB8_HIGHP).ascii()
 
         assertTrue(shader.startsWith("#version 300 es\n"))
@@ -44,7 +44,7 @@ class VideoOutputPrecisionTest {
     }
 
     @Test
-    fun `rgb10 shader applies eotf and uses 10-bit-scaled dither`() {
+    fun `rgb10 shader applies eotf and retains disabled 10-bit-scaled dither`() {
         val shader = paddedVideoShader(
             1.20f,
             1.45f,
@@ -88,12 +88,13 @@ class VideoOutputPrecisionTest {
     @Test
     fun `dither toggle preserves the selected output scale`() {
         VideoOutputPrecision.entries.forEach { precision ->
-            val enabled = paddedVideoShader(1.06f, 1.12f, precision)
-            val disabled = setDitherState(enabled, false)
-            val restored = setDitherState(disabled, true)
+            val disabled = paddedVideoShader(1.06f, 1.12f, precision)
+            val enabled = setDitherState(disabled, true)
+            val restored = setDitherState(enabled, false)
 
             assertTrue(disabled.ascii().contains("const float DITHER_ENABLE=0.;"))
-            assertContentEquals(enabled, restored)
+            assertTrue(enabled.ascii().contains("const float DITHER_ENABLE=1.;"))
+            assertContentEquals(disabled, restored)
         }
     }
 
@@ -230,6 +231,7 @@ class VideoOutputPrecisionTest {
     private fun ByteArray.ascii() = toString(Charsets.US_ASCII)
 
     private fun assertShaderInterface(shader: String) {
+        assertTrue(shader.contains("const float DITHER_ENABLE=0.;"))
         assertTrue(shader.contains("layout(location=2) uniform highp samplerExternalOES tex0;"))
         assertFalse(shader.contains("layout(location=2) uniform samplerExternalOES tex0;"))
         assertTrue(shader.contains("layout(location=3) uniform float fFadeAmount;"))
