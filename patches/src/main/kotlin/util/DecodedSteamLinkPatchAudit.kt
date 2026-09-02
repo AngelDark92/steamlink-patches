@@ -4,7 +4,10 @@ import app.morphe.patcher.Patcher
 import app.morphe.patcher.PatcherConfig
 import app.morphe.patcher.apk.ApkUtils.applyTo
 import app.morphe.patcher.patch.Patch
+import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID
+import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_BUILD_ID
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_MANIFEST
+import app.template.patches.steamlink.androidxr.androidSurfaceTriggerResourceLibraryForBuild
 import app.template.patches.steamlink.androidxr.appearOnTopPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityPatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
@@ -313,7 +316,25 @@ private fun verifyHighResolutionOutput(outputApk: File, fixture: HighResolutionF
 }
 
 private fun verifyHighResolutionZip(apk: ZipFile, fixture: HighResolutionFixture) {
-    apk.requireElf("lib/arm64-v8a/libgxr_ast.so")
+    val installedHelper = apk.requireEntryBytes("lib/arm64-v8a/libgxr_ast.so")
+    installedHelper.requireBytesAt(0, byteArrayOf(0x7f, 0x45, 0x4c, 0x46))
+    val expectedResourceName = androidSurfaceTriggerResourceLibraryForBuild(
+        fixture.versionName,
+        fixture.versionCode,
+    )
+    val expectedHelper = requireNotNull(DecodedSteamLinkPatchAudit::class.java.getResourceAsStream(
+        "/steamlink/androidxr/$expectedResourceName",
+    )) { "Missing bundled high-resolution helper: $expectedResourceName" }.use { it.readBytes() }
+    check(installedHelper.contentEquals(expectedHelper)) {
+        "${fixture.versionName}/${fixture.versionCode}: installed helper does not match " +
+            expectedResourceName
+    }
+    val expectedBuildId = if (fixture.versionName == "2.0.20" && fixture.versionCode == "5001712") {
+        ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID
+    } else {
+        ANDROID_SURFACE_TRIGGER_BUILD_ID
+    }
+    installedHelper.requireEncodedString(expectedBuildId)
     apk.requireEntryBytes(
         "assets/openxr/1/api_layers/implicit.d/" + ANDROID_SURFACE_TRIGGER_MANIFEST,
     ).requireEncodedString("XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1")

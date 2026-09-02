@@ -115,11 +115,13 @@ object Constants {
         HIGH_RESOLUTION_STEAM_LINK_BUILDS.map { build ->
             steamLinkBuildCompatibility(
                 build = build,
-                description = if (build.versionCode == 5002322) {
-                    "Headset-validated Galaxy XR high-resolution patch target for exact Steam Link " +
+                description = when (build.versionCode) {
+                    5001712 -> "Exact Steam Link 2.0.20/5001712 high-resolution target with its isolated " +
+                        "2-projection to 3-layer payload. The topology correction has prior user-reported " +
+                        "startup and delayed-frame runtime evidence; this rebuilt binary remains uninstalled."
+                    5002322 -> "Headset-validated Galaxy XR high-resolution patch target for exact Steam Link " +
                         "${build.version} build ${build.versionCode}."
-                } else {
-                    "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact " +
+                    else -> "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact " +
                         "Steam Link ${build.version} build ${build.versionCode}; headset validation pending."
                 },
             )

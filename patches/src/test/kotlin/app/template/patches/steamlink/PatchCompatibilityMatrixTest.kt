@@ -5,7 +5,7 @@ import app.template.patches.steamlink.androidxr.appearOnTopPatch
 import app.template.patches.steamlink.androidxr.androidXrUiExtensionPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityPatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
-import app.template.patches.steamlink.androidxr.experimentalAndroidSurfaceWarmupOmitPatch
+import app.template.patches.steamlink.androidxr.experimentalAndroidSurfaceDfrRearmPatch
 import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.xrDirectInputFixPatch
 import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
@@ -51,10 +51,10 @@ class PatchCompatibilityMatrixTest {
         assertFalse(appearOnTopPatch.supports("2.0.22", 5002322))
         assertEquals("Appear on top (legacy)", appearOnTopPatch.name)
         assertFalse(appearOnTopPatch.default)
-        assertTrue(experimentalAndroidSurfaceWarmupOmitPatch.supports("2.0.22", 5002322))
-        assertFalse(experimentalAndroidSurfaceWarmupOmitPatch.supports("2.0.22", 5002318))
-        assertFalse(experimentalAndroidSurfaceWarmupOmitPatch.supports("2.0.20", 5001712))
-        assertFalse(experimentalAndroidSurfaceWarmupOmitPatch.default)
+        assertTrue(experimentalAndroidSurfaceDfrRearmPatch.supports("2.0.22", 5002322))
+        assertFalse(experimentalAndroidSurfaceDfrRearmPatch.supports("2.0.22", 5002318))
+        assertFalse(experimentalAndroidSurfaceDfrRearmPatch.supports("2.0.20", 5001712))
+        assertFalse(experimentalAndroidSurfaceDfrRearmPatch.default)
         (allowedNativeXr + excludedNativeXr).forEach { patch ->
             assertEquals(
                 patch in recommendedDefaults,

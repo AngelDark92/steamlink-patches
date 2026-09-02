@@ -840,8 +840,8 @@
       ]
     },
     {
-      "name": "Experimental Galaxy XR surface warm-up/omit performance A/B",
-      "description": "Diagnostic-only exact 2.0.22/5002322 variant. It creates and queues the same 2x2 Android Surface, submits the fourth terminal quad for 7200 accepted frames, then retains every Surface resource while returning to Valve's original 3 projection layers. Use it only to determine whether the recurring fourth layer causes the extra compositor cost.",
+      "name": "Experimental Galaxy XR DFR composition re-arm",
+      "description": "Diagnostic-only exact 2.0.22/5002322 variant. After a 7200-frame validation warm-up it normally submits Valve's original layers, then briefly re-posts and re-submits the retained 2x2 Android Surface after OpenXR-visible composition changes and every 90 omitted frames. This tests whether Windows-only DFR attachment invalidates Galaxy XR's private high-resolution policy without paying for a fourth layer continuously.",
       "default": false,
       "dependencies": [
         "ResourcePatch",
@@ -1488,7 +1488,7 @@
     },
     {
       "name": "Galaxy XR high-resolution 3-projection fix",
-      "description": "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves Valve's native 3 projections and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
+      "description": "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves each build's native projection layout (2 layers on 2.0.20/5001712; 3 layers on supported 2.0.22 builds) and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
       "default": true,
       "dependencies": [
         "ResourcePatch",
@@ -1514,7 +1514,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.20 build 5001712; headset validation pending."
+              "description": "Exact Steam Link 2.0.20/5001712 high-resolution target with its isolated 2-projection to 3-layer payload. The topology correction has prior user-reported startup and delayed-frame runtime evidence; this rebuilt binary remains uninstalled."
             }
           ]
         },

@@ -11,19 +11,19 @@ import kotlin.test.assertTrue
 
 class AndroidSurfaceTriggerResourceTest {
     @Test
-    fun `production and warmup omit modes are the only active resolution modes`() {
+    fun `production and DFR rearm modes are the only active resolution modes`() {
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(
-            ANDROID_SURFACE_WARMUP_OMIT_MODE,
-            ANDROID_SURFACE_WARMUP_OMIT_MODE,
+            ANDROID_SURFACE_DFR_REARM_MODE,
+            ANDROID_SURFACE_DFR_REARM_MODE,
         ))
         assertTrue(projectionModesConflict(
             ANDROID_SURFACE_TRIGGER_MODE,
-            ANDROID_SURFACE_WARMUP_OMIT_MODE,
+            ANDROID_SURFACE_DFR_REARM_MODE,
         ))
         assertTrue(projectionModesConflict(
-            ANDROID_SURFACE_WARMUP_OMIT_MODE,
+            ANDROID_SURFACE_DFR_REARM_MODE,
             ANDROID_SURFACE_TRIGGER_MODE,
         ))
         listOf(
@@ -59,7 +59,12 @@ class AndroidSurfaceTriggerResourceTest {
             "surface_trigger_frame",
             "surface_trigger_warmup_started",
             "surface_trigger_quad_omitted",
+            "surface_trigger_rearm",
+            "surface_trigger_buffer_reposted",
+            "eligible_reentry",
             "kWarmupSuccessfulFrames = 7200",
+            "kPeriodicProbeOmittedFrames = 90",
+            "kRearmSuccessfulFrames = 3",
             "surfaceRetained",
             "swapchainRetained",
             "nativeWindowRetained",
@@ -75,6 +80,9 @@ class AndroidSurfaceTriggerResourceTest {
             "outputLayerCount",
             "XR_REFERENCE_SPACE_TYPE_VIEW",
             "maxLayerCount < kRequiredLayerCount",
+            "GXR_AST_SOURCE_PROJECTION_COUNT",
+            "kSourceProjectionCount + 1",
+            "layers[kSourceProjectionCount]",
             "XR_SESSION_STATE_VISIBLE",
             "XR_SESSION_STATE_FOCUSED",
             "XR_SWAPCHAIN_USAGE_SAMPLED_BIT",
@@ -86,6 +94,7 @@ class AndroidSurfaceTriggerResourceTest {
             .forEach { invariant -> assertTrue(source.replace(" ", "").contains(invariant), invariant) }
         assertTrue(source.replace(" ", "").contains("output.layers=layers.data()"))
         assertTrue(source.replace(" ", "").contains("constboolappended=!appEnabled"))
+        assertFalse(source.contains("info->layers[2]"))
         assertTrue(source.contains("nextCreateApiLayerInstance(createInfo, &next, instance)"))
         assertTrue(source.contains("layers[index] = info->layers[index]"))
         assertFalse(source.contains("glDrawArrays"))
@@ -106,12 +115,33 @@ class AndroidSurfaceTriggerResourceTest {
         assertTrue(patchSource.contains("libgxr_nspp.so"))
         assertTrue(patchSource.contains("future RGB10_A2"))
         assertTrue(patchSource.contains("activeProjectionModes.first { it.mode == requestedMode }"))
-        assertTrue(patchSource.contains("ANDROID_SURFACE_WARMUP_OMIT_MODE"))
+        assertTrue(patchSource.contains("ANDROID_SURFACE_DFR_REARM_MODE"))
         assertTrue(patchSource.contains("COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL"))
         assertTrue(patchSource.contains("exact5002322Only = true"))
+        assertTrue(patchSource.contains("android_surface_trigger_warmup_omit_v1"))
+        assertTrue(patchSource.contains("libgxr_ast_warmup_omit.so"))
         assertFalse(patchSource.contains("nativeProjectionHelperPatch"))
         assertFalse(patchSource.contains("patchNativeEndFrameHelper"))
         assertFalse(patchSource.contains("gxrEndFrame"))
+    }
+
+    @Test
+    fun `5001712 alone selects the 2 projection helper resource`() {
+        assertEquals(
+            ANDROID_SURFACE_TRIGGER_5001712_RESOURCE_LIBRARY,
+            androidSurfaceTriggerResourceLibraryForBuild("2.0.20", "5001712"),
+        )
+        listOf("5002244", "5002296", "5002313", "5002318", "5002322").forEach {
+            assertEquals(
+                ANDROID_SURFACE_TRIGGER_LIBRARY,
+                androidSurfaceTriggerResourceLibraryForBuild("2.0.22", it),
+                it,
+            )
+        }
+        assertEquals(
+            ANDROID_SURFACE_TRIGGER_LIBRARY,
+            androidSurfaceTriggerResourceLibraryForBuild("2.0.22", "5001712"),
+        )
     }
 
     @Test
@@ -134,7 +164,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "93971dc2d81f0587047dd816d772a6ca3d4bdb9c9bfcfe0c5831f27adedac966",
+            "0d3d89d872457a7b93993e6ac45c2458beafad2c83f00effa8b7ad0872adf205",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
@@ -162,35 +192,63 @@ class AndroidSurfaceTriggerResourceTest {
     }
 
     @Test
-    fun `warmup omit helper is isolated diagnostic instrumentation`() {
-        val manifest = requireNotNull(javaClass.getResource(
-            "/steamlink/androidxr/$ANDROID_SURFACE_WARMUP_OMIT_MANIFEST",
-        )).readText()
-        assertTrue(manifest.contains("\"library_path\": \"$ANDROID_SURFACE_WARMUP_OMIT_LIBRARY\""))
-        assertTrue(manifest.contains(
-            "XR_APILAYER_local_GalaxyXR_android_surface_trigger_warmup_omit_v1",
-        ))
-
+    fun `5001712 helper is isolated 2 to 3 layer payload`() {
         val helper = requireNotNull(
-            javaClass.getResourceAsStream("/steamlink/androidxr/$ANDROID_SURFACE_WARMUP_OMIT_LIBRARY"),
+            javaClass.getResourceAsStream(
+                "/steamlink/androidxr/$ANDROID_SURFACE_TRIGGER_5001712_RESOURCE_LIBRARY",
+            ),
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "6707ccc5b18220227e5e640a06df9e87d9ecf1826ebc27a5373da9d7cec3df2a",
+            "1d96de258da0ed3c3eaa0913a411b2b7232fe304455ec25d866ad68b3baa347d",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
         val strings = helper.toString(Charsets.ISO_8859_1)
         listOf(
-            ANDROID_SURFACE_WARMUP_OMIT_MODE,
-            ANDROID_SURFACE_WARMUP_OMIT_BUILD_ID,
+            ANDROID_SURFACE_TRIGGER_MODE,
+            ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID,
+            "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1",
+            "surface_trigger_frame",
+            "surface_trigger_submission",
+        ).forEach { invariant -> assertTrue(strings.contains(invariant), invariant) }
+        assertFalse(strings.contains(ANDROID_SURFACE_TRIGGER_BUILD_ID))
+        assertFalse(strings.contains("sourcePointer2"))
+    }
+
+    @Test
+    fun `DFR rearm helper is isolated diagnostic instrumentation`() {
+        val manifest = requireNotNull(javaClass.getResource(
+            "/steamlink/androidxr/$ANDROID_SURFACE_DFR_REARM_MANIFEST",
+        )).readText()
+        assertTrue(manifest.contains("\"library_path\": \"$ANDROID_SURFACE_DFR_REARM_LIBRARY\""))
+        assertTrue(manifest.contains(
+            "XR_APILAYER_local_GalaxyXR_android_surface_trigger_dfr_rearm_v1",
+        ))
+
+        val helper = requireNotNull(
+            javaClass.getResourceAsStream("/steamlink/androidxr/$ANDROID_SURFACE_DFR_REARM_LIBRARY"),
+        ).use { it.readBytes() }
+        assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
+        assertEquals(
+            "6fd1fb326e2cba5b2a629fd9bb15648144876d2d049178450eabd00d8a502c31",
+            MessageDigest.getInstance("SHA-256").digest(helper)
+                .joinToString("") { "%02x".format(it) },
+        )
+        val strings = helper.toString(Charsets.ISO_8859_1)
+        listOf(
+            ANDROID_SURFACE_DFR_REARM_MODE,
+            ANDROID_SURFACE_DFR_REARM_BUILD_ID,
             "surface_trigger_warmup_started",
             "surface_trigger_quad_omitted",
+            "surface_trigger_rearm",
+            "surface_trigger_buffer_reposted",
+            "surface_trigger_composition_changed",
+            "periodic_probe",
             "surfaceRetained",
             "swapchainRetained",
             "nativeWindowRetained",
             "bufferRetained",
-            "GXR_AST_quad_omitted_resources_retained",
             "ATrace_beginSection",
         ).forEach { invariant -> assertTrue(strings.contains(invariant), invariant) }
         assertFalse(strings.contains("xrWaitFrame"))
@@ -209,6 +267,8 @@ class AndroidSurfaceTriggerResourceTest {
             "libgxr_nspp.so",
             "libgxr_single_projection_reconstruction_efficient_v1.so",
             "XR_APILAYER_local_GalaxyXR_single_projection_reconstruction_efficient_v1.json",
+            "libgxr_ast_warmup_omit.so",
+            "XR_APILAYER_local_GalaxyXR_android_surface_trigger_warmup_omit_v1.json",
         ).forEach { resource ->
             assertNull(javaClass.getResourceAsStream("/steamlink/androidxr/$resource"), resource)
         }

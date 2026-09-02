@@ -58,9 +58,43 @@ function Protect-DiagnosticText {
     }
     $result = $result -replace '(?i)\b(?:10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2})\b', '<private-ip>'
     $result = $result -replace '(?i)\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b', '<mac>'
-    $result = $result -replace '(?i)(["''](?:password|authorization|bearer|token|pairing[_ -]?token|secret)["'']\s*:\s*)["''][^"''\r\n]*["'']', '$1"<redacted>"'
-    $result = $result -replace '(?i)\b(password|authorization|bearer|token|pairing[_ -]?token|secret)\b\s*[:=]\s*\S+', '$1=<redacted>'
+    $result = $result -replace '(?i)(["''](?:password|authorization|bearer|token|access[_ -]?token|refresh[_ -]?token|pairing[_ -]?token|api[_ -]?key|secret)["'']\s*:\s*)["''][^"''\r\n]*["'']', '$1"<redacted>"'
+    $result = $result -replace '(?i)\b(password|authorization|bearer|token|access[_ -]?token|refresh[_ -]?token|pairing[_ -]?token|api[_ -]?key|secret)\b\s*[:=]\s*\S+', '$1=<redacted>'
     return $result
+}
+
+function Protect-DiagnosticObject {
+    param([AllowNull()]$InputObject)
+
+    if ($null -eq $InputObject) { return $null }
+    if ($InputObject -is [string] -or $InputObject.GetType().IsPrimitive -or $InputObject -is [decimal]) {
+        return $InputObject
+    }
+    if ($InputObject -is [Collections.IDictionary]) {
+        $safeDictionary = [ordered]@{}
+        foreach ($key in $InputObject.Keys) {
+            $name = [string]$key
+            $safeDictionary[$name] = if ($name -match '(?i)^(?:password|authorization|bearer|token|access[_ -]?token|refresh[_ -]?token|pairing[_ -]?token|api[_ -]?key|secret)$') {
+                '<redacted>'
+            } else {
+                Protect-DiagnosticObject -InputObject $InputObject[$key]
+            }
+        }
+        return [PSCustomObject]$safeDictionary
+    }
+    if ($InputObject -is [Collections.IEnumerable]) {
+        return @($InputObject | ForEach-Object { Protect-DiagnosticObject -InputObject $_ })
+    }
+
+    $safeObject = [ordered]@{}
+    foreach ($property in $InputObject.PSObject.Properties) {
+        $safeObject[$property.Name] = if ($property.Name -match '(?i)^(?:password|authorization|bearer|token|access[_ -]?token|refresh[_ -]?token|pairing[_ -]?token|api[_ -]?key|secret)$') {
+            '<redacted>'
+        } else {
+            Protect-DiagnosticObject -InputObject $property.Value
+        }
+    }
+    return [PSCustomObject]$safeObject
 }
 
 function Get-SmaliDescriptor {
@@ -140,14 +174,12 @@ function Invoke-StaticAudit {
     }
 
     $definitions = @{}
-    $superclasses = @{}
     $baseFiles = @(Get-ChildItem -LiteralPath $DecodedDirectory -Directory -Filter 'smali*' |
         ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Recurse -File -Filter '*.smali' })
     foreach ($file in $baseFiles) {
         $text = Get-Content -LiteralPath $file.FullName -Raw
         $class = Get-SmaliDescriptor -Text $text
         $definitions[$class] = @(Get-SmaliMethods -Text $text)
-        $superclasses[$class] = Get-SmaliSuperclass -Text $text
     }
 
     $assembledHelperFiles = @(
@@ -163,21 +195,29 @@ function Invoke-StaticAudit {
         $text = Get-Content -LiteralPath $file.FullName -Raw
         $class = Get-SmaliDescriptor -Text $text
         $definitions[$class] = @(Get-SmaliMethods -Text $text)
-        $superclasses[$class] = Get-SmaliSuperclass -Text $text
         foreach ($invoke in Get-SmaliInvokes -Text $text -Path $file.FullName -CallerClass $class) {
             $invokes.Add($invoke)
         }
     }
 
     $projectPrefixes = @('Lorg/libsdl/app/', 'Lcom/valvesoftware/steamlink/')
+    $activityInheritedMethods = @(
+        'checkSelfPermission(Ljava/lang/String;)I',
+        'finish()V',
+        'getPackageManager()Landroid/content/pm/PackageManager;',
+        'getPackageName()Ljava/lang/String;',
+        'getSystemService(Ljava/lang/String;)Ljava/lang/Object;',
+        'requestPermissions([Ljava/lang/String;I)V',
+        'startActivity(Landroid/content/Intent;)V',
+        'startActivityForResult(Landroid/content/Intent;I)V'
+    )
     $unresolved = @($invokes | Where-Object {
         $target = $_.targetClass
-        $inheritedFrameworkCall = $target -eq $_.callerClass -and
-            $_.invokeKind -match '^(?:virtual|super)' -and
-            $superclasses.ContainsKey($target) -and
-            $superclasses[$target] -match '^L(?:android|java)/'
+        $knownActivityCall = $target -eq 'Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;' -and
+            $_.invokeKind -eq 'virtual' -and
+            $_.targetMethod -in $activityInheritedMethods
         @($projectPrefixes | Where-Object { $target.StartsWith($_) }).Count -gt 0 -and
-        -not $inheritedFrameworkCall -and
+        -not $knownActivityCall -and
         (-not $definitions.ContainsKey($target) -or $_.targetMethod -notin @($definitions[$target]))
     } | Sort-Object targetClass, targetMethod, path, line)
 
@@ -192,7 +232,8 @@ function Invoke-StaticAudit {
     })
 
     $loaderPath = Join-Path $DecodedDirectory 'lib\arm64-v8a\libopenxr_loader.so'
-    $astPath = Join-Path $RepoRoot 'patches\src\main\resources\steamlink\androidxr\libgxr_ast.so'
+    $astResourceName = 'libgxr_ast_5001712.so'
+    $astPath = Join-Path $RepoRoot "patches\src\main\resources\steamlink\androidxr\$astResourceName"
     $astManifestPath = Join-Path $RepoRoot 'patches\src\main\resources\steamlink\androidxr\XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json'
     $v10 = [byte[]](0, 0, 0, 0, 0, 0, 1, 0)
     $v11 = [byte[]](0, 0, 0, 0, 1, 0, 1, 0)
@@ -203,6 +244,7 @@ function Invoke-StaticAudit {
         $manifest = if (Test-Path -LiteralPath $astManifestPath) { Get-Content -LiteralPath $astManifestPath -Raw } else { '' }
         $openXrRisk = [PSCustomObject][ordered]@{
             status = 'warning-not-runtime-proof'
+            astResource = $astResourceName
             loaderRawPacked10PatternCount = Count-BytePattern -Bytes $loader -Pattern $v10
             loaderRawPacked11PatternCount = Count-BytePattern -Bytes $loader -Pattern $v11
             astRawPacked11PatternCount = Count-BytePattern -Bytes $ast -Pattern $v11
@@ -242,18 +284,37 @@ function Invoke-Adb {
     return $output
 }
 
-function Select-LogContext {
-    param([AllowEmptyString()][string]$Text, [string]$Pattern, [int]$Radius = 12)
+function Select-PackageLogcat {
+    param([AllowEmptyString()][string]$Text, [string]$PackageName)
 
     $lines = @($Text -split '\r?\n')
-    $selected = New-Object 'System.Collections.Generic.SortedSet[int]'
-    for ($index = 0; $index -lt $lines.Count; $index++) {
-        if ($lines[$index] -notmatch $Pattern) { continue }
-        $start = [Math]::Max(0, $index - $Radius)
-        $end = [Math]::Min($lines.Count - 1, $index + $Radius)
-        for ($line = $start; $line -le $end; $line++) { [void]$selected.Add($line) }
+    $packagePattern = '(?<![A-Za-z0-9._])' + [regex]::Escape($PackageName) + '(?![A-Za-z0-9._])'
+    $headerPattern = '^\s*\d+\.\d+\s+(?:\d+\s+)?(?<pid>\d+)\s+(?<tid>\d+)\s+[VDIWEF]\s+'
+    $processIds = New-Object 'System.Collections.Generic.HashSet[string]'
+
+    foreach ($line in $lines) {
+        if ($line -notmatch $packagePattern) { continue }
+        $header = [regex]::Match($line, $headerPattern)
+        if ($header.Success) { [void]$processIds.Add($header.Groups['pid'].Value) }
+        foreach ($pattern in @(
+            '(?i)\bPID:\s*(?<pid>\d+)\b',
+            '(?i)\bpid:\s*(?<pid>\d+)\b[^\r\n]*>>>',
+            '\b(?<pid>\d+):' + [regex]::Escape($PackageName) + '(?:[:/\s]|$)'
+        )) {
+            $match = [regex]::Match($line, $pattern)
+            if ($match.Success) { [void]$processIds.Add($match.Groups['pid'].Value) }
+        }
     }
-    return (($selected | ForEach-Object { $lines[$_] }) -join "`r`n")
+
+    $selected = @($lines | Where-Object {
+        if ($_ -match $packagePattern) { return $true }
+        $header = [regex]::Match($_, $headerPattern)
+        return $header.Success -and $processIds.Contains($header.Groups['pid'].Value)
+    })
+    return [PSCustomObject][ordered]@{
+        processIds = @($processIds | Sort-Object)
+        text = $selected -join "`r`n"
+    }
 }
 
 function Get-CrashClassification {
@@ -314,9 +375,8 @@ function Invoke-Capture {
         'logcat', '-d', '-v', 'epoch', '-T', $sinceEpochText,
         '-b', 'crash', '-b', 'main', '-b', 'system'
     )
-    $packagePattern = [regex]::Escape($Package)
-    $pattern = "(?i)$packagePattern|com\.valvesoftware\.steamlinkvr|GxrSdlBridge|SDLControllerManager|SteamLinkGXR|libvrlink_scene|libgxr_|GXRSurfaceTrigger|GXRXrBridge|GXRFaceBridge|\bVRLink\b"
-    $targetedLogcat = Select-LogContext -Text $allLogcat -Pattern $pattern
+    $packageLogcat = Select-PackageLogcat -Text $allLogcat -PackageName $Package
+    $targetedLogcat = $packageLogcat.text
     $exitInfo = Invoke-Adb -Arguments @('shell', 'dumpsys', 'activity', 'exit-info', $Package)
 
     $receipt = $null
@@ -345,8 +405,15 @@ function Invoke-Capture {
     }
 
     $knownSensitive = @($DeviceSerial)
-    $combined = $targetedLogcat + "`r`n" + $exitInfo
-    $classification = Get-CrashClassification -Text $combined
+    $logcatClassification = Get-CrashClassification -Text $targetedLogcat
+    $exitInfoClassification = Get-CrashClassification -Text $exitInfo
+    $classification = [PSCustomObject][ordered]@{
+        selected = $(if ($logcatClassification.kind -ne 'unknown') { 'exact-package-logcat' } else { 'package-exit-info' })
+        result = $(if ($logcatClassification.kind -ne 'unknown') { $logcatClassification } else { $exitInfoClassification })
+        exactPackageLogcat = $logcatClassification
+        packageExitInfo = $exitInfoClassification
+        exitInfoLimitation = 'Package-scoped exit history can include events older than the requested logcat boundary.'
+    }
     $provenance = [PSCustomObject][ordered]@{
         schemaVersion = 1
         hostUtc = $hostUtc.ToString('o')
@@ -355,6 +422,7 @@ function Invoke-Capture {
         packageName = $Package
         versionName = $versionName
         versionCode = 5001712
+        logcatProcessIds = $packageLogcat.processIds
         installedFiles = $installedFiles
         localApk = $localApk
         patchSelectionKnown = [bool]($null -ne $receipt)
@@ -369,14 +437,15 @@ function Invoke-Capture {
         Join-Path $OutputDirectory '20-classification.json'
     )
     Write-Utf8 -Path $createdFiles[0] -Text "Read-only post-reproduction capture. No launch, force-stop, install, grant, log clear, bugreport, screenshot, network dump, DropBox query, or tombstone pull was performed.`r`n"
-    Write-Utf8 -Path $createdFiles[1] -Text (Protect-DiagnosticText -Text ($provenance | ConvertTo-Json -Depth 10) -KnownSensitive $knownSensitive)
+    $safeProvenance = Protect-DiagnosticObject -InputObject $provenance
+    Write-Utf8 -Path $createdFiles[1] -Text (Protect-DiagnosticText -Text ($safeProvenance | ConvertTo-Json -Depth 10) -KnownSensitive $knownSensitive)
     Write-Utf8 -Path $createdFiles[2] -Text (Protect-DiagnosticText -Text $targetedLogcat -KnownSensitive $knownSensitive)
     Write-Utf8 -Path $createdFiles[3] -Text (Protect-DiagnosticText -Text $exitInfo -KnownSensitive $knownSensitive)
     Write-Utf8 -Path $createdFiles[4] -Text ($classification | ConvertTo-Json -Depth 5)
 
     $secretPatterns = @(
-        '(?i)["''](?:password|authorization|bearer|token|pairing[_ -]?token|secret)["'']\s*:\s*["''](?!<redacted>)[^"''\r\n]+["'']',
-        '(?i)\b(?:password|authorization|bearer|token|pairing[_ -]?token|secret)\b\s*[:=]\s*(?!<redacted>)\S+'
+        '(?i)["''](?:password|authorization|bearer|token|access[_ -]?token|refresh[_ -]?token|pairing[_ -]?token|api[_ -]?key|secret)["'']\s*:\s*["''](?!<redacted>)[^"''\r\n]+["'']',
+        '(?i)\b(?:password|authorization|bearer|token|access[_ -]?token|refresh[_ -]?token|pairing[_ -]?token|api[_ -]?key|secret)\b\s*[:=]\s*(?!<redacted>)\S+'
     )
     $leaks = @($createdFiles | Select-String -Pattern $secretPatterns)
     if ($leaks.Count -gt 0) { throw 'Secret scan failed; capture was not archived.' }
@@ -401,8 +470,12 @@ function Invoke-SelfTest {
     Assert-True ((Get-CrashClassification 'ANR in com.valvesoftware.steamlinkvr').kind -eq 'anr') 'ANR classification'
     $redacted = Protect-DiagnosticText -Text "serial-123 192.168.1.2 aa:bb:cc:dd:ee:ff token=abc" -KnownSensitive @('serial-123')
     Assert-True ($redacted -notmatch 'serial-123|192\.168\.1\.2|aa:bb:cc:dd:ee:ff|token=abc') 'redaction'
-    $jsonRedacted = Protect-DiagnosticText -Text '{"token":"abc","nested":{"password":"xyz"}}'
-    Assert-True ($jsonRedacted -notmatch '"abc"|"xyz"') 'JSON redaction'
+    $jsonRedacted = Protect-DiagnosticObject -InputObject ('{"token":12345,"secret":["abc"],"nested":{"password":"xyz"}}' | ConvertFrom-Json)
+    $jsonRedactedText = $jsonRedacted | ConvertTo-Json -Depth 5
+    Assert-True ($jsonRedactedText -notmatch '12345|"abc"|"xyz"') 'recursive JSON redaction'
+    $mixedLogcat = "1720000000.000 123 123 E AndroidRuntime: Process: com.valvesoftware.steamlinkvr.gxr, PID: 123`r`n1720000000.001 123 123 E AndroidRuntime: java.lang.NoSuchMethodError`r`n1720000000.002 999 999 E AndroidRuntime: Fatal signal 11 in unrelated`r`n1720000000.003 456 456 E AndroidRuntime: Process: com.valvesoftware.steamlinkvr.other, PID: 456"
+    $selectedLogcat = Select-PackageLogcat -Text $mixedLogcat -PackageName 'com.valvesoftware.steamlinkvr.gxr'
+    Assert-True ($selectedLogcat.text -match 'NoSuchMethodError' -and $selectedLogcat.text -notmatch 'unrelated|steamlinkvr\.other') 'exact-package logcat selection'
     Assert-True ((Count-BytePattern -Bytes ([byte[]](1, 2, 1, 2, 1)) -Pattern ([byte[]](1, 2))) -eq 2) 'byte pattern count'
     "PASS SelfTest checks=$checks"
 }

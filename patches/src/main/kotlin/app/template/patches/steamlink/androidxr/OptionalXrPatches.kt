@@ -88,16 +88,20 @@ val appearOnTopPatch = bytecodePatch(
 private const val FOVEA_QUADS_MODE = "single_projection_fovea_quads_v1"
 internal const val ANDROID_SURFACE_TRIGGER_MODE = "android_surface_trigger_passthrough_v1"
 internal const val ANDROID_SURFACE_TRIGGER_LIBRARY = "libgxr_ast.so"
+internal const val ANDROID_SURFACE_TRIGGER_5001712_RESOURCE_LIBRARY =
+    "libgxr_ast_5001712.so"
 internal const val ANDROID_SURFACE_TRIGGER_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json"
 internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
     "android-surface-trigger-passthrough-v1.2-20260902"
-internal const val ANDROID_SURFACE_WARMUP_OMIT_MODE = "android_surface_trigger_warmup_omit_v1"
-internal const val ANDROID_SURFACE_WARMUP_OMIT_LIBRARY = "libgxr_ast_warmup_omit.so"
-internal const val ANDROID_SURFACE_WARMUP_OMIT_MANIFEST =
-    "XR_APILAYER_local_GalaxyXR_android_surface_trigger_warmup_omit_v1.json"
-internal const val ANDROID_SURFACE_WARMUP_OMIT_BUILD_ID =
-    "android-surface-trigger-warmup-omit-v1.0-20260902"
+internal const val ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID =
+    "android-surface-trigger-5001712-v1.0-20260902"
+internal const val ANDROID_SURFACE_DFR_REARM_MODE = "android_surface_trigger_dfr_rearm_v1"
+internal const val ANDROID_SURFACE_DFR_REARM_LIBRARY = "libgxr_ast_dfr_rearm.so"
+internal const val ANDROID_SURFACE_DFR_REARM_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_android_surface_trigger_dfr_rearm_v1.json"
+internal const val ANDROID_SURFACE_DFR_REARM_BUILD_ID =
+    "android-surface-trigger-dfr-rearm-v1.0-20260902"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -111,9 +115,9 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_MANIFEST,
     ),
     ProjectionModeResources(
-        ANDROID_SURFACE_WARMUP_OMIT_MODE,
-        ANDROID_SURFACE_WARMUP_OMIT_LIBRARY,
-        ANDROID_SURFACE_WARMUP_OMIT_MANIFEST,
+        ANDROID_SURFACE_DFR_REARM_MODE,
+        ANDROID_SURFACE_DFR_REARM_LIBRARY,
+        ANDROID_SURFACE_DFR_REARM_MANIFEST,
     ),
 )
 
@@ -122,6 +126,7 @@ internal fun projectionModesConflict(existingMode: String, requestedMode: String
         activeProjectionModes.any { it.mode == existingMode }
 
 private val retiredProjectionModes = setOf(
+    "android_surface_trigger_warmup_omit_v1",
     "single_projection_reconstruction_v1",
     FOVEA_QUADS_MODE,
     "projection_trace_control",
@@ -140,6 +145,7 @@ private val retiredProjectionModes = setOf(
     "single_projection_native_probe_v1",
 )
 private val retiredProjectionLibraries = setOf(
+    "libgxr_ast_warmup_omit.so",
     "libgxr_single_projection_reconstruction_efficient_v1.so",
     "libgxr_nsp.so",
     "libgxr_nspd.so",
@@ -165,10 +171,20 @@ private fun projectionModeResource(name: String): ByteArray =
         ?: throw PatchException("Missing bundled XR projection-mode resource: $name"))
         .use { it.readBytes() }
 
+internal fun androidSurfaceTriggerResourceLibraryForBuild(
+    versionName: String,
+    versionCode: String,
+): String = if (versionName == "2.0.20" && versionCode == "5001712") {
+    ANDROID_SURFACE_TRIGGER_5001712_RESOURCE_LIBRARY
+} else {
+    ANDROID_SURFACE_TRIGGER_LIBRARY
+}
+
 private fun installProjectionModeResources(
     libDir: File,
     layerDir: File,
     requested: ProjectionModeResources,
+    helperBytes: ByteArray,
 ) {
     activeProjectionModes.filterNot { it.mode == requested.mode }.forEach { sibling ->
         val siblingManifestExists = sibling.manifest?.let { File(layerDir, it).exists() } == true
@@ -197,7 +213,7 @@ private fun installProjectionModeResources(
         }
     }
 
-    File(libDir, requested.library).writeBytes(projectionModeResource(requested.library))
+    File(libDir, requested.library).writeBytes(helperBytes)
     requested.manifest?.let { manifest ->
         val layerManifest = File(layerDir, manifest)
         layerManifest.parentFile!!.mkdirs()
@@ -265,12 +281,20 @@ private fun androidSurfaceTriggerResourcesPatch(
             )
         }
         val requested = activeProjectionModes.first { it.mode == requestedMode }
-        val helperBytes = projectionModeResource(requested.library)
+        val resourceLibrary = if (requested.mode == ANDROID_SURFACE_TRIGGER_MODE) {
+            androidSurfaceTriggerResourceLibraryForBuild(
+                packageMetadata.versionName,
+                packageMetadata.versionCode,
+            )
+        } else {
+            requested.library
+        }
+        val helperBytes = projectionModeResource(resourceLibrary)
         if (helperBytes.size < 4 || !helperBytes.copyOfRange(0, 4)
                 .contentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))) {
             throw PatchException(
                 "Bundled Android-surface trigger is not an ELF library: " +
-                    requested.library,
+                    resourceLibrary,
             )
         }
         val libDir = sceneFile.parentFile!!
@@ -280,6 +304,7 @@ private fun androidSurfaceTriggerResourcesPatch(
             libDir,
             layerDir,
             requested,
+            helperBytes,
         )
     }
 }
@@ -289,15 +314,15 @@ private val androidSurfaceTriggerResourcesPatch = androidSurfaceTriggerResources
     exact5002322Only = false,
 )
 
-private val androidSurfaceWarmupOmitResourcesPatch = androidSurfaceTriggerResourcesPatch(
-    requestedMode = ANDROID_SURFACE_WARMUP_OMIT_MODE,
+private val androidSurfaceDfrRearmResourcesPatch = androidSurfaceTriggerResourcesPatch(
+    requestedMode = ANDROID_SURFACE_DFR_REARM_MODE,
     exact5002322Only = true,
 )
 
 @Suppress("unused")
 val xrGalaxyXrHighResolutionPatch = resourcePatch(
     name = "Galaxy XR high-resolution 3-projection fix",
-    description = "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves Valve's native 3 projections and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
+    description = "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves each build's native projection layout (2 layers on 2.0.20/5001712; 3 layers on supported 2.0.22 builds) and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION.toTypedArray())
@@ -315,21 +340,21 @@ val xrGalaxyXrHighResolutionPatch = resourcePatch(
 }
 
 @Suppress("unused")
-val experimentalAndroidSurfaceWarmupOmitPatch = resourcePatch(
-    name = "Experimental Galaxy XR surface warm-up/omit performance A/B",
-    description = "Diagnostic-only exact 2.0.22/5002322 variant. It creates and queues the same 2x2 Android Surface, submits the fourth terminal quad for 7200 accepted frames, then retains every Surface resource while returning to Valve's original 3 projection layers. Use it only to determine whether the recurring fourth layer causes the extra compositor cost.",
+val experimentalAndroidSurfaceDfrRearmPatch = resourcePatch(
+    name = "Experimental Galaxy XR DFR composition re-arm",
+    description = "Diagnostic-only exact 2.0.22/5002322 variant. After a 7200-frame validation warm-up it normally submits Valve's original layers, then briefly re-posts and re-submits the retained 2x2 Android Surface after OpenXR-visible composition changes and every 90 omitted frames. This tests whether Windows-only DFR attachment invalidates Galaxy XR's private high-resolution policy without paying for a fourth layer continuously.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
     dependsOn(
         xrLauncherBootstrapPatch,
         xrPermissionSettingsBootstrapPatch,
-        androidSurfaceWarmupOmitResourcesPatch,
+        androidSurfaceDfrRearmResourcesPatch,
     )
 
     finalize {
         document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_WARMUP_OMIT_MODE)
+            configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_DFR_REARM_MODE)
         }
     }
 }

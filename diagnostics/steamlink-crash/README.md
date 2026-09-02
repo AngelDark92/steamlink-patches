@@ -13,7 +13,7 @@ The decoded 2.0.20/5001712 `SDL` ABI does not match the helper currently injecte
 
 5001712 instead uses the older joystick registration descriptor and 2-argument pad methods. Likely device signatures are `NoSuchMethodError` or a `VerifyError` naming `GxrSdlBridge`.
 
-There is also a separate OpenXR risk. A raw packed-byte scan finds 30 OpenXR 1.0 patterns and 0 OpenXR 1.1 patterns in the decoded 5001712 loader, while `libgxr_ast.so` has 2 OpenXR 1.1 patterns and its manifest declares 1.1. Those byte counts do not prove loader API support or negotiated runtime behavior. This remains a hypothesis until current runtime logs show loader negotiation or the isolation matrix makes the failure appear only when the high-resolution layer is added.
+There is also a separate OpenXR risk. A raw packed-byte scan finds 30 OpenXR 1.0 patterns and 0 OpenXR 1.1 patterns in the decoded 5001712 loader, while the exact-build resource `libgxr_ast_5001712.so` has 2 OpenXR 1.1 patterns and its installed manifest declares 1.1. Those byte counts do not prove loader API support or negotiated runtime behavior. This remains a hypothesis until current runtime logs show loader negotiation or the isolation matrix makes the failure appear only when the high-resolution layer is added.
 
 ## Offline checks
 
@@ -53,7 +53,7 @@ First reproduce the stop manually. Then run the collector; it does not start or 
 
 `-PatchReceiptPath` is optional. Without it, `patchSelectionKnown` is `false`; selected patches and options cannot be reconstructed reliably from an installed APK and are never guessed.
 
-The capture requires exact installed `2.0.20/5001712`. It records targeted package provenance, on-device APK hashes, bounded crash context, package-scoped process exit history, and a classification. It intentionally skips DropBox because its portable interface cannot reliably enforce the requested time boundary. It omits the raw device serial and redacts home paths, private IP addresses, MAC addresses, and secret-like values. Only derived targeted text is archived; unfiltered logcat is never written. The default output is a new timestamped directory in the system temporary folder; an explicit `-OutputDirectory` must not already exist.
+The capture requires exact installed `2.0.20/5001712`. It records targeted package provenance, on-device APK hashes, logcat lines belonging to an exact-package process ID, package-scoped process exit history, and separate classifications for both sources. Exit history can include events older than `-Since`, so exact-package logcat wins when it has a recognized crash signature. The collector intentionally skips DropBox because its portable interface cannot reliably enforce the requested time boundary. It omits the raw device serial and recursively redacts secret-named receipt fields, home paths, private IP addresses, MAC addresses, and secret-like text. Only newly created allowlisted files are archived; unfiltered logcat is never written. The default output is a new timestamped directory in the system temporary folder; an explicit `-OutputDirectory` must not already exist.
 
 ## Isolation matrix
 

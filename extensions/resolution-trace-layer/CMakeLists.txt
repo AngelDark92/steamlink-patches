@@ -20,7 +20,7 @@ if(NOT EXISTS "${OPENXR_SDK_SOURCE_DIR}/include/openxr/openxr.h")
     message(FATAL_ERROR "Set OPENXR_SDK_SOURCE_DIR to the bundled OpenXR-SDK 1.1.61 checkout")
 endif()
 
-function(add_gxr_surface_trigger_target target output_name warmup_omit)
+function(add_gxr_surface_trigger_target target output_name dfr_rearm source_projection_count)
     add_library(${target} SHARED
         src/android_surface_trigger_passthrough_layer.cpp
     )
@@ -30,7 +30,8 @@ function(add_gxr_surface_trigger_target target output_name warmup_omit)
     target_compile_definitions(${target} PRIVATE
         XR_USE_PLATFORM_ANDROID
         NDEBUG
-        GXR_AST_WARMUP_OMIT=${warmup_omit}
+        GXR_AST_DFR_REARM=${dfr_rearm}
+        GXR_AST_SOURCE_PROJECTION_COUNT=${source_projection_count}
     )
     target_compile_options(${target} PRIVATE
         -O2
@@ -60,13 +61,23 @@ add_gxr_surface_trigger_target(
     gxr_android_surface_trigger_passthrough_v1
     gxr_ast
     0
+    3
 )
 
-# Diagnostic helper: after 7200 accepted trigger frames, keep every trigger resource
-# alive but stop submitting the quad. This isolates persistent layer cost from the
-# vendor policy activated by creating and presenting the Android Surface.
+# Exact Steam Link 2.0.20/5001712 helper: Valve submits 2 projection layers.
 add_gxr_surface_trigger_target(
-    gxr_android_surface_trigger_warmup_omit_v1
-    gxr_ast_warmup_omit
+    gxr_android_surface_trigger_passthrough_5001712_v1
+    gxr_ast_5001712
+    0
+    2
+)
+
+# Diagnostic helper: after the 7200-frame warm-up, normally omit the trigger quad.
+# Re-post and briefly re-submit it when Valve/DFR changes composition state, and run
+# a bounded periodic probe for vendor-policy changes that expose no Android event.
+add_gxr_surface_trigger_target(
+    gxr_android_surface_trigger_dfr_rearm_v1
+    gxr_ast_dfr_rearm
     1
+    3
 )
