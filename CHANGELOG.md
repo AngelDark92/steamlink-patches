@@ -1,3 +1,9 @@
+## [1.11.1-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.7...v1.11.1-dev.8) (2026-09-02)
+
+### 🐛 Bug Fixes
+
+* legacy bundles now include device identity (quest pro) for DFR and Face Tracking ([9dde468](https://github.com/AngelDark92/steamlink-patches/commit/9dde468956d5ace82c2b0cd8da524b764f0d353e))
+
 ## [1.11.1-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.6...v1.11.1-dev.7) (2026-09-02)
 
 ### 🐛 Bug Fixes

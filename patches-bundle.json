@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-09-02T18:51:30",
-  "description": "## [1.11.1-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.6...v1.11.1-dev.7) (2026-09-02)\n\n### 🐛 Bug Fixes\n\n* fixed bundles and removed dithering patch ([3544cab](https://github.com/AngelDark92/steamlink-patches/commit/3544cabfc2ae598427988c41dd199da73777cecd))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.11.1-dev.7/patches-1.11.1-dev.7.mpp",
+  "created_at": "2026-09-02T19:38:18",
+  "description": "## [1.11.1-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.7...v1.11.1-dev.8) (2026-09-02)\n\n### 🐛 Bug Fixes\n\n* legacy bundles now include device identity (quest pro) for DFR and Face Tracking ([9dde468](https://github.com/AngelDark92/steamlink-patches/commit/9dde468956d5ace82c2b0cd8da524b764f0d353e))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.11.1-dev.8/patches-1.11.1-dev.8.mpp",
   "signature_download_url": "",
-  "version": "1.11.1-dev.7"
+  "version": "1.11.1-dev.8"
 }
