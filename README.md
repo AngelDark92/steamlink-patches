@@ -19,7 +19,7 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.11.1-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.11.1-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;20 patches total
+> **[v1.11.1-dev.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.11.1-dev.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;21 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;20 patches</summary>
 <br>
@@ -52,6 +52,22 @@ To download it:
 | [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. | 5001712, 5001740, 5002172, 5002206, 5002244, 5002313 |  |
 | [XR Launcher Bootstrap (Home Space)](#xr-launcher-bootstrap-home-space) | Installs GalaxyXRPermissionActivity as launcher and configures the Steam Link VR activity XR startup wiring. | 5001712, 5001740, 5002172, 5002206, 5002244, 5002313 |  |
 | [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. | 5001712, 5001740, 5002172, 5002206, 5002244, 5002313 |  |
+
+</details>
+
+<details open>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.0.22 (5002322) |
+| :---: |
+| Experimental patches for Steam Link 2.0.22 build 5002322. |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Experimental Galaxy XR surface warm-up/omit performance A/B](#experimental-galaxy-xr-surface-warm-up-omit-performance-a-b) | Diagnostic-only exact 2.0.22/5002322 variant. It creates and queues the same 2x2 Android Surface, submits the fourth terminal quad for 7200 accepted frames, then retains every Surface resource while returning to Valve's original 3 projection layers. Use it only to determine whether the recurring fourth layer causes the extra compositor cost. | 5002322 |  |
 
 </details>
 
