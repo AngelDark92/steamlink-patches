@@ -1,3 +1,9 @@
+## [1.11.1-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.6...v1.11.1-dev.7) (2026-09-02)
+
+### 🐛 Bug Fixes
+
+* fixed bundles and removed dithering patch ([3544cab](https://github.com/AngelDark92/steamlink-patches/commit/3544cabfc2ae598427988c41dd199da73777cecd))
+
 ## [1.11.1-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.5...v1.11.1-dev.6) (2026-09-02)
 
 ### 🐛 Bug Fixes
