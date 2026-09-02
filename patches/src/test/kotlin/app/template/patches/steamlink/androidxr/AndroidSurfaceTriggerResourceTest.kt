@@ -62,6 +62,9 @@ class AndroidSurfaceTriggerResourceTest {
             "surface_trigger_rearm",
             "surface_trigger_buffer_reposted",
             "eligible_reentry",
+            "XrCompositionLayerQuad triggerQuad{}",
+            "copiedLayers[index] = base",
+            "!state->passthroughLogged.load",
             "kWarmupSuccessfulFrames = 7200",
             "kPeriodicProbeOmittedFrames = 90",
             "kRearmSuccessfulFrames = 3",
@@ -96,13 +99,13 @@ class AndroidSurfaceTriggerResourceTest {
         assertTrue(source.replace(" ", "").contains("constboolappended=!appEnabled"))
         assertFalse(source.contains("info->layers[2]"))
         assertTrue(source.contains("nextCreateApiLayerInstance(createInfo, &next, instance)"))
-        assertTrue(source.contains("layers[index] = info->layers[index]"))
         assertFalse(source.contains("glDrawArrays"))
         assertFalse(source.contains("glBlitFramebuffer"))
         assertFalse(source.contains("PFN_xrEnumerateSwapchainImages"))
         assertFalse(source.contains("PFN_xrAcquireSwapchainImage"))
         assertFalse(source.contains("PFN_xrWaitSwapchainImage"))
         assertFalse(source.contains("PFN_xrReleaseSwapchainImage"))
+        assertFalse(source.contains("XrCompositionLayerQuad quad{}"))
 
         val patchSource = source(
             "patches/src/main/kotlin/app/template/patches/steamlink/androidxr/OptionalXrPatches.kt",
@@ -164,7 +167,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "0d3d89d872457a7b93993e6ac45c2458beafad2c83f00effa8b7ad0872adf205",
+            "35a754af50497be00cf554c66a2be94369e45aaf8fd9e6a135db9bf07a43107b",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
@@ -200,7 +203,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "1d96de258da0ed3c3eaa0913a411b2b7232fe304455ec25d866ad68b3baa347d",
+            "6703688cf79f90c1745cfd699297bd48086341867ce395d517b34382d4326a8b",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
@@ -231,7 +234,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "6fd1fb326e2cba5b2a629fd9bb15648144876d2d049178450eabd00d8a502c31",
+            "9dd7a9b3f19ae689b45f8c58358e68428a3b95b335bd9cb0153acea1b811a320",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )

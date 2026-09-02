@@ -17,7 +17,13 @@ There is also a separate OpenXR risk. A raw packed-byte scan finds 30 OpenXR 1.0
 
 ## Offline checks
 
-Run the self-test without ADB:
+First enter the repository root. The commands below are relative to that directory:
+
+```powershell
+Set-Location 'C:\Users\Angelo\Desktop\SteamLink-GalaxyXR-Windows-Toolkit-FULL\steamlink-patches'
+```
+
+Run the self-test without contacting a device:
 
 ```powershell
 .\diagnostics\steamlink-crash\Invoke-SteamLinkCrashDiagnostics.ps1 -Mode SelfTest
@@ -37,6 +43,8 @@ For CI-style failure when unresolved runtime links exist:
 
 This audit is intentionally different from Morphe compilation: it resolves injected calls against the exact target build instead of merely confirming that DEX and resources can be emitted.
 
+If PowerShell is already inside `diagnostics\steamlink-crash`, run `.\Invoke-SteamLinkCrashDiagnostics.ps1` directly instead of repeating `diagnostics\steamlink-crash` in the path. A Static result with `"status": "incompatible"` means the test ran successfully and found incompatible runtime calls; it is not a command failure.
+
 ## Read-only device capture
 
 First reproduce the stop manually. Then run the collector; it does not start or stop the app:
@@ -44,14 +52,12 @@ First reproduce the stop manually. Then run the collector; it does not start or 
 ```powershell
 .\diagnostics\steamlink-crash\Invoke-SteamLinkCrashDiagnostics.ps1 `
   -Mode Capture `
-  -DeviceSerial '<adb serial>' `
-  -Package 'com.valvesoftware.steamlinkvr.gxr' `
-  -Since (Get-Date).AddMinutes(-5) `
-  -PatchedApkPath 'C:\path\to\patched.apk' `
-  -PatchReceiptPath 'C:\path\to\patch-receipt.json'
+  -Since (Get-Date).AddMinutes(-5)
 ```
 
-`-PatchReceiptPath` is optional. Without it, `patchSelectionKnown` is `false`; selected patches and options cannot be reconstructed reliably from an installed APK and are never guessed.
+The default package is `com.valvesoftware.steamlinkvr`. For an APK deliberately renamed by the package-name patch, add `-Package 'com.valvesoftware.steamlinkvr.gxr'`. The collector automatically finds the bundled `GalaxyXR-APK\install\platform-tools\adb.exe` and auto-selects the headset when exactly 1 authorized ADB device is connected. With multiple authorized devices, add `-DeviceSerial '<REAL_SERIAL>'` after replacing the angle-bracket placeholder. Do not copy a placeholder literally; the collector rejects it before querying devices. To use another Platform Tools installation, pass the real full path with `-AdbPath`.
+
+`-PatchedApkPath` and `-PatchReceiptPath` are optional provenance inputs. Without a receipt, `patchSelectionKnown` is `false`; selected patches and options cannot be reconstructed reliably from an installed APK and are never guessed.
 
 The capture requires exact installed `2.0.20/5001712`. It records targeted package provenance, on-device APK hashes, logcat lines belonging to an exact-package process ID, package-scoped process exit history, and separate classifications for both sources. Exit history can include events older than `-Since`, so exact-package logcat wins when it has a recognized crash signature. The collector intentionally skips DropBox because its portable interface cannot reliably enforce the requested time boundary. It omits the raw device serial and recursively redacts secret-named receipt fields, home paths, private IP addresses, MAC addresses, and secret-like text. Only newly created allowlisted files are archived; unfiltered logcat is never written. The default output is a new timestamped directory in the system temporary folder; an explicit `-OutputDirectory` must not already exist.
 

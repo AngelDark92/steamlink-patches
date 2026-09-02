@@ -3,15 +3,15 @@ param(
     [ValidateSet('Static', 'Capture', 'SelfTest')]
     [string]$Mode = 'Static',
 
-    [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
+    [string]$RepoRoot,
     [string]$DecodedDirectory,
     [string]$PatchSmaliDirectory,
     [switch]$FailOnFinding,
 
     [ValidatePattern('^[A-Za-z0-9._]+$')]
-    [string]$Package = 'com.valvesoftware.steamlinkvr.gxr',
+    [string]$Package = 'com.valvesoftware.steamlinkvr',
     [string]$DeviceSerial,
-    [string]$AdbPath = 'adb',
+    [string]$AdbPath,
     [datetime]$Since = (Get-Date).AddMinutes(-10),
     [string]$OutputDirectory,
     [string]$PatchedApkPath,
@@ -20,6 +20,9 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
+    $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+}
 
 function Write-Utf8 {
     param([string]$Path, [AllowEmptyString()][string]$Text)
@@ -191,8 +194,10 @@ function Invoke-StaticAudit {
     $patchFiles = @(Get-ChildItem -LiteralPath $PatchSmaliDirectory -Recurse -File -Filter '*.smali' |
         Where-Object { $_.Name -in $assembledHelperFiles })
     $invokes = New-Object System.Collections.Generic.List[object]
+    $gxrBridgeText = ''
     foreach ($file in $patchFiles) {
         $text = Get-Content -LiteralPath $file.FullName -Raw
+        if ($file.Name -eq 'GxrSdlBridge.smali') { $gxrBridgeText = $text }
         $class = Get-SmaliDescriptor -Text $text
         $definitions[$class] = @(Get-SmaliMethods -Text $text)
         foreach ($invoke in Get-SmaliInvokes -Text $text -Path $file.FullName -CallerClass $class) {
@@ -211,7 +216,7 @@ function Invoke-StaticAudit {
         'startActivity(Landroid/content/Intent;)V',
         'startActivityForResult(Landroid/content/Intent;I)V'
     )
-    $unresolved = @($invokes | Where-Object {
+    $rawUnresolved = @($invokes | Where-Object {
         $target = $_.targetClass
         $knownActivityCall = $target -eq 'Lcom/valvesoftware/steamlink/GalaxyXRPermissionActivity;' -and
             $_.invokeKind -eq 'virtual' -and
@@ -220,6 +225,36 @@ function Invoke-StaticAudit {
         -not $knownActivityCall -and
         (-not $definitions.ContainsKey($target) -or $_.targetMethod -notin @($definitions[$target]))
     } | Sort-Object targetClass, targetMethod, path, line)
+
+    # GxrSdlBridge contains both SDL generations so 2.0.22 remains byte-for-byte compatible.
+    # The exact 5001712 Kotlin hook enters wrappers that select only the older descriptors below.
+    $guardedModernTargets = @(
+        'isControllerManagerReady()Z',
+        'nativeAddJoystick(ILjava/lang/String;Ljava/lang/String;IIIIIIZZZZ)V',
+        'onNativePadDown(III)Z',
+        'onNativePadUp(III)Z'
+    )
+    $directInputPath = Join-Path $RepoRoot 'patches\src\main\kotlin\app\template\patches\steamlink\androidxr\DirectInputFixPatch.kt'
+    $directInputText = if (Test-Path -LiteralPath $directInputPath) { Get-Content -LiteralPath $directInputPath -Raw } else { '' }
+    $has5001712SdlGuard =
+        $gxrBridgeText -match '\.method public static routeXrPointerAsMouse5001712\(' -and
+        $gxrBridgeText -match '\.method public static routeXrPointerAsMouseGeneric5001712\(' -and
+        $gxrBridgeText -match 'nativeAddJoystick\(ILjava/lang/String;Ljava/lang/String;IIIIIIZ\)V' -and
+        $gxrBridgeText -match 'onNativePadDown\(II\)Z' -and
+        $gxrBridgeText -match 'onNativePadUp\(II\)Z' -and
+        $directInputText -match 'versionName == "2\.0\.20"\s*&&\s*packageMetadata\.versionCode == "5001712"' -and
+        $directInputText -match '"routeXrPointerAsMouse5001712"' -and
+        $directInputText -match '"routeXrPointerAsMouseGeneric5001712"'
+    $guardedUnresolved = @($rawUnresolved | Where-Object {
+        $has5001712SdlGuard -and
+        $_.callerClass -eq 'Lorg/libsdl/app/GxrSdlBridge;' -and
+        $_.targetMethod -in $guardedModernTargets
+    })
+    $unresolved = @($rawUnresolved | Where-Object {
+        -not ($has5001712SdlGuard -and
+            $_.callerClass -eq 'Lorg/libsdl/app/GxrSdlBridge;' -and
+            $_.targetMethod -in $guardedModernTargets)
+    })
 
     $unique = @($unresolved | Group-Object targetClass, targetMethod | ForEach-Object {
         $first = $_.Group[0]
@@ -264,6 +299,7 @@ function Invoke-StaticAudit {
         unresolvedCallSites = $unresolved.Count
         uniqueUnresolvedMethods = $unique.Count
         unresolved = $unique
+        guarded5001712ModernCallSites = $guardedUnresolved.Count
         openxrApiRisk = $openXrRisk
     }
 
@@ -276,12 +312,108 @@ function Invoke-StaticAudit {
     if ($FailOnFinding -and $unique.Count -gt 0) { exit 2 }
 }
 
+function Resolve-DiagnosticAdbPath {
+    param([string]$RequestedPath, [string]$RepositoryRoot)
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedPath)) {
+        $explicitCommand = Get-Command $RequestedPath -ErrorAction SilentlyContinue
+        if ($null -ne $explicitCommand -and $explicitCommand.CommandType -eq 'Application') {
+            return $explicitCommand.Source
+        }
+        try {
+            $explicitFullPath = [IO.Path]::GetFullPath($RequestedPath)
+            if (Test-Path -LiteralPath $explicitFullPath -PathType Leaf) {
+                return $explicitFullPath
+            }
+        }
+        catch { }
+        throw "Requested adb executable was not found: $RequestedPath"
+    }
+
+    $candidates = New-Object System.Collections.Generic.List[string]
+    $candidates.Add((Join-Path $RepositoryRoot '..\GalaxyXR-APK\install\platform-tools\adb.exe'))
+    foreach ($sdkRoot in @($env:ANDROID_SDK_ROOT, $env:ANDROID_HOME)) {
+        if (-not [string]::IsNullOrWhiteSpace($sdkRoot)) {
+            $candidates.Add((Join-Path $sdkRoot 'platform-tools\adb.exe'))
+        }
+    }
+    foreach ($commandName in @('adb.exe', 'adb')) {
+        $command = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($null -ne $command -and $command.CommandType -eq 'Application') {
+            $candidates.Add($command.Source)
+        }
+    }
+    foreach ($candidate in $candidates) {
+        try {
+            $fullPath = [IO.Path]::GetFullPath($candidate)
+            if (Test-Path -LiteralPath $fullPath -PathType Leaf) { return $fullPath }
+        }
+        catch { }
+    }
+    throw (
+        'ADB was not found. Pass -AdbPath with the full adb.exe path, or place Android ' +
+        'Platform Tools in the sibling GalaxyXR-APK\install\platform-tools directory.'
+    )
+}
+
+function Invoke-NativeProcessCaptured {
+    param([string]$FilePath, [string[]]$Arguments = @())
+
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell promotes redirected native stderr to ErrorRecord objects.
+        # Keep those records in the captured output without making benign stderr fatal.
+        $ErrorActionPreference = 'Continue'
+        $output = & $FilePath @Arguments 2>&1 | Out-String
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    return [PSCustomObject]@{ output = $output; exitCode = $exitCode }
+}
+
+function Resolve-DiagnosticDeviceSerial {
+    param([string]$RequestedSerial)
+
+    if ($RequestedSerial -match '^<[^>]+>$') {
+        throw "Do not pass the placeholder $RequestedSerial. Omit -DeviceSerial to auto-select 1 authorized headset, or pass its real serial."
+    }
+    $deviceListResult = Invoke-NativeProcessCaptured -FilePath $AdbPath -Arguments @('devices', '-l')
+    if ($deviceListResult.exitCode -ne 0) {
+        throw "adb devices -l failed ($($deviceListResult.exitCode)); device-list output was omitted for privacy."
+    }
+    $output = $deviceListResult.output
+    $devices = @($output -split '\r?\n' | ForEach-Object {
+        if ($_ -match '^(?<serial>\S+)\s+(?<state>device|unauthorized|offline)(?:\s+.*)?$') {
+            [PSCustomObject]@{ serial = $Matches['serial']; state = $Matches['state'] }
+        }
+    })
+    $authorized = @($devices | Where-Object state -eq 'device')
+    if (-not [string]::IsNullOrWhiteSpace($RequestedSerial)) {
+        $matching = @($authorized | Where-Object serial -CEQ $RequestedSerial)
+        if ($matching.Count -ne 1) {
+            throw 'The requested serial is not exactly 1 authorized ADB device.'
+        }
+        return $matching[0].serial
+    }
+    if ($authorized.Count -ne 1) {
+        $unauthorizedCount = @($devices | Where-Object state -eq 'unauthorized').Count
+        throw "Exactly 1 authorized headset is required; found $($authorized.Count) authorized and $unauthorizedCount unauthorized."
+    }
+    return $authorized[0].serial
+}
+
 function Invoke-Adb {
     param([string[]]$Arguments)
 
-    $output = & $AdbPath -s $DeviceSerial @Arguments 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) { throw "adb failed ($LASTEXITCODE): $($Arguments -join ' ')`n$output" }
-    return $output
+    $nativeArguments = @('-s', $DeviceSerial) + @($Arguments)
+    $result = Invoke-NativeProcessCaptured -FilePath $AdbPath -Arguments $nativeArguments
+    if ($result.exitCode -ne 0) {
+        $safeOutput = Protect-DiagnosticText -Text $result.output -KnownSensitive @($DeviceSerial)
+        throw "adb failed ($($result.exitCode)): $($Arguments -join ' ')`n$safeOutput"
+    }
+    return $result.output
 }
 
 function Select-PackageLogcat {
@@ -289,17 +421,17 @@ function Select-PackageLogcat {
 
     $lines = @($Text -split '\r?\n')
     $packagePattern = '(?<![A-Za-z0-9._])' + [regex]::Escape($PackageName) + '(?![A-Za-z0-9._])'
-    $headerPattern = '^\s*\d+\.\d+\s+(?:\d+\s+)?(?<pid>\d+)\s+(?<tid>\d+)\s+[VDIWEF]\s+'
+    # `logcat -v epoch` is: timestamp PID TID level tag. Do not consume PID as an
+    # optional field; doing so promotes unrelated system TIDs into package PIDs.
+    $headerPattern = '^\s*\d+\.\d+\s+(?<pid>\d+)\s+(?<tid>\d+)\s+[VDIWEF]\s+'
     $processIds = New-Object 'System.Collections.Generic.HashSet[string]'
 
     foreach ($line in $lines) {
-        if ($line -notmatch $packagePattern) { continue }
-        $header = [regex]::Match($line, $headerPattern)
-        if ($header.Success) { [void]$processIds.Add($header.Groups['pid'].Value) }
         foreach ($pattern in @(
-            '(?i)\bPID:\s*(?<pid>\d+)\b',
-            '(?i)\bpid:\s*(?<pid>\d+)\b[^\r\n]*>>>',
-            '\b(?<pid>\d+):' + [regex]::Escape($PackageName) + '(?:[:/\s]|$)'
+            ('(?i)\bProcess:\s*' + [regex]::Escape($PackageName) + '\s*,\s*PID:\s*(?<pid>\d+)\b'),
+            ('(?i)\bStart proc\s+(?<pid>\d+):' + [regex]::Escape($PackageName) + '(?:[:/\s]|$)'),
+            ('(?i)\bpid:\s*(?<pid>\d+)\b[^\r\n]*>>>\s*' + [regex]::Escape($PackageName) + '\s*<<<'),
+            ('\b(?<pid>\d+):' + [regex]::Escape($PackageName) + '(?:[:/\s]|$)')
         )) {
             $match = [regex]::Match($line, $pattern)
             if ($match.Success) { [void]$processIds.Add($match.Groups['pid'].Value) }
@@ -338,8 +470,8 @@ function Get-CrashClassification {
 }
 
 function Invoke-Capture {
-    if (-not $DeviceSerial) { throw '-DeviceSerial is required for Capture mode.' }
-    if (-not (Get-Command $AdbPath -ErrorAction SilentlyContinue)) { throw "adb not found: $AdbPath" }
+    $script:AdbPath = Resolve-DiagnosticAdbPath -RequestedPath $AdbPath -RepositoryRoot $RepoRoot
+    $script:DeviceSerial = Resolve-DiagnosticDeviceSerial -RequestedSerial $DeviceSerial
 
     $state = (Invoke-Adb -Arguments @('get-state')).Trim()
     if ($state -ne 'device') { throw "ADB target is not ready: $state" }
@@ -347,6 +479,9 @@ function Invoke-Capture {
     $hostUtc = [DateTime]::UtcNow
     $deviceEpoch = (Invoke-Adb -Arguments @('shell', 'date', '+%s')).Trim()
     $packageDump = Invoke-Adb -Arguments @('shell', 'dumpsys', 'package', $Package)
+    if ($packageDump -match '(?im)^Unable to find package:') {
+        throw "Package is not installed: $Package"
+    }
     $versionName = [regex]::Match($packageDump, '(?m)^\s*versionName=(?<value>\S+)').Groups['value'].Value
     $versionCodeMatch = [regex]::Match($packageDump, '(?m)^\s*versionCode=(?<value>\d+)')
     if (-not $versionCodeMatch.Success -or $versionName -ne '2.0.20' -or [int64]$versionCodeMatch.Groups['value'].Value -ne 5001712) {
@@ -470,13 +605,31 @@ function Invoke-SelfTest {
     Assert-True ((Get-CrashClassification 'ANR in com.valvesoftware.steamlinkvr').kind -eq 'anr') 'ANR classification'
     $redacted = Protect-DiagnosticText -Text "serial-123 192.168.1.2 aa:bb:cc:dd:ee:ff token=abc" -KnownSensitive @('serial-123')
     Assert-True ($redacted -notmatch 'serial-123|192\.168\.1\.2|aa:bb:cc:dd:ee:ff|token=abc') 'redaction'
+    $adbErrorRedacted = Protect-DiagnosticText -Text "adb.exe: device 'serial-123' not found" -KnownSensitive @('serial-123')
+    Assert-True ($adbErrorRedacted -match 'device.+<redacted>.+not found' -and $adbErrorRedacted -notmatch 'serial-123') 'ADB error serial redaction'
     $jsonRedacted = Protect-DiagnosticObject -InputObject ('{"token":12345,"secret":["abc"],"nested":{"password":"xyz"}}' | ConvertFrom-Json)
     $jsonRedactedText = $jsonRedacted | ConvertTo-Json -Depth 5
     Assert-True ($jsonRedactedText -notmatch '12345|"abc"|"xyz"') 'recursive JSON redaction'
-    $mixedLogcat = "1720000000.000 123 123 E AndroidRuntime: Process: com.valvesoftware.steamlinkvr.gxr, PID: 123`r`n1720000000.001 123 123 E AndroidRuntime: java.lang.NoSuchMethodError`r`n1720000000.002 999 999 E AndroidRuntime: Fatal signal 11 in unrelated`r`n1720000000.003 456 456 E AndroidRuntime: Process: com.valvesoftware.steamlinkvr.other, PID: 456"
+    $mixedLogcat = "1720000000.000 123 123 E AndroidRuntime: Process: com.valvesoftware.steamlinkvr.gxr, PID: 123`r`n1720000000.001 123 123 E AndroidRuntime: java.lang.NoSuchMethodError`r`n1720000000.002 999 999 E AndroidRuntime: Fatal signal 11 in unrelated`r`n1720000000.003 456 456 E AndroidRuntime: Process: com.valvesoftware.steamlinkvr.other, PID: 456`r`n1720000000.004 777 123 E SystemService: package com.valvesoftware.steamlinkvr.gxr mentioned by another process"
     $selectedLogcat = Select-PackageLogcat -Text $mixedLogcat -PackageName 'com.valvesoftware.steamlinkvr.gxr'
     Assert-True ($selectedLogcat.text -match 'NoSuchMethodError' -and $selectedLogcat.text -notmatch 'unrelated|steamlinkvr\.other') 'exact-package logcat selection'
     Assert-True ((Count-BytePattern -Bytes ([byte[]](1, 2, 1, 2, 1)) -Pattern ([byte[]](1, 2))) -eq 2) 'byte pattern count'
+    $hostExecutable = (Get-Process -Id $PID).Path
+    $stderrCapture = Invoke-NativeProcessCaptured -FilePath $hostExecutable -Arguments @(
+        '-NoProfile', '-NonInteractive', '-Command', '[Console]::Error.WriteLine(12345); exit 0'
+    )
+    Assert-True ($stderrCapture.exitCode -eq 0 -and $stderrCapture.output -match '12345') 'nonfatal native stderr capture'
+    $failedNativeCapture = Invoke-NativeProcessCaptured -FilePath $hostExecutable -Arguments @(
+        '-NoProfile', '-NonInteractive', '-Command', 'exit 17'
+    )
+    Assert-True ($failedNativeCapture.exitCode -eq 17) 'native exit-code capture'
+    $bundledAdb = Join-Path $RepoRoot '..\GalaxyXR-APK\install\platform-tools\adb.exe'
+    if (Test-Path -LiteralPath $bundledAdb -PathType Leaf) {
+        Assert-True (
+            (Resolve-DiagnosticAdbPath -RequestedPath $null -RepositoryRoot $RepoRoot) -eq
+                [IO.Path]::GetFullPath($bundledAdb)
+        ) 'bundled ADB discovery'
+    }
     "PASS SelfTest checks=$checks"
 }
 

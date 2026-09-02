@@ -40,15 +40,15 @@ namespace {
 constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_dfr_rearm_v1";
 constexpr char kModeName[] = "android_surface_trigger_dfr_rearm_v1";
-constexpr char kBuildId[] = "android-surface-trigger-dfr-rearm-v1.0-20260902";
+constexpr char kBuildId[] = "android-surface-trigger-dfr-rearm-v1.1-20260902";
 #else
 constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1";
 constexpr char kModeName[] = "android_surface_trigger_passthrough_v1";
 #if GXR_AST_SOURCE_PROJECTION_COUNT == 2
-constexpr char kBuildId[] = "android-surface-trigger-5001712-v1.0-20260902";
+constexpr char kBuildId[] = "android-surface-trigger-5001712-v1.1-20260902";
 #else
-constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.2-20260902";
+constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.3-20260902";
 #endif
 #endif
 constexpr char kLogTag[] = "GXRSurfaceTrigger";
@@ -109,6 +109,7 @@ struct SessionState {
     XrSpace viewSpace{XR_NULL_HANDLE};
     XrSwapchain surfaceSwapchain{XR_NULL_HANDLE};
     ANativeWindow* window{};
+    XrCompositionLayerQuad triggerQuad{};
     bool bufferQueued{};
     std::atomic<bool> triggerReady{};
     std::atomic<bool> failureLogged{};
@@ -381,6 +382,21 @@ bool createTrigger(SessionState& state) {
         cleanupTrigger(state);
         return false;
     }
+    // The trigger layer is immutable for the session. Build it once instead of
+    // zeroing and populating the same structure on every xrEndFrame call.
+    state.triggerQuad.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
+    state.triggerQuad.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+    state.triggerQuad.space = state.viewSpace;
+    state.triggerQuad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
+    state.triggerQuad.subImage.swapchain = state.surfaceSwapchain;
+    state.triggerQuad.subImage.imageRect = {
+        {0, 0},
+        {static_cast<int32_t>(kTriggerWidth), static_cast<int32_t>(kTriggerHeight)},
+    };
+    state.triggerQuad.subImage.imageArrayIndex = 0;
+    state.triggerQuad.pose.orientation.w = 1.0f;
+    state.triggerQuad.pose.position.z = -1.0f;
+    state.triggerQuad.size = {0.001f, 0.001f};
     return true;
 }
 
@@ -498,7 +514,8 @@ bool refreshTriggerBuffer(SessionState& state, uint32_t reasons) {
 
 bool valveProjectionShape(
     const XrFrameEndInfo* info,
-    [[maybe_unused]] uint32_t maxLayerCount
+    [[maybe_unused]] uint32_t maxLayerCount,
+    [[maybe_unused]] const XrCompositionLayerBaseHeader** copiedLayers
 ) {
     if (!info || info->type != XR_TYPE_FRAME_END_INFO ||
 #if GXR_AST_DFR_REARM
@@ -519,6 +536,11 @@ bool valveProjectionShape(
         const auto* projection =
             reinterpret_cast<const XrCompositionLayerProjection*>(base);
         if (projection->viewCount != 2 || !projection->views) return false;
+#if !GXR_AST_DFR_REARM
+        // Production accepts only projection layers, so this validation pass can
+        // also populate the exact pointer array later passed to the runtime.
+        copiedLayers[index] = base;
+#endif
         ++projectionCount;
     }
     return projectionCount == kSourceProjectionCount;
@@ -817,28 +839,30 @@ XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain swapchain) {
 XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) {
     const auto state = findSession(session);
     XrSessionState sessionState = XR_SESSION_STATE_UNKNOWN;
-    XrSpace viewSpace = XR_NULL_HANDLE;
-    XrSwapchain surfaceSwapchain = XR_NULL_HANDLE;
     bool triggerReady = false;
     uint64_t appendedBefore = 0;
     if (state) {
         // Handles are immutable until externally synchronized session destruction.
         sessionState = state->state.load(std::memory_order_acquire);
         triggerReady = state->triggerReady.load(std::memory_order_acquire);
-        if (triggerReady) {
-            viewSpace = state->viewSpace;
-            surfaceSwapchain = state->surfaceSwapchain;
-        }
         appendedBefore = state->appendedFrames.load(std::memory_order_relaxed);
     }
-    const bool exactValveShape = valveProjectionShape(
-        info, state ? state->maxLayerCount : 0);
-    const bool eligible = state && triggerReady && isVisible(sessionState) && exactValveShape;
+#if GXR_AST_DFR_REARM
+    const XrCompositionLayerBaseHeader** copiedLayers = nullptr;
+#else
+    std::array<const XrCompositionLayerBaseHeader*, kRequiredLayerCount> layers{};
+    const XrCompositionLayerBaseHeader** copiedLayers = layers.data();
+#endif
+    // Avoid even the small layer walk while the trigger cannot be submitted.
+    const bool eligible = state && triggerReady && isVisible(sessionState) &&
+        valveProjectionShape(info, state->maxLayerCount, copiedLayers);
     if (!eligible) {
 #if GXR_AST_DFR_REARM
         if (state) state->lastFrameEligible.store(false, std::memory_order_relaxed);
 #endif
+        // After the first cold-path event, use a read instead of an RMW every frame.
         const bool shouldLog = state &&
+            !state->passthroughLogged.load(std::memory_order_relaxed) &&
             !state->passthroughLogged.exchange(true, std::memory_order_relaxed);
         if (shouldLog) {
             emit("surface_trigger_passthrough",
@@ -949,19 +973,6 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     }
 #endif
 
-    XrCompositionLayerQuad quad{};
-    quad.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
-    quad.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-    quad.space = viewSpace;
-    quad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
-    quad.subImage.swapchain = surfaceSwapchain;
-    quad.subImage.imageRect = {{0, 0}, {static_cast<int32_t>(kTriggerWidth),
-        static_cast<int32_t>(kTriggerHeight)}};
-    quad.subImage.imageArrayIndex = 0;
-    quad.pose.orientation.w = 1.0f;
-    quad.pose.position.z = -1.0f;
-    quad.size = {0.001f, 0.001f};
-
     // Preserve every source pointer and its order; only append the terminal quad.
 #if GXR_AST_DFR_REARM
     thread_local std::vector<const XrCompositionLayerBaseHeader*> layers;
@@ -970,22 +981,23 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     for (uint32_t index = 0; index < info->layerCount; ++index) {
         layers.push_back(info->layers[index]);
     }
-    layers.push_back(reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad));
+    layers.push_back(reinterpret_cast<const XrCompositionLayerBaseHeader*>(&state->triggerQuad));
 #else
-    std::array<const XrCompositionLayerBaseHeader*, kRequiredLayerCount> layers{};
-    for (uint32_t index = 0; index < kSourceProjectionCount; ++index) {
-        layers[index] = info->layers[index];
-    }
     layers[kSourceProjectionCount] =
-        reinterpret_cast<const XrCompositionLayerBaseHeader*>(&quad);
+        reinterpret_cast<const XrCompositionLayerBaseHeader*>(&state->triggerQuad);
 #endif
     XrFrameEndInfo output = *info;
     output.layerCount = info->layerCount + 1;
     output.layers = layers.data();
+#if GXR_AST_DFR_REARM
     bool pointersPreserved = true;
     for (uint32_t index = 0; index < info->layerCount; ++index) {
         pointersPreserved = pointersPreserved && layers[index] == info->layers[index];
     }
+#else
+    // valveProjectionShape copied each validated source pointer directly.
+    constexpr bool pointersPreserved = true;
+#endif
     const XrResult result = g.endFrame(session, &output);
     uint64_t appendedFrames = appendedBefore;
 #if GXR_AST_DFR_REARM

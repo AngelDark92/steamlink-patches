@@ -10,10 +10,35 @@
 # State: whether we already registered the synthetic Galaxy XR pad with SDL.
 .field private static sGxrPadAdded:Z
 
+# Exact 2.0.20/5001712 uses the older SDL controller JNI descriptors. The
+# build-aware Kotlin hook enters through the 5001712 wrappers below, setting
+# this before the shared pointer-routing body can submit a synthetic pad event.
+.field private static sGxrUse5001712SdlApi:Z
+
 # ─────────────────────────────────────────────────────────────────────────────
 .method public constructor <init>()V
     .locals 0
     invoke-direct {p0}, Ljava/lang/Object;-><init>()V
+    return-void
+.end method
+
+# Exact 2.0.20/5001712 entry points. Other builds continue calling the original
+# methods and therefore retain the 2.0.22 SDL ABI path unchanged.
+.method public static routeXrPointerAsMouse5001712(Landroid/view/MotionEvent;)V
+    .locals 1
+
+    const/4 v0, 0x1
+    sput-boolean v0, Lorg/libsdl/app/GxrSdlBridge;->sGxrUse5001712SdlApi:Z
+    invoke-static {p0}, Lorg/libsdl/app/GxrSdlBridge;->routeXrPointerAsMouse(Landroid/view/MotionEvent;)V
+    return-void
+.end method
+
+.method public static routeXrPointerAsMouseGeneric5001712(Landroid/view/MotionEvent;)V
+    .locals 1
+
+    const/4 v0, 0x1
+    sput-boolean v0, Lorg/libsdl/app/GxrSdlBridge;->sGxrUse5001712SdlApi:Z
+    invoke-static {p0}, Lorg/libsdl/app/GxrSdlBridge;->routeXrPointerAsMouseGeneric(Landroid/view/MotionEvent;)V
     return-void
 .end method
 
@@ -213,6 +238,15 @@
 .method public static sendGxrSyntheticPad(Z)Z
     .locals 13
 
+    sget-boolean v0, Lorg/libsdl/app/GxrSdlBridge;->sGxrUse5001712SdlApi:Z
+    if-eqz v0, :gxr_modern_sdl_api
+
+    invoke-static {p0}, Lorg/libsdl/app/GxrSdlBridge;->sendGxrSyntheticPad5001712(Z)Z
+    move-result v0
+    return v0
+
+    :gxr_modern_sdl_api
+
     # Check SDL controller manager is initialised.
     invoke-static {}, Lorg/libsdl/app/SDL;->isControllerManagerReady()Z
     move-result v0
@@ -273,6 +307,56 @@
     move-result v0
     const-string v1, "SteamLinkGXR"
     const-string v2, "Galaxy XR select -> SDL PAD_A up"
+    invoke-static {v1, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    return v0
+.end method
+
+# Exact Steam Link 2.0.20/5001712 SDL ABI:
+# - SDL.initialize() unconditionally initializes SDLControllerManager, so there
+#   is no isControllerManagerReady() helper to call.
+# - nativeAddJoystick ends in a single hasDpad boolean.
+# - onNativePadDown/onNativePadUp accept deviceId and keyCode only.
+.method private static sendGxrSyntheticPad5001712(Z)Z
+    .locals 10
+
+    sget-boolean v0, Lorg/libsdl/app/GxrSdlBridge;->sGxrPadAdded:Z
+    if-nez v0, :gxr_5001712_pad_ready
+
+    const v0, 0x475852
+    const-string v1, "Galaxy XR Spatial Select"
+    const-string v2, "Samsung Galaxy XR spatial navigation"
+    const v3, 0x4e8
+    const v4, 0x4758
+    const/4 v5, 0x1
+    const/4 v6, 0x0
+    const/4 v7, 0x0
+    const/4 v8, 0x0
+    const/4 v9, 0x0
+    invoke-static/range {v0 .. v9}, Lorg/libsdl/app/SDLControllerManager;->nativeAddJoystick(ILjava/lang/String;Ljava/lang/String;IIIIIIZ)V
+
+    const/4 v0, 0x1
+    sput-boolean v0, Lorg/libsdl/app/GxrSdlBridge;->sGxrPadAdded:Z
+    const-string v0, "SteamLinkGXR"
+    const-string v1, "Registered Galaxy XR spatial select on SDL 2.0.20 gamepad path"
+    invoke-static {v0, v1}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+
+    :gxr_5001712_pad_ready
+    const v0, 0x475852
+    const/16 v1, 0x60
+    if-eqz p0, :gxr_5001712_pad_up
+
+    invoke-static {v0, v1}, Lorg/libsdl/app/SDLControllerManager;->onNativePadDown(II)Z
+    move-result v0
+    const-string v1, "SteamLinkGXR"
+    const-string v2, "Galaxy XR select -> SDL 2.0.20 PAD_A down"
+    invoke-static {v1, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
+    return v0
+
+    :gxr_5001712_pad_up
+    invoke-static {v0, v1}, Lorg/libsdl/app/SDLControllerManager;->onNativePadUp(II)Z
+    move-result v0
+    const-string v1, "SteamLinkGXR"
+    const-string v2, "Galaxy XR select -> SDL 2.0.20 PAD_A up"
     invoke-static {v1, v2}, Landroid/util/Log;->i(Ljava/lang/String;Ljava/lang/String;)I
     return v0
 .end method

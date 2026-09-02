@@ -68,6 +68,19 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                 packageMetadata.versionCode,
             )) return@execute
 
+        val uses5001712SdlApi =
+            packageMetadata.versionName == "2.0.20" && packageMetadata.versionCode == "5001712"
+        val pointerRouteMethod = if (uses5001712SdlApi) {
+            "routeXrPointerAsMouse5001712"
+        } else {
+            "routeXrPointerAsMouse"
+        }
+        val genericPointerRouteMethod = if (uses5001712SdlApi) {
+            "routeXrPointerAsMouseGeneric5001712"
+        } else {
+            "routeXrPointerAsMouseGeneric"
+        }
+
         val surfaceChanged = mutableClassDefBy("Lorg/libsdl/app/SDLSurface;").methods
             .first { it.name == "surfaceChanged" && it.parameterTypes.size == 4 }
         val displayMetricsClass = "Landroid/util/DisplayMetrics;"
@@ -101,7 +114,7 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                     0,
                     invokeStaticRange(
                         "Lorg/libsdl/app/GxrSdlBridge;",
-                        "routeXrPointerAsMouse",
+                        pointerRouteMethod,
                         listOf("Landroid/view/MotionEvent;"),
                         "V",
                         pRegister(2),
@@ -117,7 +130,7 @@ internal val xrDirectInputFixPatch = bytecodePatch {
                     0,
                     invokeStaticRange(
                         "Lorg/libsdl/app/GxrSdlBridge;",
-                        "routeXrPointerAsMouseGeneric",
+                        genericPointerRouteMethod,
                         listOf("Landroid/view/MotionEvent;"),
                         "V",
                         pRegister(2),
