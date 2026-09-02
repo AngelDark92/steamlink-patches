@@ -7,6 +7,7 @@ import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL
 import app.template.patches.shared.Constants.isHighResolutionSteamLinkBuild
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -90,7 +91,13 @@ internal const val ANDROID_SURFACE_TRIGGER_LIBRARY = "libgxr_ast.so"
 internal const val ANDROID_SURFACE_TRIGGER_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json"
 internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
-    "android-surface-trigger-forced-probe-v1.1-20260901"
+    "android-surface-trigger-passthrough-v1.2-20260902"
+internal const val ANDROID_SURFACE_WARMUP_OMIT_MODE = "android_surface_trigger_warmup_omit_v1"
+internal const val ANDROID_SURFACE_WARMUP_OMIT_LIBRARY = "libgxr_ast_warmup_omit.so"
+internal const val ANDROID_SURFACE_WARMUP_OMIT_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_android_surface_trigger_warmup_omit_v1.json"
+internal const val ANDROID_SURFACE_WARMUP_OMIT_BUILD_ID =
+    "android-surface-trigger-warmup-omit-v1.0-20260902"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -102,6 +109,11 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_MODE,
         ANDROID_SURFACE_TRIGGER_LIBRARY,
         ANDROID_SURFACE_TRIGGER_MANIFEST,
+    ),
+    ProjectionModeResources(
+        ANDROID_SURFACE_WARMUP_OMIT_MODE,
+        ANDROID_SURFACE_WARMUP_OMIT_LIBRARY,
+        ANDROID_SURFACE_WARMUP_OMIT_MANIFEST,
     ),
 )
 
@@ -226,12 +238,19 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
     metadata.setAttribute("android:value", requestedMode)
 }
 
-private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
+private fun androidSurfaceTriggerResourcesPatch(
+    requestedMode: String,
+    exact5002322Only: Boolean,
+) = rawResourcePatch {
     execute {
-        if (!isHighResolutionSteamLinkBuild(
-                packageMetadata.versionName,
-                packageMetadata.versionCode,
-            )) {
+        val compatible = if (exact5002322Only) {
+            packageMetadata.versionName == "2.0.22" && packageMetadata.versionCode == "5002322"
+        } else {
+            isHighResolutionSteamLinkBuild(packageMetadata.versionName, packageMetadata.versionCode)
+        }
+        // Morphe executes dependencies recursively without rechecking compatibility.
+        // Keep this build guard inside the mutation itself so an excluded APK stays untouched.
+        if (!compatible) {
             return@execute
         }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
@@ -245,12 +264,13 @@ private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
                     "retired renderer hooks cannot be migrated safely in place.",
             )
         }
-        val helperBytes = projectionModeResource(ANDROID_SURFACE_TRIGGER_LIBRARY)
+        val requested = activeProjectionModes.first { it.mode == requestedMode }
+        val helperBytes = projectionModeResource(requested.library)
         if (helperBytes.size < 4 || !helperBytes.copyOfRange(0, 4)
                 .contentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46))) {
             throw PatchException(
                 "Bundled Android-surface trigger is not an ELF library: " +
-                    ANDROID_SURFACE_TRIGGER_LIBRARY,
+                    requested.library,
             )
         }
         val libDir = sceneFile.parentFile!!
@@ -259,10 +279,20 @@ private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
         installProjectionModeResources(
             libDir,
             layerDir,
-            activeProjectionModes.first { it.mode == ANDROID_SURFACE_TRIGGER_MODE },
+            requested,
         )
     }
 }
+
+private val androidSurfaceTriggerResourcesPatch = androidSurfaceTriggerResourcesPatch(
+    requestedMode = ANDROID_SURFACE_TRIGGER_MODE,
+    exact5002322Only = false,
+)
+
+private val androidSurfaceWarmupOmitResourcesPatch = androidSurfaceTriggerResourcesPatch(
+    requestedMode = ANDROID_SURFACE_WARMUP_OMIT_MODE,
+    exact5002322Only = true,
+)
 
 @Suppress("unused")
 val xrGalaxyXrHighResolutionPatch = resourcePatch(
@@ -280,6 +310,26 @@ val xrGalaxyXrHighResolutionPatch = resourcePatch(
     finalize {
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
+        }
+    }
+}
+
+@Suppress("unused")
+val experimentalAndroidSurfaceWarmupOmitPatch = resourcePatch(
+    name = "Experimental Galaxy XR surface warm-up/omit performance A/B",
+    description = "Diagnostic-only exact 2.0.22/5002322 variant. It creates and queues the same 2x2 Android Surface, submits the fourth terminal quad for 7200 accepted frames, then retains every Surface resource while returning to Valve's original 3 projection layers. Use it only to determine whether the recurring fourth layer causes the extra compositor cost.",
+    default = false,
+) {
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
+    dependsOn(
+        xrLauncherBootstrapPatch,
+        xrPermissionSettingsBootstrapPatch,
+        androidSurfaceWarmupOmitResourcesPatch,
+    )
+
+    finalize {
+        document("AndroidManifest.xml").use { document ->
+            configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_WARMUP_OMIT_MODE)
         }
     }
 }

@@ -1,6 +1,9 @@
 #include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
+#if GXR_AST_WARMUP_OMIT
+#include <android/trace.h>
+#endif
 #include <jni.h>
 #include <openxr/openxr.h>
 #include <openxr/openxr_loader_negotiation.h>
@@ -29,15 +32,27 @@ namespace {
 // Surface quad that activates the Galaxy XR compositor path observed to retain full
 // sharpness without SYSTEM_ALERT_WINDOW.
 
+#if GXR_AST_WARMUP_OMIT
+constexpr char kLayerName[] =
+    "XR_APILAYER_local_GalaxyXR_android_surface_trigger_warmup_omit_v1";
+constexpr char kModeName[] = "android_surface_trigger_warmup_omit_v1";
+constexpr char kBuildId[] = "android-surface-trigger-warmup-omit-v1.0-20260902";
+#else
 constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1";
 constexpr char kModeName[] = "android_surface_trigger_passthrough_v1";
-constexpr char kBuildId[] = "android-surface-trigger-forced-probe-v1.1-20260901";
+constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.2-20260902";
+#endif
 constexpr char kLogTag[] = "GXRSurfaceTrigger";
 constexpr uint32_t kTriggerWidth = 2;
 constexpr uint32_t kTriggerHeight = 2;
 constexpr uint32_t kRequiredLayerCount = 4;
-constexpr uint64_t kSummaryInterval = 900;
+constexpr uint64_t kInitialDiagnosticFrames = 3;
+#if GXR_AST_WARMUP_OMIT
+// Give the operator enough time to reach a stable fixed scene before the phase
+// change. At 72-120 Hz this is approximately 100-60 seconds.
+constexpr uint64_t kWarmupSuccessfulFrames = 7200;
+#endif
 
 struct Dispatch {
     XrInstance instance{XR_NULL_HANDLE};
@@ -52,7 +67,6 @@ struct Dispatch {
     PFN_xrCreateSwapchain createSwapchain{};
     PFN_xrCreateSwapchainAndroidSurfaceKHR createAndroidSurfaceSwapchain{};
     PFN_xrDestroySwapchain destroySwapchain{};
-    PFN_xrWaitFrame waitFrame{};
     PFN_xrEndFrame endFrame{};
     PFN_xrPollEvent pollEvent{};
 };
@@ -69,15 +83,22 @@ struct SwapchainContract {
 struct SessionState {
     std::mutex mutex;
     XrSession session{XR_NULL_HANDLE};
-    XrSessionState state{XR_SESSION_STATE_UNKNOWN};
+    std::atomic<XrSessionState> state{XR_SESSION_STATE_UNKNOWN};
     uint32_t maxLayerCount{};
     XrSpace viewSpace{XR_NULL_HANDLE};
     XrSwapchain surfaceSwapchain{XR_NULL_HANDLE};
     ANativeWindow* window{};
     bool bufferQueued{};
-    bool triggerReady{};
-    bool failureLogged{};
-    uint64_t appendedFrames{};
+    std::atomic<bool> triggerReady{};
+    std::atomic<bool> failureLogged{};
+    std::atomic<bool> passthroughLogged{};
+    std::atomic<uint64_t> appendedFrames{};
+#if GXR_AST_WARMUP_OMIT
+    std::atomic<bool> warmupLogged{};
+    std::atomic<bool> omissionLogged{};
+    std::atomic<bool> omissionFailureLogged{};
+    std::atomic<uint64_t> omittedFrames{};
+#endif
 };
 
 Dispatch g;
@@ -88,8 +109,8 @@ std::mutex sessionsMutex;
 std::map<XrSession, std::shared_ptr<SessionState>> sessions;
 std::mutex swapchainsMutex;
 std::map<XrSwapchain, SwapchainContract> applicationSwapchains;
-std::atomic<uint64_t> frameCounter{0};
-std::atomic<uint64_t> waitCounter{0};
+thread_local XrSession cachedSessionHandle{XR_NULL_HANDLE};
+thread_local std::weak_ptr<SessionState> cachedSession;
 
 uint64_t elapsedMs() {
     timespec value{};
@@ -101,10 +122,6 @@ uint64_t elapsedMs() {
 template <typename Handle>
 uint64_t handleValue(Handle handle) {
     return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(handle));
-}
-
-bool sample(uint64_t value) {
-    return value <= 3 || value % kSummaryInterval == 0;
 }
 
 void emit(const char* event, const std::string& fields = {}) {
@@ -166,9 +183,22 @@ bool isVisible(XrSessionState state) {
 }
 
 std::shared_ptr<SessionState> findSession(XrSession session) {
+    // xrEndFrame normally stays on 1 render thread. A weak TLS cache removes the
+    // global session-map mutex from that hot path without extending session lifetime
+    // or risking a stale object when an OpenXR handle is later reused.
+    if (cachedSessionHandle == session) {
+        if (auto cached = cachedSession.lock()) return cached;
+    }
     std::lock_guard<std::mutex> lock(sessionsMutex);
     const auto iterator = sessions.find(session);
-    return iterator != sessions.end() ? iterator->second : nullptr;
+    if (iterator == sessions.end()) {
+        cachedSessionHandle = XR_NULL_HANDLE;
+        cachedSession.reset();
+        return nullptr;
+    }
+    cachedSessionHandle = session;
+    cachedSession = iterator->second;
+    return iterator->second;
 }
 
 std::optional<SwapchainContract> findApplicationSwapchain(XrSwapchain swapchain) {
@@ -184,7 +214,7 @@ void cleanupTrigger(SessionState& state) {
     XrSpace viewSpace{XR_NULL_HANDLE};
     {
         std::lock_guard<std::mutex> lock(state.mutex);
-        state.triggerReady = false;
+        state.triggerReady.store(false, std::memory_order_release);
         state.bufferQueued = false;
         window = state.window;
         state.window = nullptr;
@@ -286,7 +316,8 @@ bool queueTriggerBuffer(SessionState& state) {
     bool queued = false;
     {
         std::lock_guard<std::mutex> lock(state.mutex);
-        if (!state.window || state.bufferQueued || !isVisible(state.state)) return false;
+        if (!state.window || state.bufferQueued ||
+            !isVisible(state.state.load(std::memory_order_acquire))) return false;
         const int geometryResult = ANativeWindow_setBuffersGeometry(
             state.window, kTriggerWidth, kTriggerHeight, WINDOW_FORMAT_RGBA_8888);
         ANativeWindow_Buffer buffer{};
@@ -309,11 +340,12 @@ bool queueTriggerBuffer(SessionState& state) {
         }
         if (lockResult == 0) postResult = ANativeWindow_unlockAndPost(state.window);
         state.bufferQueued = geometryResult == 0 && writableBuffer && postResult == 0;
-        state.triggerReady = state.bufferQueued;
+        state.triggerReady.store(state.bufferQueued, std::memory_order_release);
         queued = state.bufferQueued;
         emit("surface_buffer_queued",
             "\"session\":" + std::to_string(handleValue(state.session)) +
-            ",\"sessionState\":" + std::to_string(static_cast<int>(state.state)) +
+            ",\"sessionState\":" + std::to_string(static_cast<int>(
+                state.state.load(std::memory_order_acquire))) +
             ",\"geometryResult\":" + std::to_string(geometryResult) +
             ",\"lockResult\":" + std::to_string(lockResult) +
             ",\"postResult\":" + std::to_string(postResult) +
@@ -440,13 +472,24 @@ XrResult XRAPI_PTR layerDestroySession(XrSession session) {
     }
     if (state) {
         uint64_t appendedFrames{};
+#if GXR_AST_WARMUP_OMIT
+        uint64_t omittedFrames{};
+#endif
         {
-            std::lock_guard<std::mutex> lock(state->mutex);
-            appendedFrames = state->appendedFrames;
+            appendedFrames = state->appendedFrames.load(std::memory_order_relaxed);
+#if GXR_AST_WARMUP_OMIT
+            omittedFrames = state->omittedFrames.load(std::memory_order_relaxed);
+#endif
         }
         emit("surface_trigger_summary",
             "\"session\":" + std::to_string(handleValue(session)) +
-            ",\"appendedFrames\":" + std::to_string(appendedFrames));
+            ",\"appendedFrames\":" + std::to_string(appendedFrames)
+#if GXR_AST_WARMUP_OMIT
+            + ",\"omittedFrames\":" + std::to_string(omittedFrames) +
+            ",\"warmupSuccessfulFrames\":" +
+                std::to_string(kWarmupSuccessfulFrames)
+#endif
+        );
         cleanupTrigger(*state);
     }
     return g.destroySession(session);
@@ -485,51 +528,41 @@ XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain swapchain) {
     return result;
 }
 
-XrResult XRAPI_PTR layerWaitFrame(
-    XrSession session,
-    const XrFrameWaitInfo* info,
-    XrFrameState* state
-) {
-    const XrResult result = g.waitFrame(session, info, state);
-    const uint64_t wait = ++waitCounter;
-    if (XR_FAILED(result) || sample(wait)) {
-        emit("wait_frame",
-            "\"session\":" + std::to_string(handleValue(session)) +
-            ",\"wait\":" + std::to_string(wait) +
-            ",\"result\":" + std::to_string(result) +
-            (state ? ",\"shouldRender\":" +
-                std::string(state->shouldRender ? "true" : "false") : std::string{}));
-    }
-    return result;
-}
-
 XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) {
-    const uint64_t frame = ++frameCounter;
     const auto state = findSession(session);
     XrSessionState sessionState = XR_SESSION_STATE_UNKNOWN;
     XrSpace viewSpace = XR_NULL_HANDLE;
     XrSwapchain surfaceSwapchain = XR_NULL_HANDLE;
     bool triggerReady = false;
+    uint64_t appendedBefore = 0;
+#if GXR_AST_WARMUP_OMIT
+    uint64_t omittedBefore = 0;
+#endif
     if (state) {
-        std::lock_guard<std::mutex> lock(state->mutex);
-        sessionState = state->state;
-        viewSpace = state->viewSpace;
-        surfaceSwapchain = state->surfaceSwapchain;
-        triggerReady = state->triggerReady;
+        // The handles are fully initialized before the state enters the session map
+        // and are immutable until externally synchronized session destruction. Atomics
+        // cover the fields that can change through xrPollEvent or failure handling.
+        sessionState = state->state.load(std::memory_order_acquire);
+        triggerReady = state->triggerReady.load(std::memory_order_acquire);
+        // Failed queue setup publishes false before cold cleanup clears the handles.
+        // Do not touch those non-atomic handles unless readiness was published true.
+        if (triggerReady) {
+            viewSpace = state->viewSpace;
+            surfaceSwapchain = state->surfaceSwapchain;
+        }
+        appendedBefore = state->appendedFrames.load(std::memory_order_relaxed);
+#if GXR_AST_WARMUP_OMIT
+        omittedBefore = state->omittedFrames.load(std::memory_order_relaxed);
+#endif
     }
     const bool exactValveShape = valveThreeProjectionShape(info);
-    const bool willAppend = state && triggerReady && isVisible(sessionState) && exactValveShape;
-    if (sample(frame) && exactValveShape) {
-        emit("surface_trigger_frame", sourceFrameContract(info, frame) +
-            ",\"sessionState\":" + std::to_string(static_cast<int>(sessionState)) +
-            ",\"outputLayerCount\":" + std::to_string(willAppend ? 4 : 3) +
-            ",\"triggerTerminal\":" + (willAppend ? std::string("true") : "false"));
-    }
-    if (!willAppend) {
-        if (sample(frame)) {
+    const bool eligible = state && triggerReady && isVisible(sessionState) && exactValveShape;
+    if (!eligible) {
+        const bool shouldLog = state &&
+            !state->passthroughLogged.exchange(true, std::memory_order_relaxed);
+        if (shouldLog) {
             emit("surface_trigger_passthrough",
                 "\"session\":" + std::to_string(handleValue(session)) +
-                ",\"frame\":" + std::to_string(frame) +
                 ",\"sourceLayerCount\":" + std::to_string(info ? info->layerCount : 0) +
                 ",\"triggerReady\":" +
                     (triggerReady ? std::string("true") : "false") +
@@ -537,6 +570,47 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
         }
         return g.endFrame(session, info);
     }
+
+#if GXR_AST_WARMUP_OMIT
+    // The diagnostic target deliberately changes only xrEndFrame submission after
+    // a long sharp warm-up. The Android Surface, native window, queued buffer,
+    // swapchain, and reference space stay alive so the A/B isolates whether the
+    // runtime needs the 4th layer every frame or only the established Surface state.
+    if (appendedBefore >= kWarmupSuccessfulFrames) {
+        const XrResult result = g.endFrame(session, info);
+        bool logTransition = false;
+        bool logFailure = false;
+        uint64_t omittedFrames = omittedBefore;
+        if (XR_SUCCEEDED(result)) {
+            omittedFrames = state->omittedFrames.fetch_add(
+                1, std::memory_order_relaxed) + 1;
+            logTransition = !state->omissionLogged.exchange(
+                true, std::memory_order_relaxed);
+        } else {
+            logFailure = !state->omissionFailureLogged.exchange(
+                true, std::memory_order_relaxed);
+        }
+        if (logTransition) {
+            ATrace_beginSection("GXR_AST_quad_omitted_resources_retained");
+            ATrace_endSection();
+            emit("surface_trigger_quad_omitted",
+                sourceFrameContract(info, appendedBefore + omittedFrames) +
+                ",\"sessionState\":" +
+                    std::to_string(static_cast<int>(sessionState)) +
+                ",\"outputLayerCount\":3,\"triggerTerminal\":false," +
+                "\"surfaceRetained\":true,\"swapchainRetained\":true," +
+                "\"nativeWindowRetained\":true,\"bufferRetained\":true," +
+                "\"acceptedFrames\":" + std::to_string(appendedBefore) +
+                ",\"result\":" + std::to_string(result));
+        } else if (logFailure) {
+            emit("surface_trigger_omitted_submission_failed",
+                "\"session\":" + std::to_string(handleValue(session)) +
+                ",\"acceptedFrames\":" + std::to_string(appendedBefore) +
+                ",\"result\":" + std::to_string(result));
+        }
+        return result;
+    }
+#endif
 
     XrCompositionLayerQuad quad{};
     quad.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
@@ -563,14 +637,37 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     const bool pointersPreserved = layers[0] == info->layers[0] &&
         layers[1] == info->layers[1] && layers[2] == info->layers[2];
     const XrResult result = g.endFrame(session, &output);
+    uint64_t appendedFrames = appendedBefore;
+    bool logWarmup = false;
     if (XR_SUCCEEDED(result)) {
-        std::lock_guard<std::mutex> lock(state->mutex);
-        ++state->appendedFrames;
+        appendedFrames = state->appendedFrames.fetch_add(
+            1, std::memory_order_relaxed) + 1;
+#if GXR_AST_WARMUP_OMIT
+        logWarmup = !state->warmupLogged.exchange(true, std::memory_order_relaxed);
+#endif
     }
-    if (sample(frame) || XR_FAILED(result)) {
+    const bool initialDiagnostic = XR_SUCCEEDED(result) &&
+        appendedFrames <= kInitialDiagnosticFrames;
+    if (initialDiagnostic) {
+        emit("surface_trigger_frame", sourceFrameContract(info, appendedFrames) +
+            ",\"sessionState\":" + std::to_string(static_cast<int>(sessionState)) +
+            ",\"outputLayerCount\":4,\"triggerTerminal\":true");
+    }
+#if GXR_AST_WARMUP_OMIT
+    if (logWarmup) {
+        ATrace_beginSection("GXR_AST_warmup_started_quad_appended");
+        ATrace_endSection();
+        emit("surface_trigger_warmup_started",
+            "\"session\":" + std::to_string(handleValue(session)) +
+            ",\"outputLayerCount\":4,\"warmupSuccessfulFrames\":" +
+                std::to_string(kWarmupSuccessfulFrames) +
+            ",\"surfaceRetainedAfterWarmup\":true");
+    }
+#endif
+    if (initialDiagnostic || XR_FAILED(result)) {
         emit("surface_trigger_submission",
             "\"session\":" + std::to_string(handleValue(session)) +
-            ",\"frame\":" + std::to_string(frame) +
+            ",\"frame\":" + std::to_string(appendedFrames) +
             ",\"sourceLayerCount\":3,\"sourceProjectionCount\":3," +
             "\"sourceViewCount\":6,\"outputLayerCount\":4," +
             "\"submittedProjectionCount\":3,\"triggerQuadCount\":1," +
@@ -586,15 +683,9 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     if (XR_FAILED(result)) {
         // xrEndFrame is not replayable. Return this frame's runtime error, disable the
         // trigger, and let later frames use Valve's untouched 3-layer submission.
-        bool logFailure = false;
-        {
-            std::lock_guard<std::mutex> lock(state->mutex);
-            state->triggerReady = false;
-            if (!state->failureLogged) {
-                state->failureLogged = true;
-                logFailure = true;
-            }
-        }
+        state->triggerReady.store(false, std::memory_order_release);
+        const bool logFailure = !state->failureLogged.exchange(
+            true, std::memory_order_relaxed);
         if (logFailure) {
             emit("surface_trigger_disabled",
                 "\"session\":" + std::to_string(handleValue(session)) +
@@ -616,16 +707,13 @@ XrResult XRAPI_PTR layerPollEvent(XrInstance instance, XrEventDataBuffer* data) 
         if (state) {
             {
                 std::lock_guard<std::mutex> lock(state->mutex);
-                state->state = event->state;
+                state->state.store(event->state, std::memory_order_release);
                 shouldQueue = isVisible(event->state) && !state->bufferQueued && state->window;
             }
             if (shouldQueue) queueTriggerBuffer(*state);
         }
-        bool triggerReady = false;
-        if (state) {
-            std::lock_guard<std::mutex> lock(state->mutex);
-            triggerReady = state->triggerReady;
-        }
+        const bool triggerReady = state &&
+            state->triggerReady.load(std::memory_order_acquire);
         emit("session_state_changed",
             "\"session\":" + std::to_string(handleValue(event->session)) +
             ",\"state\":" + std::to_string(static_cast<int>(event->state)) +
@@ -653,8 +741,6 @@ XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance) {
     applicationVm = nullptr;
     extensionAdvertised = false;
     extensionEnabled = false;
-    frameCounter.store(0);
-    waitCounter.store(0);
     return result;
 }
 
@@ -673,7 +759,6 @@ XrResult XRAPI_PTR layerGetInstanceProcAddr(
     else ROUTE("xrDestroySession", layerDestroySession);
     else ROUTE("xrCreateSwapchain", layerCreateSwapchain);
     else ROUTE("xrDestroySwapchain", layerDestroySwapchain);
-    else ROUTE("xrWaitFrame", layerWaitFrame);
     else ROUTE("xrEndFrame", layerEndFrame);
     else ROUTE("xrPollEvent", layerPollEvent);
     else return g.getInstanceProcAddr ?
@@ -744,7 +829,6 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
         load("xrDestroySpace", g.destroySpace) &&
         load("xrCreateSwapchain", g.createSwapchain) &&
         load("xrDestroySwapchain", g.destroySwapchain) &&
-        load("xrWaitFrame", g.waitFrame) &&
         load("xrEndFrame", g.endFrame) &&
         load("xrPollEvent", g.pollEvent);
     const bool surfaceFunctionLookupAttempted = extensionEnabled;

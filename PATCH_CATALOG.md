@@ -146,10 +146,14 @@ Selection uses exact `(versionName, versionCode)` before checking the pinned lib
 | Artifact | Exact guarded edit |
 |---|---|
 | `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=android_surface_trigger_passthrough_v1` |
-| `lib/arm64-v8a/libgxr_ast.so` | Implicit OpenXR API layer. Requests `XR_KHR_android_surface_swapchain` even when enumeration hides it, retries Valve's original instance create-info if rejected, and otherwise queues a nonzero-alpha `2x2` RGBA8888 Android `Surface` as a terminal quad after Valve's unchanged 3 projection pointers. |
+| `lib/arm64-v8a/libgxr_ast.so` | Release-built, stripped implicit OpenXR API layer. Requests `XR_KHR_android_surface_swapchain` even when enumeration hides it, retries Valve's original instance create-info if rejected, and otherwise queues a nonzero-alpha `2x2` RGBA8888 Android `Surface` as a terminal quad after Valve's unchanged 3 projection pointers. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json` | Registers the surface-trigger API layer; disable environment is `GXR_DISABLE_ANDROID_SURFACE_TRIGGER`. |
 
 The output remains Valve's original 3 projections and 6 views, plus 1 nearly invisible quad. The layer performs no texture copy, shader draw, resampling, or 3-to-1 reconstruction. The independent trigger Surface does not alter Valve's source handles or formats, so future RGB10_A2 projection sources remain reserved for unchanged passthrough.
+
+The production helper is now compiled with `-O2`, dead-section elimination, and stripped symbols. It no longer intercepts `xrWaitFrame`, performs no periodic per-frame log formatting, and caches the render thread's session lookup. Cold lifecycle evidence plus the first 3 accepted submissions remain available to validate topology. These changes reduce helper CPU overhead; they cannot remove a vendor compositor cost caused by submitting a fourth OpenXR layer.
+
+The optimized v1.2 helper is build- and static-test validated, not yet headset validated. The accepted 2026-09-01 capture below belongs to the same append-only topology in the preceding helper and is prior behavioral evidence, not a runtime result for the new binary.
 
 The 5001712, 5002244, 5002296, 5002313, and 5002318 decoded bases have exact metadata, recognized VRLink activities, and distinct recorded native sizes/hashes. Their resource, manifest, and dependency routing is statically validated; headset behavior remains unverified. The existing 2.0.22/5002322 headset evidence below is unchanged.
 
@@ -161,6 +165,15 @@ when explicitly requested: the function loaded, a 2x2 Surface was created and qu
 terminal quad. No overlay permission, type-2038 Steam Link window, or recording contamination
 existed. The headset palm A/B/A result was `MATCHES REFERENCE -> MATCHES REFERENCE -> MATCHES
 REFERENCE`, establishing perceived parity with Valve's native 3-projection APK with Appear on top.
+
+---
+
+### Experimental Galaxy XR surface warm-up/omit performance A/B
+**Diagnostic-only/default off; exact 2.0.22/5002322 only**
+
+This variant uses the same optimized helper and unchanged Valve 3-projection/6-view path. It appends the trigger quad for 7,200 accepted frames (about 60–100 seconds at 120–72 Hz), then submits Valve's original 3 layers while retaining the created Android Surface, swapchain, native window, reference space, and queued buffer. A one-shot trace marker records the exact `4 -> 3` transition.
+
+If sharpness remains equal after the transition and composition time falls, the final patch can be changed to create/queue-only. If sharpness falls at the transition, the recurring fourth layer is required to hold the Galaxy XR high-resolution compositor policy and its measured cost is not removable in Valve's renderer. This experiment is mutually exclusive with the final high-resolution patch and is not a production recommendation.
 
 ---
 

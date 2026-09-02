@@ -840,6 +840,41 @@
       ]
     },
     {
+      "name": "Experimental Galaxy XR surface warm-up/omit performance A/B",
+      "description": "Diagnostic-only exact 2.0.22/5002322 variant. It creates and queues the same 2x2 Android Surface, submits the fourth terminal quad for 7200 accepted frames, then retains every Surface resource while returning to Valve's original 3 projection layers. Use it only to determine whether the recurring fourth layer causes the extra compositor cost.",
+      "default": false,
+      "dependencies": [
+        "ResourcePatch",
+        "ResourcePatch",
+        "RawResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002322,
+                "ARMEABI_V7A": 5002322,
+                "X86_64": 5002322,
+                "X86": 5002322
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Experimental patches for Steam Link 2.0.22 build 5002322."
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Force HMD initialization gates",
       "description": "Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5001712, 5001740, 5002244, and 5002313.",
       "default": false,
