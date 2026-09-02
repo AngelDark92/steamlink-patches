@@ -128,13 +128,55 @@ val xrDeviceConfigBaselinePatch = rawResourcePatch(
         // The legacy controller_config.json has neither, so replacing it disables native hands.
         if (isNativeXrSteamLinkBuild(packageMetadata.versionName, packageMetadata.versionCode)) return@execute
 
-        get("assets/config/hmd_config.json").writeBytes(loadResource("hmd_config.json"))
+        get("assets/config/hmd_config.json").writeBytes(
+            adaptLegacyHmdConfigForBuild(
+                loadResource("hmd_config.json"),
+                packageMetadata.versionName,
+                packageMetadata.versionCode,
+            ),
+        )
         get("assets/config/controller_config.json").writeBytes(loadResource("controller_config.json"))
         // assets/config/default_config.json — preflight.ignore_microphone_muted=false
         get("assets/config/default_config.json").writeBytes(loadResource("default_config.json"))
         // assets/webui/dash/index.html — Steam Link dashboard HTML bootstrap
         get("assets/webui/dash/index.html").writeBytes(loadResource("index.html"))
     }
+}
+
+private const val REQUESTED_EXTENSIONS_5001712 =
+    "  \"requestedExtensions\": {\n" +
+        "    \"xrvst2\": [\n" +
+        "      \"XR_EXT_eye_gaze_interaction\"\n" +
+        "    ],\n" +
+        "    \"xrvst2ue\": [\n" +
+        "      \"XR_EXT_eye_gaze_interaction\"\n" +
+        "    ],\n" +
+        "    \"unknown\": [\n" +
+        "      \"XR_EXT_eye_gaze_interaction\"\n" +
+        "    ]\n" +
+        "  },"
+
+private val requestedExtensionsArrayRegex = Regex(
+    "(?m)^  \"requestedExtensions\": \\[\\r?\\n" +
+        "    \"XR_EXT_eye_gaze_interaction\"\\r?\\n" +
+        "  ],",
+)
+
+internal fun adaptLegacyHmdConfigForBuild(
+    payload: ByteArray,
+    versionName: String,
+    versionCode: String,
+): ByteArray {
+    if (versionName != "2.0.20" || versionCode != "5001712") return payload
+    val source = payload.decodeToString()
+    val matches = requestedExtensionsArrayRegex.findAll(source).toList()
+    check(matches.size == 1) {
+        "Expected exactly one legacy requestedExtensions array in the 5001712 HMD payload"
+    }
+    val match = matches.single()
+    val newline = if (match.value.contains("\r\n")) "\r\n" else "\n"
+    val replacement = REQUESTED_EXTENSIONS_5001712.replace("\n", newline)
+    return source.replaceRange(match.range, replacement).encodeToByteArray()
 }
 
 @Suppress("unused")

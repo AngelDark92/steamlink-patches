@@ -20,7 +20,7 @@ if(NOT EXISTS "${OPENXR_SDK_SOURCE_DIR}/include/openxr/openxr.h")
     message(FATAL_ERROR "Set OPENXR_SDK_SOURCE_DIR to the bundled OpenXR-SDK 1.1.61 checkout")
 endif()
 
-function(add_gxr_surface_trigger_target target output_name dfr_rearm source_projection_count)
+function(add_gxr_surface_trigger_target target output_name source_projection_count)
     add_library(${target} SHARED
         src/android_surface_trigger_passthrough_layer.cpp
     )
@@ -30,7 +30,6 @@ function(add_gxr_surface_trigger_target target output_name dfr_rearm source_proj
     target_compile_definitions(${target} PRIVATE
         XR_USE_PLATFORM_ANDROID
         NDEBUG
-        GXR_AST_DFR_REARM=${dfr_rearm}
         GXR_AST_SOURCE_PROJECTION_COUNT=${source_projection_count}
     )
     target_compile_options(${target} PRIVATE
@@ -60,7 +59,6 @@ endfunction()
 add_gxr_surface_trigger_target(
     gxr_android_surface_trigger_passthrough_v1
     gxr_ast
-    0
     3
 )
 
@@ -68,16 +66,5 @@ add_gxr_surface_trigger_target(
 add_gxr_surface_trigger_target(
     gxr_android_surface_trigger_passthrough_5001712_v1
     gxr_ast_5001712
-    0
     2
-)
-
-# Diagnostic helper: after the 7200-frame warm-up, normally omit the trigger quad.
-# Re-post and briefly re-submit it when Valve/DFR changes composition state, and run
-# a bounded periodic probe for vendor-policy changes that expose no Android event.
-add_gxr_surface_trigger_target(
-    gxr_android_surface_trigger_dfr_rearm_v1
-    gxr_ast_dfr_rearm
-    1
-    3
 )

@@ -26,6 +26,9 @@ import app.template.patches.steamlink.binary.hmdOnlyPatch
 import app.template.patches.steamlink.binary.microphoneInputPresetPatch
 import app.template.patches.steamlink.binary.oledCalibrationPatch
 import app.template.patches.steamlink.binary.videoDitherPatch
+import app.template.patches.steamlink.galaxyXrLegacyFoundationPatch
+import app.template.patches.steamlink.galaxyXrRecommended5002318Patch
+import app.template.patches.steamlink.galaxyXrRecommended5002322Patch
 import app.template.patches.steamlink.identity.changePackageNamePatch
 import app.template.patches.steamlink.identity.deviceIdentityPatch
 import kotlinx.coroutines.flow.toList
@@ -50,6 +53,32 @@ private val highResolutionFixtures = listOf(
     HighResolutionFixture("2.0.22", "5002313", 0x1472a8, true),
     HighResolutionFixture("2.0.22", "5002318", 0x147418, false),
     HighResolutionFixture("2.0.22", "5002322", 0x148aac, false),
+)
+
+private data class RecommendedBundleFixture(
+    val base: HighResolutionFixture,
+    val patch: Patch<*>,
+)
+
+private val visualDelayFixtures = highResolutionFixtures.filter { it.versionCode != "5002296" }
+
+private val recommendedBundleFixtures = listOf(
+    RecommendedBundleFixture(
+        highResolutionFixtures.single { it.versionCode == "5001712" },
+        galaxyXrLegacyFoundationPatch,
+    ),
+    RecommendedBundleFixture(
+        highResolutionFixtures.single { it.versionCode == "5002244" },
+        galaxyXrLegacyFoundationPatch,
+    ),
+    RecommendedBundleFixture(
+        highResolutionFixtures.single { it.versionCode == "5002318" },
+        galaxyXrRecommended5002318Patch,
+    ),
+    RecommendedBundleFixture(
+        highResolutionFixtures.single { it.versionCode == "5002322" },
+        galaxyXrRecommended5002322Patch,
+    ),
 )
 
 private val publicPatchesFor5001712: List<Patch<*>> = listOf(
@@ -79,8 +108,9 @@ private val publicPatchesFor5001712: List<Patch<*>> = listOf(
  * Offline integration audit for apktool-rebuilt decoded Steam Link bases.
  *
  * This deliberately does not sign, install, deploy, or contact a device. It executes every
- * public patch independently on 2.0.20/5001712, then produces 6 unsigned high-resolution APKs
- * and verifies the build-specific native permission behavior plus installed API-layer files.
+ * compatible public patch independently on 2.0.20/5001712, produces 6 unsigned high-resolution
+ * APKs, checks Visual Delay on 5 native layouts, and applies the 3 recommendation bundles to the
+ * 4 decoded bases that are available. It does not turn decoded-fixture success into runtime proof.
  */
 object DecodedSteamLinkPatchAudit {
     @JvmStatic
@@ -102,6 +132,12 @@ private fun runIsolatedAudits(fixtureDirectory: String, outputDirectory: String)
     }
     highResolutionFixtures.indices.forEach { index ->
         runAuditChild(fixtureDirectory, outputDirectory, "high-resolution", index)
+    }
+    visualDelayFixtures.indices.forEach { index ->
+        runAuditChild(fixtureDirectory, outputDirectory, "visual-delay", index)
+    }
+    recommendedBundleFixtures.indices.forEach { index ->
+        runAuditChild(fixtureDirectory, outputDirectory, "recommended", index)
     }
 }
 
@@ -153,6 +189,31 @@ private suspend fun runSingleAudit(args: Array<String>) {
             println("PASS ${fixture.versionName}/${fixture.versionCode} high-resolution output: $output")
         }
 
+        "visual-delay" -> {
+            val fixture = visualDelayFixtures[index]
+            val input = fixtureFile(fixtureDirectory, fixture)
+            require(input.isFile) { "Missing decoded APK fixture: $input" }
+            val caseDirectory = File(outputDirectory, "visual-delay-${fixture.versionCode}")
+            val output = File(caseDirectory, "steamlink-${fixture.versionCode}-visual-delay-unsigned.apk")
+            output.parentFile.mkdirs()
+            executePatch(input, hmdOnlyPatch, File(caseDirectory, "temporary"), output)
+            verifyVisualDelayOutput(input, output, fixture)
+            println("PASS ${fixture.versionName}/${fixture.versionCode} Visual Delay output: $output")
+        }
+
+        "recommended" -> {
+            val selection = recommendedBundleFixtures[index]
+            val fixture = selection.base
+            val input = fixtureFile(fixtureDirectory, fixture)
+            require(input.isFile) { "Missing decoded APK fixture: $input" }
+            val caseDirectory = File(outputDirectory, "recommended-${fixture.versionCode}")
+            val output = File(caseDirectory, "steamlink-${fixture.versionCode}-recommended-unsigned.apk")
+            output.parentFile.mkdirs()
+            executePatch(input, selection.patch, File(caseDirectory, "temporary"), output)
+            verifyRecommendedBundleOutput(output, fixture)
+            println("PASS ${fixture.versionName}/${fixture.versionCode} recommended bundle output: $output")
+        }
+
         else -> error("Unknown audit kind: ${args[2]}")
     }
 }
@@ -199,8 +260,9 @@ private fun verifyPublicPatchOutput(outputApk: File, patch: Patch<*>) {
             }
 
             deviceIdentityPatch -> {
-                apk.requireEntryBytes("assets/config/hmd_config.json")
-                    .requireEncodedString("\"sModelNumber\": \"Oculus Quest Pro\"")
+                val hmdConfig = apk.requireEntryBytes("assets/config/hmd_config.json")
+                hmdConfig.requireEncodedString("\"sModelNumber\": \"Oculus Quest Pro\"")
+                hmdConfig.require5001712RequestedExtensionsObject()
             }
 
             forceHmdInitializationGatesPatch -> {
@@ -238,17 +300,12 @@ private fun verifyPublicPatchOutput(outputApk: File, patch: Patch<*>) {
                 check(!scene.copyOfRange(0x1014E8, 0x1014EC).contentEquals("e20740f9".hexBytes())) {
                     "Visual Delay Fix left the 5001712 HMD hook unchanged"
                 }
-                listOf(0x101514, 0x101530, 0x101610, 0x101614, 0x101620).forEach { offset ->
-                    check(!scene.copyOfRange(offset, offset + 4).contentEquals(
-                        mapOf(
-                            0x101514 to "fc01c263",
-                            0x101530 to "bd002664",
-                            0x101610 to "bd002a62",
-                            0x101614 to "bd002e61",
-                            0x101620 to "bd003263",
-                        ).getValue(offset).hexBytes(),
-                    )) { "Visual Delay Fix left velocity store 0x${offset.toString(16)} unchanged" }
-                }
+                scene.requireBytesAt(
+                    0x20F2D0,
+                    "700000f011f640f910a2079120021fd6700000f011fa40f910c2079120021fd6".hexBytes(),
+                )
+                scene.requireBytesAt(0x21DB98, "e20740f9".hexBytes())
+                scene.requireBytesAt(64 + 8 * 56, "0100000005000000".hexBytes())
             }
 
             xrCoreRuntimePatch -> {
@@ -257,8 +314,9 @@ private fun verifyPublicPatchOutput(outputApk: File, patch: Patch<*>) {
             }
 
             xrDeviceConfigBaselinePatch -> {
-                apk.requireEntryBytes("assets/config/hmd_config.json")
-                    .requireEncodedString("\"sModelNumber\": \"Galaxy XR\"")
+                val hmdConfig = apk.requireEntryBytes("assets/config/hmd_config.json")
+                hmdConfig.requireEncodedString("\"sModelNumber\": \"Galaxy XR\"")
+                hmdConfig.require5001712RequestedExtensionsObject()
                 apk.requireEntryBytes("assets/config/default_config.json")
                     .requireEncodedString("\"ignore_microphone_muted\": false")
             }
@@ -312,6 +370,72 @@ private suspend fun executePatch(
 private fun verifyHighResolutionOutput(outputApk: File, fixture: HighResolutionFixture) {
     ZipFile(outputApk).use { apk ->
         verifyHighResolutionZip(apk, fixture)
+    }
+}
+
+private fun verifyVisualDelayOutput(
+    inputApk: File,
+    outputApk: File,
+    fixture: HighResolutionFixture,
+) {
+    val original = ZipFile(inputApk).use { it.requireEntryBytes("lib/arm64-v8a/libvrlink_scene.so") }
+    val patched = ZipFile(outputApk).use { it.requireEntryBytes("lib/arm64-v8a/libvrlink_scene.so") }
+    check(!patched.contentEquals(original)) { "${fixture.versionCode}: Visual Delay left native library unchanged" }
+    check(patched.size == original.size) { "${fixture.versionCode}: Visual Delay changed native library size" }
+
+    val tailOffset = original.firstExecutableLoadEnd() - 32
+    check(tailOffset >= 0) { "${fixture.versionCode}: invalid executable segment tail" }
+    check(
+        patched.copyOfRange(tailOffset, tailOffset + 32)
+            .contentEquals(original.copyOfRange(tailOffset, tailOffset + 32)),
+    ) { "${fixture.versionCode}: Visual Delay changed live executable-segment tail/PLT entries" }
+
+    val originalTypes = original.programHeaderTypes()
+    val patchedTypes = patched.programHeaderTypes()
+    check(patchedTypes.count { it == 1 } == originalTypes.count { it == 1 } + 1) {
+        "${fixture.versionCode}: Visual Delay did not add exactly one PT_LOAD mapping"
+    }
+    check(patchedTypes.count { it == 4 } == originalTypes.count { it == 4 } - 1) {
+        "${fixture.versionCode}: Visual Delay did not consume exactly one PT_NOTE mapping"
+    }
+    val injectedIndex = originalTypes.indices.single { originalTypes[it] == 4 && patchedTypes[it] == 1 }
+    val injectedHeader = patched.programHeaderOffsets()[injectedIndex]
+    val injectedOffset = patched.readU64LE(injectedHeader + 8)
+    val injectedVaddr = patched.readU64LE(injectedHeader + 16)
+    val injectedAlignment = patched.readU64LE(injectedHeader + 48)
+    val expectedAlignment = original.programHeaderOffsets()
+        .filter { original.readU32LE(it) == 1 }
+        .maxOf { original.readU64LE(it + 48) }
+    check(injectedAlignment == expectedAlignment) {
+        "${fixture.versionCode}: injected alignment 0x${injectedAlignment.toString(16)} " +
+            "did not inherit 0x${expectedAlignment.toString(16)}"
+    }
+    check(injectedOffset % injectedAlignment == injectedVaddr % injectedAlignment) {
+        "${fixture.versionCode}: injected PT_LOAD offset/vaddr are not alignment-congruent"
+    }
+}
+
+private fun verifyRecommendedBundleOutput(outputApk: File, fixture: HighResolutionFixture) {
+    ZipFile(outputApk).use { apk ->
+        val manifest = apk.requireEntryBytes("AndroidManifest.xml")
+        manifest.requireEncodedString("org.khronos.openxr.permission.OPENXR")
+        manifest.requireEncodedString("android.permission.HAND_TRACKING")
+        if (fixture.versionCode in setOf("5002318", "5002322")) {
+            apk.requireEntryBytes("lib/arm64-v8a/libgxr_ast.so")
+            apk.requireEntryBytes("lib/arm64-v8a/libgxr_face_bridge.so")
+            check(!manifest.containsEncodedString("android.permission.SYSTEM_ALERT_WINDOW")) {
+                "${fixture.versionCode}: recommended native-XR bundle requested SYSTEM_ALERT_WINDOW"
+            }
+        } else {
+            apk.requireEntryBytes("lib/arm64-v8a/libgxr_xr_bridge.so")
+            apk.requireEntryBytes("assets/config/ui_config.json")
+            val hmdConfig = apk.requireEntryBytes("assets/config/hmd_config.json")
+            hmdConfig.requireEncodedString("\"sModelNumber\": \"Galaxy XR\"")
+            if (fixture.versionCode == "5001712") hmdConfig.require5001712RequestedExtensionsObject()
+        }
+    }
+    if (fixture.versionCode in setOf("5002318", "5002322")) {
+        verifyHighResolutionOutput(outputApk, fixture)
     }
 }
 
@@ -376,12 +500,53 @@ private fun ByteArray.requireBytesAt(offset: Int, expected: ByteArray) {
     }
 }
 
+private fun ByteArray.firstExecutableLoadEnd(): Int {
+    val phoff = readU64LE(32).toInt()
+    val phesz = readU16LE(54)
+    val phnum = readU16LE(56)
+    val header = (0 until phnum).map { phoff + it * phesz }.single { offset ->
+        readU32LE(offset) == 1 && (readU32LE(offset + 4) and 1) != 0 && readU64LE(offset + 8) == 0L
+    }
+    return (readU64LE(header + 8) + readU64LE(header + 32)).toInt()
+}
+
+private fun ByteArray.programHeaderTypes(): List<Int> {
+    return programHeaderOffsets().map(::readU32LE)
+}
+
+private fun ByteArray.programHeaderOffsets(): List<Int> {
+    val phoff = readU64LE(32).toInt()
+    val phesz = readU16LE(54)
+    return (0 until readU16LE(56)).map { phoff + it * phesz }
+}
+
+private fun ByteArray.readU16LE(offset: Int): Int =
+    (this[offset].toInt() and 0xFF) or ((this[offset + 1].toInt() and 0xFF) shl 8)
+
+private fun ByteArray.readU32LE(offset: Int): Int =
+    readU16LE(offset) or (readU16LE(offset + 2) shl 16)
+
+private fun ByteArray.readU64LE(offset: Int): Long =
+    (readU32LE(offset).toLong() and 0xFFFFFFFFL) or
+        ((readU32LE(offset + 4).toLong() and 0xFFFFFFFFL) shl 32)
+
 private fun ByteArray.requireEncodedString(value: String) {
     val utf8 = value.encodeToByteArray()
     val utf16Le = value.toByteArray(Charsets.UTF_16LE)
     check(containsSubsequence(utf8) || containsSubsequence(utf16Le)) {
         "Encoded string is absent: $value"
     }
+}
+
+private fun ByteArray.containsEncodedString(value: String): Boolean =
+    containsSubsequence(value.encodeToByteArray()) ||
+        containsSubsequence(value.toByteArray(Charsets.UTF_16LE))
+
+private fun ByteArray.require5001712RequestedExtensionsObject() {
+    check(Regex("\"requestedExtensions\"\\s*:\\s*\\{").containsMatchIn(decodeToString())) {
+        "2.0.20/5001712 HMD config must use the headset-keyed requestedExtensions object"
+    }
+    listOf("xrvst2", "xrvst2ue", "unknown").forEach { key -> requireEncodedString("\"$key\"") }
 }
 
 private fun ByteArray.containsSubsequence(needle: ByteArray): Boolean {

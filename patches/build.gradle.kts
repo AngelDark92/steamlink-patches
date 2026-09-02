@@ -138,7 +138,7 @@ tasks.named("sourcesJar") {
 tasks {
     register<JavaExec>("auditDecodedSteamLinkPatches") {
         group = "verification"
-        description = "Apply every public patch to decoded 5001712 and high resolution to all 6 decoded bases"
+        description = "Audit compatible 5001712 patches, high resolution on 6 bases, Visual Delay on 5 bases, and 4 recommendation fixtures"
 
         dependsOn(classes)
         classpath = sourceSets["main"].runtimeClasspath

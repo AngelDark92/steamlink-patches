@@ -7,7 +7,6 @@ import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL
 import app.template.patches.shared.Constants.isHighResolutionSteamLinkBuild
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -36,7 +35,7 @@ private val unrestrictedBatteryManifestPatch = resourcePatch {
 val unrestrictedBatteryUsagePatch = bytecodePatch(
     name = "Unrestricted battery usage",
     description = "Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     // Restore the legacy automatic foundation while its native-build guards make it a no-op.
@@ -96,12 +95,6 @@ internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
     "android-surface-trigger-passthrough-v1.3-20260902"
 internal const val ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID =
     "android-surface-trigger-5001712-v1.1-20260902"
-internal const val ANDROID_SURFACE_DFR_REARM_MODE = "android_surface_trigger_dfr_rearm_v1"
-internal const val ANDROID_SURFACE_DFR_REARM_LIBRARY = "libgxr_ast_dfr_rearm.so"
-internal const val ANDROID_SURFACE_DFR_REARM_MANIFEST =
-    "XR_APILAYER_local_GalaxyXR_android_surface_trigger_dfr_rearm_v1.json"
-internal const val ANDROID_SURFACE_DFR_REARM_BUILD_ID =
-    "android-surface-trigger-dfr-rearm-v1.1-20260902"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -114,11 +107,6 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_LIBRARY,
         ANDROID_SURFACE_TRIGGER_MANIFEST,
     ),
-    ProjectionModeResources(
-        ANDROID_SURFACE_DFR_REARM_MODE,
-        ANDROID_SURFACE_DFR_REARM_LIBRARY,
-        ANDROID_SURFACE_DFR_REARM_MANIFEST,
-    ),
 )
 
 internal fun projectionModesConflict(existingMode: String, requestedMode: String): Boolean =
@@ -127,6 +115,7 @@ internal fun projectionModesConflict(existingMode: String, requestedMode: String
 
 private val retiredProjectionModes = setOf(
     "android_surface_trigger_warmup_omit_v1",
+    "android_surface_trigger_dfr_rearm_v1",
     "single_projection_reconstruction_v1",
     FOVEA_QUADS_MODE,
     "projection_trace_control",
@@ -146,6 +135,7 @@ private val retiredProjectionModes = setOf(
 )
 private val retiredProjectionLibraries = setOf(
     "libgxr_ast_warmup_omit.so",
+    "libgxr_ast_dfr_rearm.so",
     "libgxr_single_projection_reconstruction_efficient_v1.so",
     "libgxr_nsp.so",
     "libgxr_nspd.so",
@@ -256,17 +246,14 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
 
 private fun androidSurfaceTriggerResourcesPatch(
     requestedMode: String,
-    exact5002322Only: Boolean,
 ) = rawResourcePatch {
     execute {
-        val compatible = if (exact5002322Only) {
-            packageMetadata.versionName == "2.0.22" && packageMetadata.versionCode == "5002322"
-        } else {
-            isHighResolutionSteamLinkBuild(packageMetadata.versionName, packageMetadata.versionCode)
-        }
         // Morphe executes dependencies recursively without rechecking compatibility.
         // Keep this build guard inside the mutation itself so an excluded APK stays untouched.
-        if (!compatible) {
+        if (!isHighResolutionSteamLinkBuild(
+                packageMetadata.versionName,
+                packageMetadata.versionCode,
+            )) {
             return@execute
         }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
@@ -311,19 +298,13 @@ private fun androidSurfaceTriggerResourcesPatch(
 
 private val androidSurfaceTriggerResourcesPatch = androidSurfaceTriggerResourcesPatch(
     requestedMode = ANDROID_SURFACE_TRIGGER_MODE,
-    exact5002322Only = false,
-)
-
-private val androidSurfaceDfrRearmResourcesPatch = androidSurfaceTriggerResourcesPatch(
-    requestedMode = ANDROID_SURFACE_DFR_REARM_MODE,
-    exact5002322Only = true,
 )
 
 @Suppress("unused")
 val xrGalaxyXrHighResolutionPatch = resourcePatch(
     name = "Galaxy XR high-resolution 3-projection fix",
     description = "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves each build's native projection layout (2 layers on 2.0.20/5001712; 3 layers on supported 2.0.22 builds) and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION.toTypedArray())
     dependsOn(
@@ -335,26 +316,6 @@ val xrGalaxyXrHighResolutionPatch = resourcePatch(
     finalize {
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
-        }
-    }
-}
-
-@Suppress("unused")
-val experimentalAndroidSurfaceDfrRearmPatch = resourcePatch(
-    name = "Experimental Galaxy XR DFR composition re-arm",
-    description = "Diagnostic-only exact 2.0.22/5002322 variant. After a 7200-frame validation warm-up it normally submits Valve's original layers, then briefly re-posts and re-submits the retained 2x2 Android Surface after OpenXR-visible composition changes and every 90 omitted frames. This tests whether Windows-only DFR attachment invalidates Galaxy XR's private high-resolution policy without paying for a fourth layer continuously.",
-    default = false,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_5002322_EXPERIMENTAL.toTypedArray())
-    dependsOn(
-        xrLauncherBootstrapPatch,
-        xrPermissionSettingsBootstrapPatch,
-        androidSurfaceDfrRearmResourcesPatch,
-    )
-
-    finalize {
-        document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_DFR_REARM_MODE)
         }
     }
 }

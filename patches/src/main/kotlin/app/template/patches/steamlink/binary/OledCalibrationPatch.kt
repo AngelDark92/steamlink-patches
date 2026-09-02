@@ -4,7 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.floatSliderOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import java.security.MessageDigest
 import java.util.Locale
 
@@ -284,9 +284,9 @@ internal fun setProjectionSwapchainFormat(
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
     description = "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5001712, 5001740, 5002244, 5002313, 5002318, and 5002322.",
-    default = true,
+    default = false,
 ) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST.toTypedArray())
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
 
     val profile by stringOption(
         key = "profile",

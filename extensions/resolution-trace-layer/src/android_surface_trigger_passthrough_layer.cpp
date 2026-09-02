@@ -1,9 +1,6 @@
 #include <android/log.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-#if GXR_AST_DFR_REARM
-#include <android/trace.h>
-#endif
 #include <jni.h>
 #include <openxr/openxr.h>
 #include <openxr/openxr_loader_negotiation.h>
@@ -36,12 +33,6 @@ namespace {
 #error "GXR_AST_SOURCE_PROJECTION_COUNT must be 2 or 3"
 #endif
 
-#if GXR_AST_DFR_REARM
-constexpr char kLayerName[] =
-    "XR_APILAYER_local_GalaxyXR_android_surface_trigger_dfr_rearm_v1";
-constexpr char kModeName[] = "android_surface_trigger_dfr_rearm_v1";
-constexpr char kBuildId[] = "android-surface-trigger-dfr-rearm-v1.1-20260902";
-#else
 constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1";
 constexpr char kModeName[] = "android_surface_trigger_passthrough_v1";
@@ -50,7 +41,6 @@ constexpr char kBuildId[] = "android-surface-trigger-5001712-v1.1-20260902";
 #else
 constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.3-20260902";
 #endif
-#endif
 constexpr char kLogTag[] = "GXRSurfaceTrigger";
 constexpr uint32_t kTriggerWidth = 2;
 constexpr uint32_t kTriggerHeight = 2;
@@ -58,22 +48,6 @@ constexpr uint32_t kSourceProjectionCount = GXR_AST_SOURCE_PROJECTION_COUNT;
 constexpr uint32_t kSourceViewCount = kSourceProjectionCount * 2;
 constexpr uint32_t kRequiredLayerCount = kSourceProjectionCount + 1;
 constexpr uint64_t kInitialDiagnosticFrames = 3;
-#if GXR_AST_DFR_REARM
-// Give the operator enough time to reach a stable fixed scene before the phase
-// change. At 72-120 Hz this is approximately 100-60 seconds.
-constexpr uint64_t kWarmupSuccessfulFrames = 7200;
-constexpr uint64_t kPeriodicProbeOmittedFrames = 90;
-constexpr uint32_t kRearmSuccessfulFrames = 3;
-
-enum RearmReason : uint32_t {
-    kRearmNone = 0,
-    kRearmComposition = 1u << 0,
-    kRearmSwapchain = 1u << 1,
-    kRearmVisible = 1u << 2,
-    kRearmPeriodic = 1u << 3,
-    kRearmEligible = 1u << 4,
-};
-#endif
 
 struct Dispatch {
     XrInstance instance{XR_NULL_HANDLE};
@@ -114,24 +88,10 @@ struct SessionState {
     std::atomic<bool> triggerReady{};
     std::atomic<bool> failureLogged{};
     std::atomic<bool> passthroughLogged{};
-    std::atomic<uint64_t> appendedFrames{};
-#if GXR_AST_DFR_REARM
-    std::atomic<bool> warmupLogged{};
-    std::atomic<bool> omissionLogged{};
-    std::atomic<bool> omissionFailureLogged{};
-    std::atomic<bool> refreshFailureLogged{};
-    std::atomic<uint64_t> omittedFrames{};
-    std::atomic<uint64_t> omittedSinceProbe{};
-    std::atomic<uint64_t> bufferPostSerial{1};
-    std::atomic<uint64_t> stableCompositionSignature{};
-    std::atomic<uint64_t> candidateCompositionSignature{};
-    std::atomic<uint32_t> candidateCompositionFrames{};
-    std::atomic<uint64_t> observedSwapchainGeneration{};
-    std::atomic<uint32_t> pendingRearmReasons{};
-    std::atomic<uint32_t> activeRearmReasons{};
-    std::atomic<uint32_t> rearmFramesRemaining{};
-    std::atomic<bool> lastFrameEligible{};
-#endif
+    // xrEndFrame and xrDestroySession are externally synchronized for a session.
+    // Keep this diagnostic counter non-atomic so the steady render path performs no
+    // unnecessary atomic read-modify-write on every successfully submitted frame.
+    uint64_t appendedFrames{};
 };
 
 Dispatch g;
@@ -142,10 +102,6 @@ std::mutex sessionsMutex;
 std::map<XrSession, std::shared_ptr<SessionState>> sessions;
 std::mutex swapchainsMutex;
 std::map<XrSwapchain, SwapchainContract> applicationSwapchains;
-#if GXR_AST_DFR_REARM
-std::map<XrSwapchain, XrSession> applicationSwapchainOwners;
-std::atomic<uint64_t> applicationSwapchainGeneration{};
-#endif
 thread_local XrSession cachedSessionHandle{XR_NULL_HANDLE};
 thread_local std::weak_ptr<SessionState> cachedSession;
 
@@ -238,41 +194,6 @@ std::shared_ptr<SessionState> findSession(XrSession session) {
     return iterator->second;
 }
 
-#if GXR_AST_DFR_REARM
-void requestRearm(const std::shared_ptr<SessionState>& state, uint32_t reasons) {
-    if (state && reasons != kRearmNone) {
-        state->pendingRearmReasons.fetch_or(reasons, std::memory_order_release);
-    }
-}
-
-std::string rearmReasonText(uint32_t reasons) {
-    std::string value;
-    const auto append = [&value](const char* item) {
-        if (!value.empty()) value += '+';
-        value += item;
-    };
-    if (reasons & kRearmComposition) append("composition_signature");
-    if (reasons & kRearmSwapchain) append("application_swapchain");
-    if (reasons & kRearmVisible) append("visible_reentry");
-    if (reasons & kRearmPeriodic) append("periodic_probe");
-    if (reasons & kRearmEligible) append("eligible_reentry");
-    return value.empty() ? "none" : value;
-}
-
-void traceRearm(
-    const char* phase,
-    uint32_t reasons,
-    uint32_t outputLayerCount,
-    uint64_t bufferPostSerial
-) {
-    const std::string marker = std::string("GXR_AST_") + phase +
-        "_reason=" + rearmReasonText(reasons) +
-        "_layers=" + std::to_string(outputLayerCount) +
-        "_post=" + std::to_string(bufferPostSerial);
-    ATrace_beginSection(marker.c_str());
-    ATrace_endSection();
-}
-#endif
 
 std::optional<SwapchainContract> findApplicationSwapchain(XrSwapchain swapchain) {
     std::lock_guard<std::mutex> lock(swapchainsMutex);
@@ -444,73 +365,6 @@ bool queueTriggerBuffer(SessionState& state) {
     return queued;
 }
 
-#if GXR_AST_DFR_REARM
-// Refresh the existing Surface producer instead of replacing any OpenXR object.
-// Alternating the almost-transparent alpha makes each pulse a real buffer
-// transaction while keeping the 2x2 trigger visually negligible.
-bool refreshTriggerBuffer(SessionState& state, uint32_t reasons) {
-    int lockResult = -1;
-    int postResult = -1;
-    uint8_t alpha = 1;
-    uint64_t serial = state.bufferPostSerial.load(std::memory_order_relaxed);
-    bool posted = false;
-    {
-        // This lock is taken only for a 3-frame re-arm pulse, never on the normal
-        // omitted-frame path.
-        std::lock_guard<std::mutex> lock(state.mutex);
-        if (!state.window || !state.bufferQueued ||
-            !state.triggerReady.load(std::memory_order_acquire) ||
-            !isVisible(state.state.load(std::memory_order_acquire))) {
-            lockResult = -1;
-        } else {
-            ANativeWindow_Buffer buffer{};
-            lockResult = ANativeWindow_lock(state.window, &buffer, nullptr);
-            const bool writableBuffer = lockResult == 0 && buffer.bits &&
-                buffer.stride >= static_cast<int32_t>(kTriggerWidth);
-            alpha = (serial & 1u) == 0 ? 1 : 2;
-            if (writableBuffer) {
-                for (uint32_t y = 0; y < kTriggerHeight; ++y) {
-                    auto* row = static_cast<uint8_t*>(buffer.bits) +
-                        static_cast<size_t>(y) * static_cast<size_t>(buffer.stride) * 4;
-                    for (uint32_t x = 0; x < kTriggerWidth; ++x) {
-                        row[x * 4 + 0] = 0;
-                        row[x * 4 + 1] = 0;
-                        row[x * 4 + 2] = 0;
-                        row[x * 4 + 3] = alpha;
-                    }
-                }
-            }
-            if (lockResult == 0) postResult = ANativeWindow_unlockAndPost(state.window);
-            posted = writableBuffer && postResult == 0;
-            if (posted) {
-                serial = state.bufferPostSerial.fetch_add(
-                    1, std::memory_order_relaxed) + 1;
-            }
-        }
-    }
-
-    if (posted) {
-        emit("surface_trigger_buffer_reposted",
-            "\"session\":" + std::to_string(handleValue(state.session)) +
-            ",\"reason\":\"" + rearmReasonText(reasons) + "\"" +
-            ",\"bufferPostSerial\":" + std::to_string(serial) +
-            ",\"alpha\":" + std::to_string(alpha) +
-            ",\"lockResult\":" + std::to_string(lockResult) +
-            ",\"postResult\":" + std::to_string(postResult));
-    } else if (!state.refreshFailureLogged.exchange(true, std::memory_order_relaxed)) {
-        // A refresh failure does not invalidate the already-presented buffer or any
-        // trigger handle. The quad pulse can still reassert compositor topology.
-        emit("surface_trigger_buffer_repost_failed",
-            "\"session\":" + std::to_string(handleValue(state.session)) +
-            ",\"reason\":\"" + rearmReasonText(reasons) + "\"" +
-            ",\"bufferPostSerial\":" + std::to_string(serial) +
-            ",\"lockResult\":" + std::to_string(lockResult) +
-            ",\"postResult\":" + std::to_string(postResult) +
-            ",\"triggerRetained\":true");
-    }
-    return posted;
-}
-#endif
 
 bool valveProjectionShape(
     const XrFrameEndInfo* info,
@@ -518,132 +372,24 @@ bool valveProjectionShape(
     [[maybe_unused]] const XrCompositionLayerBaseHeader** copiedLayers
 ) {
     if (!info || info->type != XR_TYPE_FRAME_END_INFO ||
-#if GXR_AST_DFR_REARM
-        info->layerCount == 0 || info->layerCount >= maxLayerCount ||
-#else
         info->layerCount != kSourceProjectionCount ||
-#endif
         !info->layers) return false;
     uint32_t projectionCount = 0;
     for (uint32_t index = 0; index < info->layerCount; ++index) {
         const auto* base = info->layers[index];
         if (!base) return false;
-#if !GXR_AST_DFR_REARM
         if (base->type != XR_TYPE_COMPOSITION_LAYER_PROJECTION) return false;
-#else
-        if (base->type != XR_TYPE_COMPOSITION_LAYER_PROJECTION) continue;
-#endif
         const auto* projection =
             reinterpret_cast<const XrCompositionLayerProjection*>(base);
         if (projection->viewCount != 2 || !projection->views) return false;
-#if !GXR_AST_DFR_REARM
         // Production accepts only projection layers, so this validation pass can
         // also populate the exact pointer array later passed to the runtime.
         copiedLayers[index] = base;
-#endif
         ++projectionCount;
     }
     return projectionCount == kSourceProjectionCount;
 }
 
-#if GXR_AST_DFR_REARM
-uint64_t mixSignature(uint64_t hash, uint64_t value) {
-    constexpr uint64_t kFnvPrime = 1099511628211ULL;
-    for (uint32_t byte = 0; byte < 8; ++byte) {
-        hash ^= (value >> (byte * 8)) & 0xffu;
-        hash *= kFnvPrime;
-    }
-    return hash;
-}
-
-uint64_t compositionSignature(const XrFrameEndInfo* info) {
-    // Hash stable composition resources and rectangles, not pose/FOV values that
-    // legitimately change every frame with head tracking and foveation.
-    uint64_t hash = 1469598103934665603ULL;
-    hash = mixSignature(hash, info->layerCount);
-    hash = mixSignature(hash, static_cast<uint64_t>(info->environmentBlendMode));
-    const auto mixSubImage = [&hash](const XrSwapchainSubImage& subImage) {
-        hash = mixSignature(hash, handleValue(subImage.swapchain));
-        hash = mixSignature(hash, static_cast<uint64_t>(
-            static_cast<uint32_t>(subImage.imageRect.offset.x)));
-        hash = mixSignature(hash, static_cast<uint64_t>(
-            static_cast<uint32_t>(subImage.imageRect.offset.y)));
-        hash = mixSignature(hash, static_cast<uint64_t>(
-            static_cast<uint32_t>(subImage.imageRect.extent.width)));
-        hash = mixSignature(hash, static_cast<uint64_t>(
-            static_cast<uint32_t>(subImage.imageRect.extent.height)));
-        hash = mixSignature(hash, subImage.imageArrayIndex);
-    };
-    for (uint32_t layerIndex = 0; layerIndex < info->layerCount; ++layerIndex) {
-        const auto* layer = info->layers[layerIndex];
-        hash = mixSignature(hash, static_cast<uint64_t>(layer->type));
-        hash = mixSignature(hash, static_cast<uint64_t>(layer->layerFlags));
-        hash = mixSignature(hash, handleValue(layer->space));
-        if (layer->type == XR_TYPE_COMPOSITION_LAYER_PROJECTION) {
-            const auto* projection =
-                reinterpret_cast<const XrCompositionLayerProjection*>(layer);
-            hash = mixSignature(hash, projection->viewCount);
-            for (uint32_t viewIndex = 0; viewIndex < projection->viewCount; ++viewIndex) {
-                mixSubImage(projection->views[viewIndex].subImage);
-            }
-        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_QUAD) {
-            const auto* quad = reinterpret_cast<const XrCompositionLayerQuad*>(layer);
-            mixSubImage(quad->subImage);
-        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_CYLINDER_KHR) {
-            const auto* cylinder =
-                reinterpret_cast<const XrCompositionLayerCylinderKHR*>(layer);
-            mixSubImage(cylinder->subImage);
-        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_EQUIRECT_KHR) {
-            const auto* equirect =
-                reinterpret_cast<const XrCompositionLayerEquirectKHR*>(layer);
-            mixSubImage(equirect->subImage);
-        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_EQUIRECT2_KHR) {
-            const auto* equirect =
-                reinterpret_cast<const XrCompositionLayerEquirect2KHR*>(layer);
-            mixSubImage(equirect->subImage);
-        } else if (layer->type == XR_TYPE_COMPOSITION_LAYER_CUBE_KHR) {
-            const auto* cube = reinterpret_cast<const XrCompositionLayerCubeKHR*>(layer);
-            hash = mixSignature(hash, handleValue(cube->swapchain));
-            hash = mixSignature(hash, cube->imageArrayIndex);
-        }
-    }
-    return hash;
-}
-
-bool observeStableCompositionChange(SessionState& state, uint64_t signature) {
-    const uint64_t stable =
-        state.stableCompositionSignature.load(std::memory_order_relaxed);
-    if (stable == signature) {
-        state.candidateCompositionFrames.store(0, std::memory_order_relaxed);
-        return false;
-    }
-    const uint64_t candidate =
-        state.candidateCompositionSignature.load(std::memory_order_relaxed);
-    uint32_t frames = 1;
-    if (candidate == signature) {
-        frames = state.candidateCompositionFrames.fetch_add(
-            1, std::memory_order_relaxed) + 1;
-    } else {
-        state.candidateCompositionSignature.store(signature, std::memory_order_relaxed);
-        state.candidateCompositionFrames.store(1, std::memory_order_relaxed);
-    }
-    if (frames < 2) return false;
-    state.stableCompositionSignature.store(signature, std::memory_order_relaxed);
-    state.candidateCompositionFrames.store(0, std::memory_order_relaxed);
-    return stable != 0;
-}
-
-std::string sourceLayerTypes(const XrFrameEndInfo* info) {
-    std::ostringstream output;
-    output << '[';
-    for (uint32_t index = 0; index < info->layerCount; ++index) {
-        if (index) output << ',';
-        output << static_cast<uint32_t>(info->layers[index]->type);
-    }
-    output << ']';
-    return output.str();
-}
-#endif
 
 std::string sourceFrameContract(const XrFrameEndInfo* info, uint64_t frame) {
     std::ostringstream output;
@@ -754,23 +500,12 @@ XrResult XRAPI_PTR layerDestroySession(XrSession session) {
     }
     if (state) {
         uint64_t appendedFrames{};
-#if GXR_AST_DFR_REARM
-        uint64_t omittedFrames{};
-#endif
         {
-            appendedFrames = state->appendedFrames.load(std::memory_order_relaxed);
-#if GXR_AST_DFR_REARM
-            omittedFrames = state->omittedFrames.load(std::memory_order_relaxed);
-#endif
+            appendedFrames = state->appendedFrames;
         }
         emit("surface_trigger_summary",
             "\"session\":" + std::to_string(handleValue(session)) +
             ",\"appendedFrames\":" + std::to_string(appendedFrames)
-#if GXR_AST_DFR_REARM
-            + ",\"omittedFrames\":" + std::to_string(omittedFrames) +
-            ",\"warmupSuccessfulFrames\":" +
-                std::to_string(kWarmupSuccessfulFrames)
-#endif
         );
         cleanupTrigger(*state);
     }
@@ -787,14 +522,7 @@ XrResult XRAPI_PTR layerCreateSwapchain(
         {
             std::lock_guard<std::mutex> lock(swapchainsMutex);
             applicationSwapchains[*swapchain] = {info->format, info->width, info->height};
-#if GXR_AST_DFR_REARM
-            applicationSwapchainOwners[*swapchain] = session;
-#endif
         }
-#if GXR_AST_DFR_REARM
-        applicationSwapchainGeneration.fetch_add(1, std::memory_order_release);
-        requestRearm(findSession(session), kRearmSwapchain);
-#endif
     }
     if (info) {
         emit("create_swapchain",
@@ -811,27 +539,12 @@ XrResult XRAPI_PTR layerCreateSwapchain(
 }
 
 XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain swapchain) {
-#if GXR_AST_DFR_REARM
-    XrSession owner = XR_NULL_HANDLE;
-    {
-        std::lock_guard<std::mutex> lock(swapchainsMutex);
-        const auto iterator = applicationSwapchainOwners.find(swapchain);
-        if (iterator != applicationSwapchainOwners.end()) owner = iterator->second;
-    }
-#endif
     const XrResult result = g.destroySwapchain(swapchain);
     if (XR_SUCCEEDED(result)) {
         {
             std::lock_guard<std::mutex> lock(swapchainsMutex);
             applicationSwapchains.erase(swapchain);
-#if GXR_AST_DFR_REARM
-            applicationSwapchainOwners.erase(swapchain);
-#endif
         }
-#if GXR_AST_DFR_REARM
-        applicationSwapchainGeneration.fetch_add(1, std::memory_order_release);
-        if (owner != XR_NULL_HANDLE) requestRearm(findSession(owner), kRearmSwapchain);
-#endif
     }
     return result;
 }
@@ -845,21 +558,14 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
         // Handles are immutable until externally synchronized session destruction.
         sessionState = state->state.load(std::memory_order_acquire);
         triggerReady = state->triggerReady.load(std::memory_order_acquire);
-        appendedBefore = state->appendedFrames.load(std::memory_order_relaxed);
+        appendedBefore = state->appendedFrames;
     }
-#if GXR_AST_DFR_REARM
-    const XrCompositionLayerBaseHeader** copiedLayers = nullptr;
-#else
     std::array<const XrCompositionLayerBaseHeader*, kRequiredLayerCount> layers{};
     const XrCompositionLayerBaseHeader** copiedLayers = layers.data();
-#endif
     // Avoid even the small layer walk while the trigger cannot be submitted.
     const bool eligible = state && triggerReady && isVisible(sessionState) &&
         valveProjectionShape(info, state->maxLayerCount, copiedLayers);
     if (!eligible) {
-#if GXR_AST_DFR_REARM
-        if (state) state->lastFrameEligible.store(false, std::memory_order_relaxed);
-#endif
         // After the first cold-path event, use a read instead of an RMW every frame.
         const bool shouldLog = state &&
             !state->passthroughLogged.load(std::memory_order_relaxed) &&
@@ -875,149 +581,19 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
         return g.endFrame(session, info);
     }
 
-#if GXR_AST_DFR_REARM
-    const bool eligibleReentry = !state->lastFrameEligible.exchange(
-        true, std::memory_order_relaxed);
-    const uint64_t signature = compositionSignature(info);
-    const uint64_t previousSignature =
-        state->stableCompositionSignature.load(std::memory_order_relaxed);
-    const bool signatureChanged = observeStableCompositionChange(*state, signature);
-    const uint64_t swapchainGeneration =
-        applicationSwapchainGeneration.load(std::memory_order_acquire);
-    const bool warmupComplete = appendedBefore >= kWarmupSuccessfulFrames;
-    if (!warmupComplete) {
-        // Learn the baseline while the quad is already continuously present.
-        state->observedSwapchainGeneration.store(
-            swapchainGeneration, std::memory_order_relaxed);
-        state->pendingRearmReasons.store(kRearmNone, std::memory_order_relaxed);
-    } else {
-        if (eligibleReentry) requestRearm(state, kRearmEligible);
-        if (signatureChanged) {
-            requestRearm(state, kRearmComposition);
-            emit("surface_trigger_composition_changed",
-                "\"session\":" + std::to_string(handleValue(session)) +
-                ",\"previousSignature\":" + std::to_string(previousSignature) +
-                ",\"signature\":" + std::to_string(signature) +
-                ",\"sourceLayerCount\":" + std::to_string(info->layerCount) +
-                ",\"sourceLayerTypes\":" + sourceLayerTypes(info));
-        }
-        const uint64_t previousGeneration = state->observedSwapchainGeneration.exchange(
-            swapchainGeneration, std::memory_order_acq_rel);
-        if (previousGeneration != swapchainGeneration) requestRearm(state, kRearmSwapchain);
-        if (state->omittedSinceProbe.load(std::memory_order_relaxed) >=
-            kPeriodicProbeOmittedFrames) {
-            requestRearm(state, kRearmPeriodic);
-        }
-        const uint32_t reasons = state->pendingRearmReasons.exchange(
-            kRearmNone, std::memory_order_acq_rel);
-        if (reasons != kRearmNone) {
-            const uint32_t active = state->activeRearmReasons.fetch_or(
-                reasons, std::memory_order_relaxed) | reasons;
-            state->rearmFramesRemaining.store(
-                kRearmSuccessfulFrames, std::memory_order_relaxed);
-            state->omittedSinceProbe.store(0, std::memory_order_relaxed);
-            const bool reposted = refreshTriggerBuffer(*state, active);
-            const uint64_t postSerial =
-                state->bufferPostSerial.load(std::memory_order_relaxed);
-            traceRearm("rearm_started", active, info->layerCount + 1, postSerial);
-            emit("surface_trigger_rearm_started",
-                "\"session\":" + std::to_string(handleValue(session)) +
-                ",\"reason\":\"" + rearmReasonText(active) + "\"" +
-                ",\"sourceLayerCount\":" + std::to_string(info->layerCount) +
-                ",\"outputLayerCount\":" + std::to_string(info->layerCount + 1) +
-                ",\"bufferReposted\":" + (reposted ? std::string("true") : "false") +
-                ",\"bufferPostSerial\":" + std::to_string(postSerial) +
-                ",\"successfulFramesRequested\":" +
-                    std::to_string(kRearmSuccessfulFrames));
-        }
-    }
-
-    // DFR-UI exposes no reliable Android event, so every 90 successful omitted
-    // frames a bounded pulse also tests and refreshes the vendor policy.
-    if (warmupComplete &&
-        state->rearmFramesRemaining.load(std::memory_order_relaxed) == 0) {
-        const XrResult result = g.endFrame(session, info);
-        bool logTransition = false;
-        bool logFailure = false;
-        uint64_t omittedFrames = state->omittedFrames.load(std::memory_order_relaxed);
-        if (XR_SUCCEEDED(result)) {
-            omittedFrames = state->omittedFrames.fetch_add(
-                1, std::memory_order_relaxed) + 1;
-            state->omittedSinceProbe.fetch_add(1, std::memory_order_relaxed);
-            logTransition = !state->omissionLogged.exchange(
-                true, std::memory_order_relaxed);
-        } else {
-            logFailure = !state->omissionFailureLogged.exchange(
-                true, std::memory_order_relaxed);
-        }
-        if (logTransition) {
-            traceRearm("quad_omitted", kRearmNone, info->layerCount,
-                state->bufferPostSerial.load(std::memory_order_relaxed));
-            emit("surface_trigger_quad_omitted",
-                sourceFrameContract(info, omittedFrames) +
-                ",\"sessionState\":" +
-                    std::to_string(static_cast<int>(sessionState)) +
-                ",\"outputLayerCount\":" + std::to_string(info->layerCount) +
-                ",\"triggerTerminal\":false," +
-                "\"surfaceRetained\":true,\"swapchainRetained\":true," +
-                "\"nativeWindowRetained\":true,\"bufferRetained\":true," +
-                "\"acceptedFrames\":" + std::to_string(appendedBefore) +
-                ",\"result\":" + std::to_string(result));
-        } else if (logFailure) {
-            emit("surface_trigger_omitted_submission_failed",
-                "\"session\":" + std::to_string(handleValue(session)) +
-                ",\"acceptedFrames\":" + std::to_string(appendedBefore) +
-                ",\"result\":" + std::to_string(result));
-        }
-        return result;
-    }
-#endif
 
     // Preserve every source pointer and its order; only append the terminal quad.
-#if GXR_AST_DFR_REARM
-    thread_local std::vector<const XrCompositionLayerBaseHeader*> layers;
-    layers.clear();
-    if (layers.capacity() < info->layerCount + 1) layers.reserve(info->layerCount + 1);
-    for (uint32_t index = 0; index < info->layerCount; ++index) {
-        layers.push_back(info->layers[index]);
-    }
-    layers.push_back(reinterpret_cast<const XrCompositionLayerBaseHeader*>(&state->triggerQuad));
-#else
     layers[kSourceProjectionCount] =
         reinterpret_cast<const XrCompositionLayerBaseHeader*>(&state->triggerQuad);
-#endif
     XrFrameEndInfo output = *info;
     output.layerCount = info->layerCount + 1;
     output.layers = layers.data();
-#if GXR_AST_DFR_REARM
-    bool pointersPreserved = true;
-    for (uint32_t index = 0; index < info->layerCount; ++index) {
-        pointersPreserved = pointersPreserved && layers[index] == info->layers[index];
-    }
-#else
     // valveProjectionShape copied each validated source pointer directly.
     constexpr bool pointersPreserved = true;
-#endif
     const XrResult result = g.endFrame(session, &output);
     uint64_t appendedFrames = appendedBefore;
-#if GXR_AST_DFR_REARM
-    bool logWarmup = false;
-    uint32_t completedRearmReasons = kRearmNone;
-#endif
     if (XR_SUCCEEDED(result)) {
-        appendedFrames = state->appendedFrames.fetch_add(
-            1, std::memory_order_relaxed) + 1;
-#if GXR_AST_DFR_REARM
-        logWarmup = !state->warmupLogged.exchange(true, std::memory_order_relaxed);
-        if (warmupComplete) {
-            const uint32_t remaining = state->rearmFramesRemaining.fetch_sub(
-                1, std::memory_order_relaxed) - 1;
-            if (remaining == 0) {
-                completedRearmReasons = state->activeRearmReasons.exchange(
-                    kRearmNone, std::memory_order_relaxed);
-            }
-        }
-#endif
+        appendedFrames = ++state->appendedFrames;
     }
     const bool initialDiagnostic = XR_SUCCEEDED(result) &&
         appendedFrames <= kInitialDiagnosticFrames;
@@ -1027,30 +603,6 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
             ",\"outputLayerCount\":" + std::to_string(output.layerCount) +
             ",\"triggerTerminal\":true");
     }
-#if GXR_AST_DFR_REARM
-    if (logWarmup) {
-        traceRearm("warmup_started", kRearmNone, output.layerCount,
-            state->bufferPostSerial.load(std::memory_order_relaxed));
-        emit("surface_trigger_warmup_started",
-            "\"session\":" + std::to_string(handleValue(session)) +
-            ",\"outputLayerCount\":" + std::to_string(output.layerCount) +
-            ",\"warmupSuccessfulFrames\":" +
-                std::to_string(kWarmupSuccessfulFrames) +
-            ",\"surfaceRetainedAfterWarmup\":true");
-    }
-    if (completedRearmReasons != kRearmNone) {
-        const uint64_t postSerial =
-            state->bufferPostSerial.load(std::memory_order_relaxed);
-        traceRearm("rearm_completed", completedRearmReasons,
-            output.layerCount, postSerial);
-        emit("surface_trigger_rearm_completed",
-            "\"session\":" + std::to_string(handleValue(session)) +
-            ",\"reason\":\"" + rearmReasonText(completedRearmReasons) + "\"" +
-            ",\"outputLayerCount\":" + std::to_string(output.layerCount) +
-            ",\"bufferPostSerial\":" + std::to_string(postSerial) +
-            ",\"successfulFrames\":" + std::to_string(kRearmSuccessfulFrames));
-    }
-#endif
     if (initialDiagnostic || XR_FAILED(result)) {
         std::ostringstream submission;
         submission << "\"session\":" << handleValue(session)
@@ -1103,11 +655,6 @@ XrResult XRAPI_PTR layerPollEvent(XrInstance instance, XrEventDataBuffer* data) 
                 shouldQueue = isVisible(event->state) && !state->bufferQueued && state->window;
             }
             if (shouldQueue) queueTriggerBuffer(*state);
-#if GXR_AST_DFR_REARM
-            if (isVisible(event->state) && !isVisible(previousState)) {
-                requestRearm(state, kRearmVisible);
-            }
-#endif
         }
         const bool triggerReady = state &&
             state->triggerReady.load(std::memory_order_acquire);
@@ -1131,9 +678,6 @@ XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance) {
     {
         std::lock_guard<std::mutex> lock(swapchainsMutex);
         applicationSwapchains.clear();
-#if GXR_AST_DFR_REARM
-        applicationSwapchainOwners.clear();
-#endif
     }
     emit("destroy_instance");
     const XrResult result = g.destroyInstance(instance);

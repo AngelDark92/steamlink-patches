@@ -5,6 +5,7 @@ import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
 import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
+import app.template.patches.steamlink.androidxr.adaptLegacyHmdConfigForBuild
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 
 private fun identityResource(name: String): ByteArray =
@@ -158,7 +159,7 @@ val deviceIdentityPatch = rawResourcePatch(
     name = "Device identity",
     description = "Overrides the HMD identity reported to SteamVR. The Galaxy profile installs its " +
         "complete transport identity while preserving stock controller/hand routing and extensions.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST.toTypedArray())
     // Morphe executes dependencies without checking their compatibility. The legacy foundation is
@@ -192,7 +193,13 @@ val deviceIdentityPatch = rawResourcePatch(
                 "pico-4-pro", "PICO 4 Pro" -> "hmd_config_pico_4_pro.json"
                 else -> throw PatchException("Unknown device identity profile: $selectedProfile")
             }
-            file.writeBytes(identityResource(fileName))
+            file.writeBytes(
+                adaptLegacyHmdConfigForBuild(
+                    identityResource(fileName),
+                    packageMetadata.versionName,
+                    packageMetadata.versionCode,
+                ),
+            )
             return@execute
         }
 

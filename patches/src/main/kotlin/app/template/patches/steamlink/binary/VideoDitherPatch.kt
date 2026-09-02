@@ -84,7 +84,7 @@ internal fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
 val videoDitherPatch = rawResourcePatch(
     name = "Video dither",
     description = "Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants.",
-    default = true,
+    default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
     dependsOn(oledCalibrationPatch)
