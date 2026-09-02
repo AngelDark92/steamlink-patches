@@ -1,3 +1,9 @@
+## [1.11.1-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.5...v1.11.1-dev.6) (2026-09-02)
+
+### 🐛 Bug Fixes
+
+* 2.0.20 connection problem ([afda85e](https://github.com/AngelDark92/steamlink-patches/commit/afda85ec21429f539801e3cc65adb8a0843fd2b9))
+
 ## [1.11.1-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.4...v1.11.1-dev.5) (2026-09-02)
 
 ### 🐛 Bug Fixes
