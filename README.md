@@ -19,16 +19,16 @@ To download it:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.11.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.11.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;20 patches total
+> **[v1.11.1-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.11.1-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;20 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;20 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 2.0.20 (5001740) | 2.0.20 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002296) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending. | Independently decoded static adaptation with exact permission-prompt, legacy native-gate, OLED/output, cadence, Visual Delay, and high-resolution layouts; runtime validation pending. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Static decoded-base adaptation of the high-resolution patch plus existing verified compatibility. | Static decoded-base adaptation of the high-resolution patch and its exact permission-prompt dependency only; headset validation pending. | Static decoded-base adaptation of the high-resolution patch plus existing verified compatibility. | Static decoded-base adaptation of the high-resolution patch plus existing native-XR compatibility. | Headset-validated high-resolution patch target; also recommends GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. |
+| 2.0.20 (5001740) | 2.0.20 (5001712) | 2.0.22 (5002172) | 2.0.22 (5002206) | 2.0.22 (5002244) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) | 2.0.20 (5001712) | 2.0.22 (5002244) | 2.0.22 (5002296) | 2.0.22 (5002313) | 2.0.22 (5002318) | 2.0.22 (5002322) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Static-analysis adaptation for Steam Link 2.0.20 build 5001740; pristine-APK patching and runtime validation remain pending. | Verified Steam Link 2.0.20 build 5001712. | Verified Steam Link 2.0.22 build 5002172. | Verified Steam Link 2.0.22 build 5002206. | Verified Steam Link 2.0.22 build 5002244. | Verified Steam Link 2.0.22 build 5002313. | Build 5002318 supports Device identity, Microphone input preset, OLED color calibration, the legacy Appear on top option, GXR face bridge, Visual Delay Fix, Unrestricted battery usage, and Video dither. | Build 5002322 recommends Galaxy XR high-resolution 3-projection fix, GXR face bridge, Microphone input preset, Unrestricted battery usage, Video dither, and Visual Delay Fix. The retired single-projection reconstruction is excluded. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.20 build 5001712; headset validation pending. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002244; headset validation pending. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002296; headset validation pending. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002313; headset validation pending. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002318; headset validation pending. | Headset-validated Galaxy XR high-resolution patch target for exact Steam Link 2.0.22 build 5002322. |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
