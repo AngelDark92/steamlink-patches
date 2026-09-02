@@ -40,6 +40,14 @@ object Constants {
     private val LEGACY_XR_FOUNDATION_STEAM_LINK_BUILDS =
         LEGACY_STEAM_LINK_BUILDS + SteamLinkBuild("2.0.22", 5002296)
 
+    // The 5001712 bundle is separate from the shared legacy bundle, but both use the
+    // legacy recommendation defaults. Match exact pairs, not a numeric build cutoff.
+    fun isLegacyRecommendedSteamLinkBuild(version: String, versionCode: String): Boolean =
+        (version == "2.0.20" && versionCode == "5001712") ||
+            LEGACY_RECOMMENDED_STEAM_LINK_BUILDS.any {
+                it.version == version && it.versionCode.toString() == versionCode
+            }
+
     fun isNativeXrSteamLinkBuild(version: String, versionCode: String): Boolean =
         NATIVE_XR_STEAM_LINK_BUILDS.any {
             it.version == version && it.versionCode.toString() == versionCode

@@ -661,7 +661,7 @@
     },
     {
       "name": "Device identity",
-      "description": "Overrides the HMD identity reported to SteamVR. The Galaxy profile installs its complete transport identity while preserving stock controller/hand routing and extensions.",
+      "description": "Overrides the HMD identity reported to SteamVR. Recommended selects Meta Quest Pro for exact legacy bundle targets through 5002244, including 2.0.20/5001712; otherwise Galaxy XR. The Galaxy profile installs its complete transport identity while preserving stock controller/hand routing and extensions.",
       "default": false,
       "dependencies": [
         "RawResourcePatch"
@@ -826,11 +826,12 @@
         {
           "key": "profile",
           "title": "HMD identity",
-          "description": "Native-XR builds: installs the full Galaxy transport identity or an explicit model spoof while preserving stock XR routing. Legacy builds retain their verified payloads.",
+          "description": "Recommended uses Meta Quest Pro on exact legacy bundle targets through 5002244 (including 5001712), and Galaxy XR otherwise. Explicit profiles override that choice. Native-XR routing and verified legacy payloads are preserved.",
           "required": true,
           "type": "kotlin.String",
-          "default": "samsung-galaxy-xr",
+          "default": "recommended",
           "values": {
+            "Recommended for this build (legacy Quest Pro / native Galaxy XR)": "recommended",
             "Samsung Galaxy XR": "samsung-galaxy-xr",
             "Stock identity (no change)": "stock-no-change",
             "Meta Quest Pro": "meta-quest-pro",
@@ -1598,7 +1599,7 @@
     },
     {
       "name": "Galaxy XR legacy foundation (through 2.0.22/5002244)",
-      "description": "Selects the 15-patch Galaxy XR legacy set, including native gates, face bridge, OLED calibration, microphone, battery, Visual Delay, and XR foundation. High-resolution output is guarded to verified layouts; unavailable on 5001740, 5002172, and 5002206.",
+      "description": "Selects the 16-patch Galaxy XR legacy set, including Meta Quest Pro identity, native gates, face bridge, OLED calibration, microphone, battery, Visual Delay, and XR foundation. High-resolution output is guarded to verified layouts; unavailable on 5001740, 5002172, and 5002206.",
       "default": true,
       "dependencies": [
         "RawResourcePatch",
@@ -1615,7 +1616,8 @@
         "RawResourcePatch",
         "RawResourcePatch",
         "ResourcePatch",
-        "ResourcePatch"
+        "ResourcePatch",
+        "RawResourcePatch"
       ],
       "compatiblePackages": [
         {
@@ -1711,7 +1713,7 @@
     },
     {
       "name": "Galaxy XR recommended set (2.0.20/5001712)",
-      "description": "Applies the exact-build Galaxy XR conversion and permission-free high-resolution set for Steam Link 2.0.20 build 5001712, including the Final balanced tested OLED profile.",
+      "description": "Applies the 16-patch Galaxy XR legacy set for exact Steam Link 2.0.20 build 5001712, including Meta Quest Pro identity, permission-free high resolution, and the Final balanced tested OLED profile.",
       "default": true,
       "dependencies": [
         "RawResourcePatch",
@@ -1728,7 +1730,8 @@
         "RawResourcePatch",
         "RawResourcePatch",
         "ResourcePatch",
-        "ResourcePatch"
+        "ResourcePatch",
+        "RawResourcePatch"
       ],
       "compatiblePackages": [
         {

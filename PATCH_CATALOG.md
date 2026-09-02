@@ -4,7 +4,7 @@ Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
 Steam Link 2.0.20 build 5001712 has an independently decoded base and exact guarded layouts for the permission prompt, legacy native gates, OLED/output precision, controller cadence, and Visual Delay Fix. These adaptations are statically validated; APK installation and headset runtime validation remain pending. Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with its own guarded native layout. Its available source is a reconstruction from a malformed hybrid APK; pristine-APK Morphe patching, installation, and headset runtime validation remain pending.
-Steam Link 2.0.20 build 5001712 and the other legacy recommendation bundle use the same 15
+Steam Link 2.0.20 build 5001712 and the other legacy recommendation bundle use the same 16
 direct patches listed below. Steam Link 2.0.22 build 5002318 keeps its native-XR-safe 7-patch
 recommendation, while build 5002322 recommends only 6 patches: GXR face bridge, Galaxy XR
 high-resolution 3-projection fix, Microphone input preset (`voice-recognition`), OLED color
@@ -24,10 +24,10 @@ bundle. Appear on top and Change package name remain optional and are never reco
 
 | Bundle | Exact targets | Direct patch set |
 |---|---|---|
-| `Galaxy XR recommended set (2.0.20/5001712)` | 2.0.20/5001712 | 15-patch legacy set below |
+| `Galaxy XR recommended set (2.0.20/5001712)` | 2.0.20/5001712 | 16-patch legacy set below, including Device identity with Meta Quest Pro spoof |
 | `Galaxy XR recommended set (2.0.22/5002322)` | 2.0.22/5002322 | Only the 6 final patches above |
-| `Galaxy XR recommended set (2.0.22/5002318)` | 2.0.22/5002318 | Native-XR-safe 7-patch set: the same 6 final patches plus Device identity |
-| `Galaxy XR legacy foundation (through 2.0.22/5002244)` | 2.0.20/5001740, 2.0.22/5002172, 2.0.22/5002206, 2.0.22/5002244 | Same 15-patch legacy set as 5001712; unavailable native adaptations remain guarded no-ops |
+| `Galaxy XR recommended set (2.0.22/5002318)` | 2.0.22/5002318 | Native-XR-safe 7-patch set: the same 6 final patches plus Device identity with Galaxy XR identity |
+| `Galaxy XR legacy foundation (through 2.0.22/5002244)` | 2.0.20/5001740, 2.0.22/5002172, 2.0.22/5002206, 2.0.22/5002244 | Same 16-patch legacy set as 5001712, including Meta Quest Pro spoof; unavailable native adaptations remain guarded no-ops |
 
 Both legacy bundles directly select:
 
@@ -46,10 +46,19 @@ Both legacy bundles directly select:
 13. XR Input Routing Config
 14. XR Launcher Bootstrap (Home Space)
 15. XR Manifest Capability Pack
+16. Device identity (Recommended: Meta Quest Pro / `Oculus Quest Pro` model)
 
-Device identity is not a separate dependency of either legacy bundle: XR Device Config Baseline
-already installs the legacy Galaxy identity. Private/transitive support dependencies are still
-deduplicated by Morphe; the counts above describe direct public selections, not all internal tasks.
+Leave **HMD identity** on **Recommended**, or explicitly choose **Meta Quest Pro**, for either
+legacy bundle. Recommended resolves by exact version/build: 2.0.20/5001712 and 5001740, plus
+2.0.22/5002172, 5002206, and 5002244 use `meta-quest-pro`. The 5002318 recommendation retains
+Galaxy XR identity; 5002322 still does not select Device identity. Saved explicit Samsung, Stock,
+or PICO choices remain respected and must be changed if the Quest spoof is wanted.
+
+Device identity depends on XR Device Config Baseline, so the baseline runs before the identity
+override. The legacy Quest payload preserves SamsungVST tracking, Galaxy XR controller and eye
+routing; only the 3 runtime-selected HMD model values change to `Oculus Quest Pro`.
+Private/transitive support dependencies are deduplicated by Morphe; the counts above describe
+direct public selections, not all internal tasks.
 
 Selecting a bundle never broadens verified build guards. The high-resolution helper and mode
 metadata are not installed on 5001740, 5002172, or 5002206: their projection topology has no
@@ -400,7 +409,7 @@ patch does not rewrite those artifacts.
 ## identity group
 
 ### Device Identity (`deviceIdentityPatch`)
-**Default: disabled individually; selected only by the 5002318 recommendation bundle; not compatible with 5002322** — optional on legacy builds, which already receive the Galaxy identity through XR Device Config Baseline; retains the legacy XR Core/device-config dependency, whose mutations are guarded off on native-XR builds
+**Default: disabled individually; selected by both legacy recommendation bundles and the 5002318 bundle; not compatible with 5002322** — Recommended selects Meta Quest Pro for the exact legacy recommendation targets and Galaxy XR for other supported targets; retains the legacy XR Core/device-config dependency, whose mutations are guarded off on native-XR builds
 
 | Artifact | Edit |
 |---|---|
@@ -413,12 +422,20 @@ This intentionally preserves the native builds' requested extensions and vendor 
 `/interaction_profiles/ext/hand_interaction_ext`, and its hand grip/aim poses.
 
 **Option `profile`:**
+
 | Value | `sModelNumber` |
 |---|---|
-| `samsung-galaxy-xr` | Full Galaxy XR identity (default) |
-| `stock-no-change` | Byte-identical stock identity |
+| `recommended` | Default: `Oculus Quest Pro` for exact 2.0.20/5001712, 2.0.20/5001740, 2.0.22/5002172, 2.0.22/5002206, and 2.0.22/5002244; Galaxy XR for other supported targets |
+| `samsung-galaxy-xr` | Explicit Galaxy XR identity |
+| `stock-no-change` | No additional identity override; the legacy config-baseline dependency still runs |
 | `meta-quest-pro` | `Oculus Quest Pro` |
 | `pico-4-pro` | `PICO 4 Pro` |
+
+Recommended is resolved during execution from the APK's exact version/build; it does not mutate
+the shared option for another build. Explicit profile choices, including saved Samsung, Stock,
+and PICO selections, override Recommended. In native-XR build 5002318, Recommended retains the
+full Galaxy XR transport identity. Build 5002322 remains outside this patch's public compatibility
+and its 6-patch recommendation is unchanged.
 
 ---
 

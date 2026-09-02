@@ -6,18 +6,27 @@ The comparison below is historical evidence about the 2 named APK artifacts, not
 the current generated patch bundle. Its enabled dithering, `78` ms pose offset, and missing-hook
 findings must not be read as current release defaults or fresh runtime results.
 
-Both legacy recommendation bundles now directly select the same 15 public patches: Android XR
+Both legacy recommendation bundles now directly select the same 16 public patches: Android XR
 native permission names; Force HMD initialization gates; Force lobby permission-state gate; Force
 stream XR gates; GXR face bridge; Galaxy XR high-resolution 3-projection fix; Microphone input
 preset; OLED color calibration; Unrestricted battery usage; Visual Delay Fix; XR Core Runtime;
-XR Device Config Baseline; XR Input Routing Config; XR Launcher Bootstrap (Home Space); and XR
-Manifest Capability Pack. Device identity is optional there because the config baseline supplies
-the legacy Galaxy identity.
+XR Device Config Baseline; XR Input Routing Config; XR Launcher Bootstrap (Home Space); XR
+Manifest Capability Pack; and Device identity with the Meta Quest Pro spoof (`Oculus Quest Pro`
+model).
+
+Leave HMD identity on **Recommended**, or explicitly choose **Meta Quest Pro**. Recommended
+resolves to the Quest spoof for exact 2.0.20/5001712 and 5001740, plus 2.0.22/5002172, 5002206,
+and 5002244. The config baseline runs before Device identity; the legacy Quest payload changes
+only the 3 HMD model values while preserving SamsungVST tracking and Galaxy XR controller/eye
+routing. Saved explicit Samsung, Stock, or PICO profiles remain respected rather than silently
+overridden.
 
 The exact 2.0.22/5002322 bundle selects only face bridge, high-resolution fix, microphone
 `voice-recognition`, OLED `final-balanced` with safe `srgb8-highp`, battery usage, and Visual Delay
-`60` ms. Native-XR build 5002318 retains that 6-patch set plus Device identity. Neither native
-bundle enables legacy conversion mutations.
+`60` ms. Native-XR build 5002318 retains that 6-patch set plus Device identity, where Recommended
+continues to resolve to Galaxy XR. Other supported targets outside the exact legacy recommendation
+set likewise retain Galaxy XR as their automatic choice. Neither native bundle enables legacy
+conversion mutations, and 5002322 still excludes Device identity.
 
 The standalone Video dither patch is removed, and new OLED shaders use `DITHER_ENABLE=0.`.
 Developer-only source opt-in and historical byte-state information are retained in

@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
+import app.template.patches.shared.Constants.isLegacyRecommendedSteamLinkBuild
 import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
 import app.template.patches.steamlink.androidxr.adaptLegacyHmdConfigForBuild
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
@@ -154,10 +155,20 @@ internal fun patchHmdModelIdentity(json: String, profile: String): String {
     }
 }
 
+// Resolve per execution: patch options are shared objects, so setting the Quest Pro option
+// while declaring a legacy bundle would also change the native 5002318 recommendation.
+internal fun resolveDeviceIdentityProfile(profile: String, version: String, versionCode: String): String =
+    if (profile == "recommended") {
+        if (isLegacyRecommendedSteamLinkBuild(version, versionCode)) "meta-quest-pro" else "samsung-galaxy-xr"
+    } else {
+        profile
+    }
+
 @Suppress("unused")
 val deviceIdentityPatch = rawResourcePatch(
     name = "Device identity",
-    description = "Overrides the HMD identity reported to SteamVR. The Galaxy profile installs its " +
+    description = "Overrides the HMD identity reported to SteamVR. Recommended selects Meta Quest Pro " +
+        "for exact legacy bundle targets through 5002244, including 2.0.20/5001712; otherwise Galaxy XR. The Galaxy profile installs its " +
         "complete transport identity while preserving stock controller/hand routing and extensions.",
     default = false,
 ) {
@@ -169,21 +180,26 @@ val deviceIdentityPatch = rawResourcePatch(
 
     val profile by stringOption(
         key = "profile",
-        default = "samsung-galaxy-xr",
+        default = "recommended",
         values = mapOf(
+            "Recommended for this build (legacy Quest Pro / native Galaxy XR)" to "recommended",
             "Samsung Galaxy XR" to "samsung-galaxy-xr",
             "Stock identity (no change)" to "stock-no-change",
             "Meta Quest Pro" to "meta-quest-pro",
             "PICO 4 Pro" to "pico-4-pro",
         ),
         title = "HMD identity",
-        description = "Native-XR builds: installs the full Galaxy transport identity or an explicit model spoof while preserving stock XR routing. Legacy builds retain their verified payloads.",
+        description = "Recommended uses Meta Quest Pro on exact legacy bundle targets through 5002244 (including 5001712), and Galaxy XR otherwise. Explicit profiles override that choice. Native-XR routing and verified legacy payloads are preserved.",
         required = true,
     )
 
     execute {
         val file = get("assets/config/hmd_config.json")
-        val selectedProfile = profile ?: throw PatchException("HMD identity profile is required")
+        val selectedProfile = resolveDeviceIdentityProfile(
+            profile ?: throw PatchException("HMD identity profile is required"),
+            packageMetadata.versionName,
+            packageMetadata.versionCode,
+        )
         if (!isNativeXrSteamLinkBuild(packageMetadata.versionName, packageMetadata.versionCode)) {
             val fileName = when (selectedProfile) {
                 "stock-no-change", "Stock identity (no change)",

@@ -8,6 +8,7 @@ import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_5001712_
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_BUILD_ID
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_MANIFEST
 import app.template.patches.steamlink.androidxr.androidSurfaceTriggerResourceLibraryForBuild
+import app.template.patches.steamlink.androidxr.adaptLegacyHmdConfigForBuild
 import app.template.patches.steamlink.androidxr.appearOnTopPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityPatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
@@ -31,6 +32,7 @@ import app.template.patches.steamlink.galaxyXrRecommended5002318Patch
 import app.template.patches.steamlink.galaxyXrRecommended5002322Patch
 import app.template.patches.steamlink.identity.changePackageNamePatch
 import app.template.patches.steamlink.identity.deviceIdentityPatch
+import app.template.patches.steamlink.identity.patchNativeGalaxyIdentity
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -209,7 +211,7 @@ private suspend fun runSingleAudit(args: Array<String>) {
             val output = File(caseDirectory, "steamlink-${fixture.versionCode}-recommended-unsigned.apk")
             output.parentFile.mkdirs()
             executePatch(input, selection.patch, File(caseDirectory, "temporary"), output)
-            verifyRecommendedBundleOutput(output, fixture)
+            verifyRecommendedBundleOutput(input, output, fixture)
             verifyVisualDelayOutput(input, output, fixture)
             println("PASS ${fixture.versionName}/${fixture.versionCode} recommended bundle output: $output")
         }
@@ -412,7 +414,7 @@ private fun verifyVisualDelayOutput(
     }
 }
 
-private fun verifyRecommendedBundleOutput(outputApk: File, fixture: HighResolutionFixture) {
+private fun verifyRecommendedBundleOutput(inputApk: File, outputApk: File, fixture: HighResolutionFixture) {
     ZipFile(outputApk).use { apk ->
         val manifest = apk.requireEntryBytes("AndroidManifest.xml")
         val scene = apk.requireEntryBytes("lib/arm64-v8a/libvrlink_scene.so")
@@ -441,7 +443,18 @@ private fun verifyRecommendedBundleOutput(outputApk: File, fixture: HighResoluti
             apk.requireEntryBytes("lib/arm64-v8a/libgxr_xr_bridge.so")
             apk.requireEntryBytes("assets/config/ui_config.json")
             val hmdConfig = apk.requireEntryBytes("assets/config/hmd_config.json")
-            hmdConfig.requireEncodedString("\"sModelNumber\": \"Galaxy XR\"")
+            val questPayload = requireNotNull(DecodedSteamLinkPatchAudit::class.java.getResourceAsStream(
+                "/steamlink/identity/hmd_config_meta_quest_pro.json",
+            )).use { it.readBytes() }
+            val expectedHmdConfig = adaptLegacyHmdConfigForBuild(
+                questPayload, fixture.versionName, fixture.versionCode,
+            )
+            check(hmdConfig.contentEquals(expectedHmdConfig)) {
+                "${fixture.versionCode}: legacy bundle did not retain the complete Quest Pro identity payload"
+            }
+            check(Regex("\"sModelNumber\": \"Oculus Quest Pro\"").findAll(hmdConfig.decodeToString()).count() == 3) {
+                "${fixture.versionCode}: expected Quest Pro spoof on all 3 runtime-selected HMD entries"
+            }
             if (fixture.versionCode == "5001712") hmdConfig.require5001712RequestedExtensionsObject()
             scene.requireEncodedString("android.permission.EYE_TRACKING_FINE")
             val gateOffsets = when (fixture.versionCode) {
@@ -450,6 +463,17 @@ private fun verifyRecommendedBundleOutput(outputApk: File, fixture: HighResoluti
                 else -> error("Missing legacy gate audit for ${fixture.versionCode}")
             }
             gateOffsets.forEach { scene.requireBytesAt(it, "1f2003d5".hexBytes()) }
+        } else {
+            // Automatic legacy identity must not change either native recommendation.
+            val original = ZipFile(inputApk).use { it.requireEntryBytes("assets/config/hmd_config.json") }
+            val expected = if (fixture.versionCode == "5002318") {
+                patchNativeGalaxyIdentity(original.decodeToString()).encodeToByteArray()
+            } else {
+                original // 5002322 has no Device identity dependency at all.
+            }
+            check(apk.requireEntryBytes("assets/config/hmd_config.json").contentEquals(expected)) {
+                "${fixture.versionCode}: native HMD identity changed from its existing recommendation"
+            }
         }
     }
     verifyHighResolutionOutput(outputApk, fixture)

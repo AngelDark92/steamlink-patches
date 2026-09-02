@@ -117,7 +117,7 @@ class PatchCompatibilityMatrixTest {
     }
 
     @Test
-    fun both_legacy_bundles_contain_exactly_the_requested_fifteen_patches() {
+    fun both_legacy_bundles_contain_the_sixteen_patches_including_identity() {
         val expected = setOf(
             androidXrNativePermissionNamesPatch,
             forceHmdInitializationGatesPatch,
@@ -134,11 +134,12 @@ class PatchCompatibilityMatrixTest {
             xrInputRoutingConfigPatch,
             xrLauncherBootstrapPatch,
             xrManifestCapabilityPackPatch,
+            deviceIdentityPatch,
         )
         listOf(galaxyXrRecommended5001712Patch, galaxyXrLegacyFoundationPatch).forEach { bundle ->
             assertEquals(expected, bundle.dependencies.toSet(), bundle.name)
             val closure = bundle.dependencyClosure()
-            listOf(deviceIdentityPatch, appearOnTopPatch, changePackageNamePatch, controllerVelocityPatch)
+            listOf(appearOnTopPatch, changePackageNamePatch, controllerVelocityPatch)
                 .forEach { assertFalse(it in closure, "${bundle.name} unexpectedly includes ${it.name}") }
         }
         assertFalse(forceHmdInitializationGatesPatch.default)
