@@ -1,3 +1,9 @@
+## [1.11.1-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.3...v1.11.1-dev.4) (2026-09-02)
+
+### 🐛 Bug Fixes
+
+* patched 2.0.20 compatibility ([0a8a396](https://github.com/AngelDark92/steamlink-patches/commit/0a8a39638bd29ffb9b977a4aae9f91b39790dde4))
+
 ## [1.11.1-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.2...v1.11.1-dev.3) (2026-09-02)
 
 ### 🐛 Bug Fixes

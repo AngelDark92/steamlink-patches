@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-09-02T13:08:00",
-  "description": "## [1.11.1-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.2...v1.11.1-dev.3) (2026-09-02)\n\n### 🐛 Bug Fixes\n\n* compatibility with 2.0.20 and another surface test for 2.0.22 GPU Optimization ([c7bddec](https://github.com/AngelDark92/steamlink-patches/commit/c7bddecbea9ab962c626a0a73d4df3f0f0bcab29))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.11.1-dev.3/patches-1.11.1-dev.3.mpp",
+  "created_at": "2026-09-02T14:06:01",
+  "description": "## [1.11.1-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.1-dev.3...v1.11.1-dev.4) (2026-09-02)\n\n### 🐛 Bug Fixes\n\n* patched 2.0.20 compatibility ([0a8a396](https://github.com/AngelDark92/steamlink-patches/commit/0a8a39638bd29ffb9b977a4aae9f91b39790dde4))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.11.1-dev.4/patches-1.11.1-dev.4.mpp",
   "signature_download_url": "",
-  "version": "1.11.1-dev.3"
+  "version": "1.11.1-dev.4"
 }
