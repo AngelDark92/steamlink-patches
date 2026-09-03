@@ -92,9 +92,9 @@ internal const val ANDROID_SURFACE_TRIGGER_5001712_RESOURCE_LIBRARY =
 internal const val ANDROID_SURFACE_TRIGGER_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json"
 internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
-    "android-surface-trigger-passthrough-v1.3-20260902"
+    "android-surface-trigger-passthrough-v1.4-20260903"
 internal const val ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID =
-    "android-surface-trigger-5001712-v1.1-20260902"
+    "android-surface-trigger-5001712-v1.2-20260903"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,

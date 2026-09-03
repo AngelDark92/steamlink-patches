@@ -19,6 +19,8 @@
 #include <unistd.h>
 #include <vector>
 
+#include "session_registry.h"
+
 #define GXR_EXPORT extern "C" __attribute__((visibility("default")))
 
 namespace {
@@ -37,9 +39,9 @@ constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1";
 constexpr char kModeName[] = "android_surface_trigger_passthrough_v1";
 #if GXR_AST_SOURCE_PROJECTION_COUNT == 2
-constexpr char kBuildId[] = "android-surface-trigger-5001712-v1.1-20260902";
+constexpr char kBuildId[] = "android-surface-trigger-5001712-v1.2-20260903";
 #else
-constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.3-20260902";
+constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.4-20260903";
 #endif
 constexpr char kLogTag[] = "GXRSurfaceTrigger";
 constexpr uint32_t kTriggerWidth = 2;
@@ -98,12 +100,11 @@ Dispatch g;
 JavaVM* applicationVm{};
 bool extensionAdvertised{};
 bool extensionEnabled{};
-std::mutex sessionsMutex;
-std::map<XrSession, std::shared_ptr<SessionState>> sessions;
+using Sessions = gxr::SessionRegistry<XrSession, SessionState>;
+Sessions sessions;
+thread_local Sessions::RenderCache renderSessionCache;
 std::mutex swapchainsMutex;
 std::map<XrSwapchain, SwapchainContract> applicationSwapchains;
-thread_local XrSession cachedSessionHandle{XR_NULL_HANDLE};
-thread_local std::weak_ptr<SessionState> cachedSession;
 
 uint64_t elapsedMs() {
     timespec value{};
@@ -176,22 +177,9 @@ bool isVisible(XrSessionState state) {
 }
 
 std::shared_ptr<SessionState> findSession(XrSession session) {
-    // xrEndFrame normally stays on 1 render thread. A weak TLS cache removes the
-    // global session-map mutex from that hot path without extending session lifetime
-    // or risking a stale object when an OpenXR handle is later reused.
-    if (cachedSessionHandle == session) {
-        if (auto cached = cachedSession.lock()) return cached;
-    }
-    std::lock_guard<std::mutex> lock(sessionsMutex);
-    const auto iterator = sessions.find(session);
-    if (iterator == sessions.end()) {
-        cachedSessionHandle = XR_NULL_HANDLE;
-        cachedSession.reset();
-        return nullptr;
-    }
-    cachedSessionHandle = session;
-    cachedSession = iterator->second;
-    return iterator->second;
+    // Event processing may run on another thread. Keep shared ownership here;
+    // only the externally synchronized render path uses a non-owning cache.
+    return sessions.find(session);
 }
 
 
@@ -476,10 +464,7 @@ XrResult XRAPI_PTR layerCreateSession(
         state->maxLayerCount = properties.graphicsProperties.maxLayerCount;
     }
     createTrigger(*state);
-    {
-        std::lock_guard<std::mutex> lock(sessionsMutex);
-        sessions[*session] = state;
-    }
+    sessions.insert(*session, state);
     emit("session_created",
         "\"session\":" + std::to_string(handleValue(*session)) +
         ",\"result\":" + std::to_string(result) +
@@ -489,15 +474,8 @@ XrResult XRAPI_PTR layerCreateSession(
 }
 
 XrResult XRAPI_PTR layerDestroySession(XrSession session) {
-    std::shared_ptr<SessionState> state;
-    {
-        std::lock_guard<std::mutex> lock(sessionsMutex);
-        const auto iterator = sessions.find(session);
-        if (iterator != sessions.end()) {
-            state = iterator->second;
-            sessions.erase(iterator);
-        }
-    }
+    // Erase invalidates every thread's render cache before native resource cleanup.
+    const auto state = sessions.erase(session);
     if (state) {
         uint64_t appendedFrames{};
         {
@@ -550,7 +528,11 @@ XrResult XRAPI_PTR layerDestroySwapchain(XrSwapchain swapchain) {
 }
 
 XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) {
-    const auto state = findSession(session);
+    // The registry owns this object for the whole call: OpenXR requires session
+    // destruction to be externally synchronized with users of the session. The
+    // cache generation handles later destruction/recreation, even for reused handles.
+    // Unlike weak_ptr::lock(), a hit performs no shared-ownership increment/decrement.
+    auto* const state = sessions.findForFrame(session, renderSessionCache);
     XrSessionState sessionState = XR_SESSION_STATE_UNKNOWN;
     bool triggerReady = false;
     uint64_t appendedBefore = 0;
@@ -641,7 +623,9 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
 
 XrResult XRAPI_PTR layerPollEvent(XrInstance instance, XrEventDataBuffer* data) {
     const XrResult result = g.pollEvent(instance, data);
-    if (XR_FAILED(result) || !data) return result;
+    // XR_EVENT_UNAVAILABLE is non-negative but supplies no event. Never inspect a
+    // stale payload or repeat its state changes/logging when the queue is empty.
+    if (result != XR_SUCCESS || !data) return result;
     if (data->type == XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED) {
         const auto* event = reinterpret_cast<const XrEventDataSessionStateChanged*>(data);
         const auto state = findSession(event->session);
@@ -668,12 +652,7 @@ XrResult XRAPI_PTR layerPollEvent(XrInstance instance, XrEventDataBuffer* data) 
 }
 
 XrResult XRAPI_PTR layerDestroyInstance(XrInstance instance) {
-    std::vector<std::shared_ptr<SessionState>> states;
-    {
-        std::lock_guard<std::mutex> lock(sessionsMutex);
-        for (auto& [session, state] : sessions) states.push_back(state);
-        sessions.clear();
-    }
+    const auto states = sessions.clear();
     for (const auto& state : states) cleanupTrigger(*state);
     {
         std::lock_guard<std::mutex> lock(swapchainsMutex);
