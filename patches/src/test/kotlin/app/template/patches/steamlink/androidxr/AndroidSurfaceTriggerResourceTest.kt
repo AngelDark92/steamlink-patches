@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
 
 class AndroidSurfaceTriggerResourceTest {
     @Test
-    fun `production is the only active resolution mode`() {
+    fun `tested mode can replace retired experiments`() {
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
         listOf(
@@ -54,7 +54,7 @@ class AndroidSurfaceTriggerResourceTest {
             "extensionRequestResult",
             "surfaceFunctionLookupAttempted",
             "surfaceFunctionLoaded",
-            "future RGB10_A2 Valve swapchain passes through unchanged",
+            "future RGB10_A2 Valve video swapchain passes through unchanged",
             "originalPointersPreserved",
             "noCopy",
             "noReconstruction",
@@ -62,7 +62,7 @@ class AndroidSurfaceTriggerResourceTest {
             "XR_REFERENCE_SPACE_TYPE_VIEW",
             "maxLayerCount < kRequiredLayerCount",
             "GXR_AST_SOURCE_PROJECTION_COUNT",
-            "kSourceProjectionCount + 1",
+            "kSourceProjectionCount + (GXR_AST_REPLACE_UNDERSIDE ? 0 : 1)",
             "layers[kSourceProjectionCount]",
             "XR_SESSION_STATE_VISIBLE",
             "XR_SESSION_STATE_FOCUSED",
@@ -77,7 +77,9 @@ class AndroidSurfaceTriggerResourceTest {
             .forEach { invariant -> assertTrue(source.replace(" ", "").contains(invariant), invariant) }
         assertTrue(source.replace(" ", "").contains("output.layers=layers.data()"))
         assertTrue(source.replace(" ", "").contains("constboolappended=!appEnabled"))
-        assertFalse(source.contains("info->layers[2]"))
+        // Index 2 is used only by the compile-time 3-projection experiment;
+        // host integration compiles and exercises the separate legacy 2-view path.
+        assertTrue(source.contains("GXR_AST_REPLACE_UNDERSIDE && GXR_AST_SOURCE_PROJECTION_COUNT != 3"))
         assertTrue(source.contains("nextCreateApiLayerInstance(createInfo, &next, instance)"))
         assertFalse(source.contains("glDrawArrays"))
         assertFalse(source.contains("glBlitFramebuffer"))

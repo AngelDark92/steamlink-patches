@@ -23,9 +23,13 @@
 
 #define GXR_EXPORT extern "C" __attribute__((visibility("default")))
 
+#ifndef GXR_AST_REPLACE_UNDERSIDE
+#define GXR_AST_REPLACE_UNDERSIDE 0
+#endif
+
 namespace {
 
-// This API layer is intentionally append-only. Steam Link continues to render its
+// The default API layer is intentionally append-only. Steam Link continues to render its
 // build-specific native projection layers into Valve-owned swapchains. We neither
 // sample nor rewrite those images. The only added composition work is a static 2x2
 // Android Surface quad that activates the Galaxy XR compositor path observed to retain
@@ -34,7 +38,16 @@ namespace {
 #if GXR_AST_SOURCE_PROJECTION_COUNT != 2 && GXR_AST_SOURCE_PROJECTION_COUNT != 3
 #error "GXR_AST_SOURCE_PROJECTION_COUNT must be 2 or 3"
 #endif
+#if GXR_AST_REPLACE_UNDERSIDE && GXR_AST_SOURCE_PROJECTION_COUNT != 3
+#error "Underside replacement requires the verified 3-projection source"
+#endif
 
+#if GXR_AST_REPLACE_UNDERSIDE
+constexpr char kLayerName[] =
+    "XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1";
+constexpr char kModeName[] = "android_surface_underside_projection_v1";
+constexpr char kBuildId[] = "android-surface-underside-5002322-v1.0-20260903";
+#else
 constexpr char kLayerName[] =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1";
 constexpr char kModeName[] = "android_surface_trigger_passthrough_v1";
@@ -43,12 +56,15 @@ constexpr char kBuildId[] = "android-surface-trigger-5001712-v1.2-20260903";
 #else
 constexpr char kBuildId[] = "android-surface-trigger-passthrough-v1.4-20260903";
 #endif
+#endif
 constexpr char kLogTag[] = "GXRSurfaceTrigger";
 constexpr uint32_t kTriggerWidth = 2;
 constexpr uint32_t kTriggerHeight = 2;
 constexpr uint32_t kSourceProjectionCount = GXR_AST_SOURCE_PROJECTION_COUNT;
 constexpr uint32_t kSourceViewCount = kSourceProjectionCount * 2;
-constexpr uint32_t kRequiredLayerCount = kSourceProjectionCount + 1;
+constexpr uint32_t kRequiredLayerCount =
+    kSourceProjectionCount + (GXR_AST_REPLACE_UNDERSIDE ? 0 : 1);
+constexpr uint8_t kSurfaceAlpha = GXR_AST_REPLACE_UNDERSIDE ? 255 : 1;
 constexpr uint64_t kInitialDiagnosticFrames = 3;
 
 struct Dispatch {
@@ -70,8 +86,8 @@ struct Dispatch {
 
 struct SwapchainContract {
     // Retain the application's exact format for diagnostics only. In particular, a
-    // future RGB10_A2 Valve swapchain passes through unchanged; this helper never
-    // substitutes an 8-bit projection swapchain or converts projection pixels.
+    // future RGB10_A2 Valve video swapchain passes through unchanged; only the
+    // experimental backing layer can be substituted. No video pixels are converted.
     int64_t format{};
     uint32_t width{};
     uint32_t height{};
@@ -243,6 +259,10 @@ bool createTrigger(SessionState& state) {
         return false;
     }
 
+#if GXR_AST_REPLACE_UNDERSIDE
+    // The replacement retains Valve's projection space; no additional space is needed.
+    constexpr XrResult spaceResult = XR_SUCCESS;
+#else
     XrReferenceSpaceCreateInfo spaceInfo{};
     spaceInfo.type = XR_TYPE_REFERENCE_SPACE_CREATE_INFO;
     spaceInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
@@ -257,14 +277,15 @@ bool createTrigger(SessionState& state) {
         cleanupTrigger(state);
         return false;
     }
+#endif
 
     XrSwapchainCreateInfo swapchainInfo{};
     swapchainInfo.type = XR_TYPE_SWAPCHAIN_CREATE_INFO;
     swapchainInfo.createFlags = 0;
     swapchainInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
     // XR_KHR_android_surface_swapchain requires format/sample/face/array/mip to be 0.
-    // This describes only the independent 2x2 trigger Surface. It does not constrain
-    // or alter the format (sRGB8 today, potentially RGB10_A2 later) of Valve's views.
+    // This describes only our 2x2 Surface. Valve's original swapchain creation and
+    // acquire/release paths remain unchanged, including the unused underside images.
     swapchainInfo.format = 0;
     swapchainInfo.sampleCount = 0;
     swapchainInfo.width = kTriggerWidth;
@@ -291,6 +312,7 @@ bool createTrigger(SessionState& state) {
         cleanupTrigger(state);
         return false;
     }
+#if !GXR_AST_REPLACE_UNDERSIDE
     // The trigger layer is immutable for the session. Build it once instead of
     // zeroing and populating the same structure on every xrEndFrame call.
     state.triggerQuad.type = XR_TYPE_COMPOSITION_LAYER_QUAD;
@@ -306,6 +328,7 @@ bool createTrigger(SessionState& state) {
     state.triggerQuad.pose.orientation.w = 1.0f;
     state.triggerQuad.pose.position.z = -1.0f;
     state.triggerQuad.size = {0.001f, 0.001f};
+#endif
     return true;
 }
 
@@ -331,7 +354,9 @@ bool queueTriggerBuffer(SessionState& state) {
                     row[x * 4 + 0] = 0;
                     row[x * 4 + 1] = 0;
                     row[x * 4 + 2] = 0;
-                    row[x * 4 + 3] = 1;
+                    // The experiment substitutes opaque black; Valve's original
+                    // underside pixel content has not been established.
+                    row[x * 4 + 3] = kSurfaceAlpha;
                 }
             }
         }
@@ -346,7 +371,7 @@ bool queueTriggerBuffer(SessionState& state) {
             ",\"geometryResult\":" + std::to_string(geometryResult) +
             ",\"lockResult\":" + std::to_string(lockResult) +
             ",\"postResult\":" + std::to_string(postResult) +
-            ",\"rgba\":[0,0,0,1],\"queued\":" +
+            ",\"rgba\":[0,0,0," + std::to_string(kSurfaceAlpha) + "],\"queued\":" +
                 (state.bufferQueued ? std::string("true") : "false"));
     }
     if (!queued) cleanupTrigger(state);
@@ -362,6 +387,9 @@ bool valveProjectionShape(
     if (!info || info->type != XR_TYPE_FRAME_END_INFO ||
         info->layerCount != kSourceProjectionCount ||
         !info->layers) return false;
+#if GXR_AST_REPLACE_UNDERSIDE
+    if (maxLayerCount < kRequiredLayerCount) return false;
+#endif
     uint32_t projectionCount = 0;
     for (uint32_t index = 0; index < info->layerCount; ++index) {
         const auto* base = info->layers[index];
@@ -370,6 +398,26 @@ bool valveProjectionShape(
         const auto* projection =
             reinterpret_cast<const XrCompositionLayerProjection*>(base);
         if (projection->viewCount != 2 || !projection->views) return false;
+#if GXR_AST_REPLACE_UNDERSIDE
+        constexpr XrCompositionLayerFlags expectedFlags[] = {0, 0, 6};
+        if (projection->layerFlags != expectedFlags[index] ||
+            projection->space == XR_NULL_HANDLE) return false;
+        if (index == 0 && projection->next) {
+            // 5002322 always attaches this zero-flag node to its underside.
+            // It has no image references and remains attached unchanged. Other
+            // nodes could describe the original images, so fail open on them.
+            const auto* next = static_cast<const XrBaseInStructure*>(projection->next);
+            if (next->type != XR_TYPE_COMPOSITION_LAYER_SETTINGS_FB || next->next) return false;
+            const auto* settings = static_cast<const XrCompositionLayerSettingsFB*>(projection->next);
+            if (settings->layerFlags != 0) return false;
+        }
+        for (uint32_t eye = 0; eye < 2; ++eye) {
+            const auto& view = projection->views[eye];
+            if (view.type != XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW ||
+                view.subImage.swapchain == XR_NULL_HANDLE ||
+                view.next) return false;
+        }
+#endif
         // Production accepts only projection layers, so this validation pass can
         // also populate the exact pointer array later passed to the runtime.
         copiedLayers[index] = base;
@@ -481,9 +529,10 @@ XrResult XRAPI_PTR layerDestroySession(XrSession session) {
         {
             appendedFrames = state->appendedFrames;
         }
-        emit("surface_trigger_summary",
+        emit(GXR_AST_REPLACE_UNDERSIDE ? "surface_underside_summary" : "surface_trigger_summary",
             "\"session\":" + std::to_string(handleValue(session)) +
-            ",\"appendedFrames\":" + std::to_string(appendedFrames)
+            (GXR_AST_REPLACE_UNDERSIDE ? ",\"replacedFrames\":" : ",\"appendedFrames\":") +
+                std::to_string(appendedFrames)
         );
         cleanupTrigger(*state);
     }
@@ -553,7 +602,8 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
             !state->passthroughLogged.load(std::memory_order_relaxed) &&
             !state->passthroughLogged.exchange(true, std::memory_order_relaxed);
         if (shouldLog) {
-            emit("surface_trigger_passthrough",
+            emit(GXR_AST_REPLACE_UNDERSIDE ? "surface_underside_passthrough" :
+                    "surface_trigger_passthrough",
                 "\"session\":" + std::to_string(handleValue(session)) +
                 ",\"sourceLayerCount\":" + std::to_string(info ? info->layerCount : 0) +
                 ",\"triggerReady\":" +
@@ -564,6 +614,28 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     }
 
 
+#if GXR_AST_REPLACE_UNDERSIDE
+    // Copy only the underside structures. Preserve the complete projection/view
+    // contracts except the 2 subImages, which reference one static Android buffer.
+    // Base/foveated pointers remain original, and no source structure is mutated.
+    const auto* sourceUnderside = reinterpret_cast<const XrCompositionLayerProjection*>(
+        info->layers[0]);
+    std::array<XrCompositionLayerProjectionView, 2> undersideViews{
+        sourceUnderside->views[0], sourceUnderside->views[1],
+    };
+    for (auto& view : undersideViews) {
+        view.subImage = {
+            state->surfaceSwapchain,
+            {{0, 0}, {static_cast<int32_t>(kTriggerWidth), static_cast<int32_t>(kTriggerHeight)}},
+            0,
+        };
+    }
+    XrCompositionLayerProjection underside = *sourceUnderside;
+    underside.views = undersideViews.data();
+    layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader*>(&underside);
+    XrFrameEndInfo output = *info;
+    output.layers = layers.data();
+#else
     // Preserve every source pointer and its order; only append the terminal quad.
     layers[kSourceProjectionCount] =
         reinterpret_cast<const XrCompositionLayerBaseHeader*>(&state->triggerQuad);
@@ -572,6 +644,7 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     output.layers = layers.data();
     // valveProjectionShape copied each validated source pointer directly.
     constexpr bool pointersPreserved = true;
+#endif
     const XrResult result = g.endFrame(session, &output);
     uint64_t appendedFrames = appendedBefore;
     if (XR_SUCCEEDED(result)) {
@@ -579,6 +652,43 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
     }
     const bool initialDiagnostic = XR_SUCCEEDED(result) &&
         appendedFrames <= kInitialDiagnosticFrames;
+#if GXR_AST_REPLACE_UNDERSIDE
+    if (initialDiagnostic || XR_FAILED(result)) {
+        const bool posesPreserved =
+            std::memcmp(&undersideViews[0].pose, &sourceUnderside->views[0].pose,
+                        sizeof(XrPosef)) == 0 &&
+            std::memcmp(&undersideViews[1].pose, &sourceUnderside->views[1].pose,
+                        sizeof(XrPosef)) == 0;
+        const bool fovsPreserved =
+            std::memcmp(&undersideViews[0].fov, &sourceUnderside->views[0].fov,
+                        sizeof(XrFovf)) == 0 &&
+            std::memcmp(&undersideViews[1].fov, &sourceUnderside->views[1].fov,
+                        sizeof(XrFovf)) == 0;
+        std::ostringstream submission;
+        submission << "\"session\":" << handleValue(session)
+                   << ",\"frame\":" << appendedFrames
+                   << ",\"sourceLayerCount\":" << info->layerCount
+                   << ",\"sourceProjectionCount\":3,\"sourceViewCount\":6"
+                   << ",\"outputLayerCount\":" << output.layerCount
+                   << ",\"submittedProjectionCount\":3,\"submittedViewCount\":6"
+                   << ",\"triggerQuadCount\":0,\"replacedLayerIndex\":0"
+                   << ",\"baseFoveaPointersPreserved\":"
+                   << (layers[1] == info->layers[1] && layers[2] == info->layers[2] ?
+                           "true" : "false")
+                   << ",\"originalPointersPreserved\":false"
+                   << ",\"outputViewPosesPreserved\":" << (posesPreserved ? "true" : "false")
+                   << ",\"outputViewFovsPreserved\":" << (fovsPreserved ? "true" : "false")
+                   << ",\"outputSpace\":" << handleValue(underside.space)
+                   << ",\"outputLayerFlags\":" << underside.layerFlags
+                   << ",\"replacementSwapchain\":" << handleValue(state->surfaceSwapchain)
+                   << ",\"replacementImageRect\":[0,0,2,2],\"replacementArrayIndex\":0"
+                   << ",\"replacementRGBA\":[0,0,0,255],\"originalUndersidePixelsKnown\":false"
+                   << ",\"sourceFrameContract\":{" << sourceFrameContract(info, appendedFrames) << '}'
+                   << ",\"noCopy\":true,\"noReconstruction\":true,\"result\":" << result;
+        if (initialDiagnostic) emit("surface_underside_frame", submission.str());
+        emit("surface_underside_submission", submission.str());
+    }
+#else
     if (initialDiagnostic) {
         emit("surface_trigger_frame", sourceFrameContract(info, appendedFrames) +
             ",\"sessionState\":" + std::to_string(static_cast<int>(sessionState)) +
@@ -606,12 +716,14 @@ XrResult XRAPI_PTR layerEndFrame(XrSession session, const XrFrameEndInfo* info) 
                    << "\"quadDistanceMeters\":1.0,\"result\":" << result;
         emit("surface_trigger_submission", submission.str());
     }
+#endif
     if (XR_FAILED(result)) {
         state->triggerReady.store(false, std::memory_order_release);
         const bool logFailure = !state->failureLogged.exchange(
             true, std::memory_order_relaxed);
         if (logFailure) {
-            emit("surface_trigger_disabled",
+            emit(GXR_AST_REPLACE_UNDERSIDE ? "surface_underside_disabled" :
+                    "surface_trigger_disabled",
                 "\"session\":" + std::to_string(handleValue(session)) +
                 ",\"reason\":\"end_frame_rejected\",\"result\":" +
                     std::to_string(result) +
@@ -781,7 +893,9 @@ XrResult XRAPI_PTR layerCreateApiLayerInstance(
         ",\"surfaceFunctionLoaded\":" +
             (surfaceFunctionLoaded ? std::string("true") : "false") +
         ",\"hasJavaVm\":" + (applicationVm ? std::string("true") : "false") +
-        ",\"preservesValveProjectionLayers\":true," +
+        (GXR_AST_REPLACE_UNDERSIDE ?
+            ",\"preservesValveProjectionLayers\":false,\"preservesBaseFoveaLayers\":true," :
+            ",\"preservesValveProjectionLayers\":true,") +
         "\"noCopy\":true,\"noReconstruction\":true");
     return XR_SUCCESS;
 }

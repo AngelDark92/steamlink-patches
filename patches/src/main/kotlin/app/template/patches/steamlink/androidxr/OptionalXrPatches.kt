@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.patch.stringOption
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
@@ -95,6 +96,33 @@ internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
     "android-surface-trigger-passthrough-v1.4-20260903"
 internal const val ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID =
     "android-surface-trigger-5001712-v1.2-20260903"
+internal const val ANDROID_SURFACE_UNDERSIDE_MODE = "android_surface_underside_projection_v1"
+internal const val ANDROID_SURFACE_UNDERSIDE_LIBRARY = "libgxr_ast_underside.so"
+internal const val ANDROID_SURFACE_UNDERSIDE_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1.json"
+internal const val ANDROID_SURFACE_UNDERSIDE_BUILD_ID =
+    "android-surface-underside-5002322-v1.0-20260903"
+
+private val surfacePlacementOption = stringOption(
+    key = "surfacePlacement",
+    default = "terminal-quad",
+    values = mapOf(
+        "Terminal quad (tested)" to "terminal-quad",
+        "Underside projection (experimental, 5002322)" to "underside-projection",
+    ),
+    title = "Android Surface placement",
+    description = "On 2.0.22/5002322, the experiment replaces the underside with static black, keeping 3 projections and no extra quad. Resolution and speed are unverified. Every other build keeps the terminal quad, including 2.0.20.",
+    required = true,
+) { it in setOf("terminal-quad", "underside-projection") }
+
+internal fun androidSurfaceModeForBuild(
+    versionName: String,
+    versionCode: String,
+    placement: String?,
+): String = if (placement == "underside-projection" &&
+    versionName == "2.0.22" && versionCode == "5002322"
+) ANDROID_SURFACE_UNDERSIDE_MODE else ANDROID_SURFACE_TRIGGER_MODE
+
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -106,6 +134,11 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_MODE,
         ANDROID_SURFACE_TRIGGER_LIBRARY,
         ANDROID_SURFACE_TRIGGER_MANIFEST,
+    ),
+    ProjectionModeResources(
+        ANDROID_SURFACE_UNDERSIDE_MODE,
+        ANDROID_SURFACE_UNDERSIDE_LIBRARY,
+        ANDROID_SURFACE_UNDERSIDE_MANIFEST,
     ),
 )
 
@@ -244,9 +277,8 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
     metadata.setAttribute("android:value", requestedMode)
 }
 
-private fun androidSurfaceTriggerResourcesPatch(
-    requestedMode: String,
-) = rawResourcePatch {
+private val androidSurfaceTriggerResourcesPatch = rawResourcePatch {
+    val surfacePlacement by surfacePlacementOption()
     execute {
         // Morphe executes dependencies recursively without rechecking compatibility.
         // Keep this build guard inside the mutation itself so an excluded APK stays untouched.
@@ -257,6 +289,12 @@ private fun androidSurfaceTriggerResourcesPatch(
             return@execute
         }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
+        val requestedMode = androidSurfaceModeForBuild(
+            packageMetadata.versionName, packageMetadata.versionCode, surfacePlacement,
+        )
+        if (requestedMode == ANDROID_SURFACE_UNDERSIDE_MODE) {
+            validateSurfaceUndersideLayout(sceneFile.readBytes())
+        }
         // This final API-layer fix does not patch libvrlink_scene.so. Accept the guarded
         // changes made by the other recommended patches in any execution order, but fail
         // closed if a retired renderer left an explicit native helper dependency behind.
@@ -296,14 +334,10 @@ private fun androidSurfaceTriggerResourcesPatch(
     }
 }
 
-private val androidSurfaceTriggerResourcesPatch = androidSurfaceTriggerResourcesPatch(
-    requestedMode = ANDROID_SURFACE_TRIGGER_MODE,
-)
-
 @Suppress("unused")
 val xrGalaxyXrHighResolutionPatch = resourcePatch(
     name = "Galaxy XR high-resolution 3-projection fix",
-    description = "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves each build's native projection layout (2 layers on 2.0.20/5001712; 3 layers on supported 2.0.22 builds) and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction.",
+    description = "Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. The tested default preserves native projections and source formats, including future RGB10_A2, with a static 2x2 Android-surface quad. Optional 2.0.22/5002322 experiment replaces only the underside with a static black Surface-backed projection, keeping 3 total layers. No image copy or reconstruction. 2.0.20 remains unchanged.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION.toTypedArray())
@@ -312,6 +346,7 @@ val xrGalaxyXrHighResolutionPatch = resourcePatch(
         xrPermissionSettingsBootstrapPatch,
         androidSurfaceTriggerResourcesPatch,
     )
+    val surfacePlacement by surfacePlacementOption()
 
     finalize {
         // Dependencies bypass compatibility checks. Never advertise a resolution mode whose
@@ -320,7 +355,9 @@ val xrGalaxyXrHighResolutionPatch = resourcePatch(
             return@finalize
         }
         document("AndroidManifest.xml").use { document ->
-            configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
+            configurePermissionFreeProjectionMode(document, androidSurfaceModeForBuild(
+                packageMetadata.versionName, packageMetadata.versionCode, surfacePlacement,
+            ))
         }
     }
 }

@@ -193,6 +193,22 @@ Selection uses exact `(versionName, versionCode)` before checking the pinned lib
 ### Galaxy XR high-resolution 3-projection fix (`xrGalaxyXrHighResolutionPatch`)
 **Default: disabled individually; selected by all 4 recommendation bundles, but remains a guarded no-op on unsupported builds** — exact 2.0.20/5001712 and 2.0.22 builds 5002244, 5002296, 5002313, 5002318, and 5002322 only
 
+**Android Surface placement** defaults to **Terminal quad (tested)**. The optional
+**Underside projection (experimental, 5002322)** choice replaces the first backing
+projection with a static 2x2 opaque-black Android Surface only on exact
+**2.0.22/5002322**: 3 projections/6 views remain 3 total layers, with no extra quad.
+Its base/foveated pointers and underside pose/FOV/space/flags are preserved; the
+original backing pixels are unknown, so black is an experimental substitution.
+Native renderer functions are hash-guarded independently of ordinary recommended
+patches. All other builds keep their existing path even with this option selected;
+the 2.0.20/5001712 binary is unchanged. Resolution and GPU benefit remain untested.
+See the [experiment and A/B instructions](extensions/resolution-trace-layer/README.md#experimental-surface-backed-underside-20225002322-only).
+
+The experiment installs `libgxr_ast_underside.so` and
+`XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1.json`, with mode
+`android_surface_underside_projection_v1`. It cannot be stacked with the tested mode.
+The following existing artifact table describes the default terminal-quad path.
+
 | Artifact | Exact guarded edit |
 |---|---|
 | `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=android_surface_trigger_passthrough_v1` |

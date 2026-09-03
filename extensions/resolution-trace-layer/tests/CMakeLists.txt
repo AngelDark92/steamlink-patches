@@ -30,4 +30,17 @@ if(OPENXR_SDK_SOURCE_DIR)
         add_test(NAME ${test_target} COMMAND ${test_target})
         set_tests_properties(${test_target} PROPERTIES TIMEOUT 30)
     endforeach()
+
+    add_executable(surface_underside_tests surface_trigger_tests.cpp)
+    target_compile_features(surface_underside_tests PRIVATE cxx_std_17)
+    target_include_directories(surface_underside_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/stubs"
+        "${OPENXR_SDK_SOURCE_DIR}/include")
+    target_compile_definitions(surface_underside_tests PRIVATE
+        XR_USE_PLATFORM_ANDROID
+        GXR_AST_SOURCE_PROJECTION_COUNT=3
+        GXR_AST_REPLACE_UNDERSIDE=1)
+    target_link_libraries(surface_underside_tests PRIVATE Threads::Threads)
+    add_test(NAME surface_underside_tests COMMAND surface_underside_tests)
+    set_tests_properties(surface_underside_tests PROPERTIES TIMEOUT 30)
 endif()

@@ -16,7 +16,20 @@ Bundle selection does not broaden native compatibility: high-resolution output r
 
 **Video dither is retired from all catalogs and bundles.** OLED-generated shaders default to dithering off, while preserving the calibration profile and output precision. [Developer opt-in instructions](PATCH_CATALOG.md#video-dither-retired-developer-opt-in) retain the information needed to enable it in a local build; no dither checkbox remains in Morphe.
 
-### Resolution helper CPU revision — 2026-09-03
+### Optional underside experiment — 2026-09-03
+
+The existing **Galaxy XR high-resolution 3-projection fix** now exposes **Android
+Surface placement**. **Terminal quad (tested)** remains the default. Select
+**Underside projection (experimental, 5002322)** to replace only the backing layer
+on exact **2.0.22/5002322**, preserving 3 projections/6 views with no extra quad.
+The replacement is static opaque black, because Valve's original underside pixel
+content is unknown. Base/foveated video pointers, poses and FOVs are preserved.
+Native function hashes and runtime topology guards prevent using other layouts.
+Every other build retains the terminal path, including the unchanged 2.0.20 helper.
+Local Android/host/Gradle builds and decoded-fixture audits passed; headset sharpness
+and GPU improvement are unverified. [Implementation and A/B details](extensions/resolution-trace-layer/README.md).
+
+### Terminal-quad helper CPU revision — 2026-09-03
 
 The shared resolution patch now supplies 3-projection helper `v1.4-20260903` and 5001712 2-projection helper `v1.2-20260903`. Its generation-validated, non-owning render-thread cache removes steady-frame shared-ownership reference-count operations while the registry retains session ownership. It relies on OpenXR's externally synchronized destruction; lifecycle changes invalidate cached handles. Event readers still acquire ownership, and `xrPollEvent` dispatch processes data only for `XR_SUCCESS`, never `XR_EVENT_UNAVAILABLE`. Existing recommendation bundles automatically receive these helpers through their unchanged resolution-patch dependency.
 
@@ -56,7 +69,7 @@ This section is generated from the patch catalog during releases.
 | [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5001712, 5001740, 5002244, and 5002313. | 5001712, 5001740, 5002172, 5002206, 5002244, 5002313 |  |
 | [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three verified XR gates in builds 5001712, 5001740, and 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged. | 5001712, 5001740, 5002172, 5002206, 5002244, 5002313 |  |
 | [GXR face bridge](#gxr-face-bridge) | Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT). | 5001712, 5001740, 5002172, 5002206, 5002244, 5002313, 5002318, 5002322 |  |
-| [Galaxy XR high-resolution 3-projection fix](#galaxy-xr-high-resolution-3-projection-fix) | Permission-free resolution fix for exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322. Preserves each build's native projection layout (2 layers on 2.0.20/5001712; 3 layers on supported 2.0.22 builds) and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction. | 5001712, 5002244, 5002296, 5002313, 5002318, 5002322 |  |
+| [Galaxy XR high-resolution 3-projection fix](#galaxy-xr-high-resolution-3-projection-fix) | Permission-free resolution fix with a static Android-surface quad by default. Optional exact 2.0.22/5002322 underside experiment keeps 3 projections and no extra quad; video sources remain unchanged, including future RGB10_A2. 2.0.20 keeps its existing helper. | 5001712, 5002244, 5002296, 5002313, 5002318, 5002322 | • Android Surface placement |
 | [Galaxy XR legacy foundation (through 2.0.22/5002244)](#galaxy-xr-legacy-foundation-through-2-0-22-5002244) | Selects the 16-patch Galaxy XR legacy set, including Meta Quest Pro identity, native gates, face bridge, OLED calibration, microphone, battery, Visual Delay, and XR foundation. High-resolution output is guarded to verified layouts; unavailable on 5001740, 5002172, and 5002206. | 5001740, 5002172, 5002206, 5002244 |  |
 | [Galaxy XR recommended set (2.0.20/5001712)](#galaxy-xr-recommended-set-2-0-20-5001712) | Applies the 16-patch Galaxy XR legacy set for exact Steam Link 2.0.20 build 5001712, including Meta Quest Pro identity, permission-free high resolution, and the Final balanced tested OLED profile. | 5001712 |  |
 | [Galaxy XR recommended set (2.0.22/5002318)](#galaxy-xr-recommended-set-2-0-22-5002318) | Applies the existing native-Android-XR-safe Galaxy XR patch set for exact Steam Link 2.0.22 build 5002318. | 5002318 |  |
