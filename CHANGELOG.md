@@ -1,3 +1,9 @@
+## [1.13.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.13.0-dev.1...v1.13.0-dev.2) (2026-09-03)
+
+### 🐛 Bug Fixes
+
+* removed experimental patch ([d49ab3e](https://github.com/AngelDark92/steamlink-patches/commit/d49ab3e60693d5632cfe63b6ac75a1ae665cffa0))
+
 ## [1.13.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.2-dev.1...v1.13.0-dev.1) (2026-09-03)
 
 ### ✨ New Features
