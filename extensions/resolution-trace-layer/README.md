@@ -1,70 +1,11 @@
-# Resolution helpers (2026-09-03)
+# Resolution helper CPU update (2026-09-03)
 
-## Experimental Surface-backed underside: 2.0.22/5002322 only
-
-In the existing **Galaxy XR high-resolution 3-projection fix** patch, set
-**Android Surface placement** to **Underside projection (experimental, 5002322)**.
-Keep the other patch selections/options the same for comparison. The default remains
-**Terminal quad (tested)**. Every other exact build ignores the experimental selection
-and keeps its current helper. In particular, 2.0.20/5001712 remains 2 projections plus
-its existing quad, and its packaged native helper is byte-for-byte unchanged.
-
-`libgxr_ast_underside.so`, build `android-surface-underside-5002322-v1.0-20260903`,
-replaces only the submitted underside at index 0 with a Surface-backed projection.
-Both eye subimages reference 1 static 2x2 opaque-black buffer. It preserves the
-underside's space, flags, poses and FOVs and the original base/foveal layer pointers
-at indices 1/2. Each eligible frame remains **3 projections / 6 views / 0 quads**.
-There is no video copy, conversion or extra draw. Valve still creates and cycles its
-original underside swapchains: this experiment does not remove that allocation/work.
-
-Native analysis identifies index 0 as `m_undersideLayerSwapchains`, index 1 as
-`m_baseLayerSwapchains` and index 2 as `m_foveatedLayerSwapchains`. The added underside
-has no video draw in the examined frame path. Its original pixel content and Valve's
-reason for adding it are unknown; opaque black is an explicit experimental substitute.
-Older experiment notes used inverted descriptive names for the first 2 layers.
-
-Selection requires exact 2.0.22/5002322, the pinned 2,283,400-byte ARM64 layout and
-SHA-256 checks of native `Init`, `GetProjectionLayers` and `FlipFrame`. These do not
-reject the existing recommended OLED/audio/pose edits elsewhere in the library.
-At runtime, the underside's native single `XrCompositionLayerSettingsFB` record
-(null next, zero flags) is preserved. Unexpected layer counts/types/flags, other
-underside chains or nonnull view chains pass through unchanged. An `xrEndFrame`
-rejection disables replacement for that session;
-it does not retry the same frame or silently switch to the terminal quad.
-
-The experiment has its own manifest/mode identity and cannot be stacked with the
-tested helper. Repatch a clean base to change modes. Roll back by selecting
-**Terminal quad (tested)** on the same clean base. No overlay permission is added.
-
-Local validation: Android NDK build, 4 host CTest targets, Gradle tests/build/catalogs,
-and decoded-fixture recommendation audits for selected 5002322 and ignored 5001712.
-These are static/mock results; no pristine-source install or headset/GPU result exists.
-
-For a headset comparison, keep the base, remaining patch options, host quality,
-refresh rate and scene identical. Check startup, stream restart, palm/SystemUI
-show/hide and focus loss/resume. Verify cold logs show this exact build/mode,
-`surface_buffer_queued` with `[0,0,0,255]`, and `surface_underside_submission` with
-`outputLayerCount=3`, `triggerQuadCount=0`, `replacedLayerIndex=0`,
-`baseFoveaPointersPreserved=true` and `result=0`. Only the first 3 accepted frames
-are logged; steady-state frames do not format logs or repost the buffer. Successful
-submission alone does not prove high resolution or faster GPU composition.
-
-Build just this payload with the same configured Android build directory:
-
-```powershell
-cmake --build extensions/resolution-trace-layer/build-android-cpu --target gxr_android_surface_underside_5002322_v1
-```
-
-Copy only `libgxr_ast_underside.so` into `patches/src/main/resources/steamlink/androidxr/`
-and update its hash in `SurfaceUndersideTest.kt` after rebuilding. The 2 tested
-helper artifacts and their existing hashes stay unchanged. Integration audits:
-
-```powershell
-.\gradlew.bat :patches:auditDecodedSteamLinkPatches -PdecodedAuditKind=underside -PdecodedAuditIndex=0 -PreleaseChannel=experimental
-.\gradlew.bat :patches:auditDecodedSteamLinkPatches -PdecodedAuditKind=underside -PdecodedAuditIndex=1 -PreleaseChannel=experimental
-```
-
-## Tested terminal-quad helper CPU update
+The Surface-backed underside experiment for 2.0.22/5002322 is **retired** after the
+user reported "doesn't work" on 2026-09-03. Its option, code, build target and
+bundled helper are removed. No new capture was reviewed; no cause or GPU result is
+claimed. The existing terminal quad is the only active path, and both packaged
+helper binaries remain unchanged, including 2.0.20/5001712. Repatch a clean source
+with the current high-resolution patch to return to that path.
 
 The existing high-resolution patch installs this shared API layer. Recommendation
 bundles already depend on that patch; they do not contain separate copies of its

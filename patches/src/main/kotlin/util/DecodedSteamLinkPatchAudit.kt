@@ -7,10 +7,6 @@ import app.morphe.patcher.patch.Patch
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_BUILD_ID
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_MANIFEST
-import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_UNDERSIDE_BUILD_ID
-import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_UNDERSIDE_LIBRARY
-import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_UNDERSIDE_MANIFEST
-import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_UNDERSIDE_MODE
 import app.template.patches.steamlink.androidxr.androidSurfaceTriggerResourceLibraryForBuild
 import app.template.patches.steamlink.androidxr.adaptLegacyHmdConfigForBuild
 import app.template.patches.steamlink.androidxr.appearOnTopPatch
@@ -220,27 +216,6 @@ private suspend fun runSingleAudit(args: Array<String>) {
             println("PASS ${fixture.versionName}/${fixture.versionCode} recommended bundle output: $output")
         }
 
-        "underside" -> {
-            // Index 0 exercises the experiment with all 5002322 recommendations.
-            // Index 1 deliberately selects it on 5001712: legacy output must keep
-            // the existing helper, mode and permissions despite the saved option.
-            val selection = when (index) {
-                0 -> recommendedBundleFixtures.single { it.base.versionCode == "5002322" }
-                1 -> recommendedBundleFixtures.single { it.base.versionCode == "5001712" }
-                else -> error("Underside audit index must be 0 or 1")
-            }
-            val fixture = selection.base
-            val input = fixtureFile(fixtureDirectory, fixture)
-            require(input.isFile) { "Missing decoded APK fixture: $input" }
-            val caseDirectory = File(outputDirectory, "underside-${fixture.versionCode}")
-            val output = File(caseDirectory, "steamlink-${fixture.versionCode}-underside-fixture-unsigned.apk")
-            xrGalaxyXrHighResolutionPatch.options["surfacePlacement"] = "underside-projection"
-            executePatch(input, selection.patch, File(caseDirectory, "temporary"), output)
-            verifyRecommendedBundleOutput(input, output, fixture, undersideSelected = true)
-            verifyVisualDelayOutput(input, output, fixture)
-            println("PASS ${fixture.versionName}/${fixture.versionCode} underside selection and recommendation output: $output")
-        }
-
         else -> error("Unknown audit kind: ${args[2]}")
     }
 }
@@ -439,9 +414,7 @@ private fun verifyVisualDelayOutput(
     }
 }
 
-private fun verifyRecommendedBundleOutput(
-    inputApk: File, outputApk: File, fixture: HighResolutionFixture, undersideSelected: Boolean = false,
-) {
+private fun verifyRecommendedBundleOutput(inputApk: File, outputApk: File, fixture: HighResolutionFixture) {
     ZipFile(outputApk).use { apk ->
         val manifest = apk.requireEntryBytes("AndroidManifest.xml")
         val scene = apk.requireEntryBytes("lib/arm64-v8a/libvrlink_scene.so")
@@ -503,15 +476,16 @@ private fun verifyRecommendedBundleOutput(
             }
         }
     }
-    ZipFile(outputApk).use { verifyHighResolutionZip(it, fixture, undersideSelected) }
+    verifyHighResolutionOutput(outputApk, fixture)
 }
 
-private fun verifyHighResolutionZip(apk: ZipFile, fixture: HighResolutionFixture, undersideSelected: Boolean = false) {
-    val underside = undersideSelected && fixture.versionName == "2.0.22" && fixture.versionCode == "5002322"
-    val installedLibrary = if (underside) ANDROID_SURFACE_UNDERSIDE_LIBRARY else "libgxr_ast.so"
-    val installedHelper = apk.requireEntryBytes("lib/arm64-v8a/$installedLibrary")
+private fun verifyHighResolutionZip(apk: ZipFile, fixture: HighResolutionFixture) {
+    check(apk.getEntry("lib/arm64-v8a/libgxr_ast_underside.so") == null)
+    check(apk.getEntry("assets/openxr/1/api_layers/implicit.d/" +
+        "XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1.json") == null)
+    val installedHelper = apk.requireEntryBytes("lib/arm64-v8a/libgxr_ast.so")
     installedHelper.requireBytesAt(0, byteArrayOf(0x7f, 0x45, 0x4c, 0x46))
-    val expectedResourceName = if (underside) ANDROID_SURFACE_UNDERSIDE_LIBRARY else androidSurfaceTriggerResourceLibraryForBuild(
+    val expectedResourceName = androidSurfaceTriggerResourceLibraryForBuild(
         fixture.versionName,
         fixture.versionCode,
     )
@@ -522,23 +496,15 @@ private fun verifyHighResolutionZip(apk: ZipFile, fixture: HighResolutionFixture
         "${fixture.versionName}/${fixture.versionCode}: installed helper does not match " +
             expectedResourceName
     }
-    val expectedBuildId = if (underside) {
-        ANDROID_SURFACE_UNDERSIDE_BUILD_ID
-    } else if (fixture.versionName == "2.0.20" && fixture.versionCode == "5001712") {
+    val expectedBuildId = if (fixture.versionName == "2.0.20" && fixture.versionCode == "5001712") {
         ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID
     } else {
         ANDROID_SURFACE_TRIGGER_BUILD_ID
     }
     installedHelper.requireEncodedString(expectedBuildId)
-    val expectedManifest = if (underside) ANDROID_SURFACE_UNDERSIDE_MANIFEST else ANDROID_SURFACE_TRIGGER_MANIFEST
-    val excludedManifest = if (underside) ANDROID_SURFACE_TRIGGER_MANIFEST else ANDROID_SURFACE_UNDERSIDE_MANIFEST
-    apk.requireEntryBytes("assets/openxr/1/api_layers/implicit.d/$expectedManifest")
-        .requireEncodedString(installedLibrary)
-    check(apk.getEntry("assets/openxr/1/api_layers/implicit.d/$excludedManifest") == null)
-    val excludedLibrary = if (underside) "libgxr_ast.so" else ANDROID_SURFACE_UNDERSIDE_LIBRARY
-    check(apk.getEntry("lib/arm64-v8a/$excludedLibrary") == null)
-    val expectedMode = if (underside) ANDROID_SURFACE_UNDERSIDE_MODE else "android_surface_trigger_passthrough_v1"
-    apk.requireEntryBytes("AndroidManifest.xml").requireEncodedString(expectedMode)
+    apk.requireEntryBytes(
+        "assets/openxr/1/api_layers/implicit.d/" + ANDROID_SURFACE_TRIGGER_MANIFEST,
+    ).requireEncodedString("XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1")
     apk.requireDexString("GxrResolutionProbe")
 
     val bytes = apk.requireEntryBytes("lib/arm64-v8a/libvrlink_scene.so")

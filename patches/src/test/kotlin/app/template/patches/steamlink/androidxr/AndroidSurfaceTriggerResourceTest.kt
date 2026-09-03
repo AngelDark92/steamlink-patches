@@ -11,10 +11,11 @@ import kotlin.test.assertTrue
 
 class AndroidSurfaceTriggerResourceTest {
     @Test
-    fun `tested mode can replace retired experiments`() {
+    fun `production is the only active resolution mode`() {
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
         listOf(
+            "android_surface_underside_projection_v1",
             "android_surface_trigger_dfr_rearm_v1",
             "single_projection_reconstruction_v1",
             "single_projection_reconstruction_efficient_v1",
@@ -54,7 +55,7 @@ class AndroidSurfaceTriggerResourceTest {
             "extensionRequestResult",
             "surfaceFunctionLookupAttempted",
             "surfaceFunctionLoaded",
-            "future RGB10_A2 Valve video swapchain passes through unchanged",
+            "future RGB10_A2 Valve swapchain passes through unchanged",
             "originalPointersPreserved",
             "noCopy",
             "noReconstruction",
@@ -62,7 +63,7 @@ class AndroidSurfaceTriggerResourceTest {
             "XR_REFERENCE_SPACE_TYPE_VIEW",
             "maxLayerCount < kRequiredLayerCount",
             "GXR_AST_SOURCE_PROJECTION_COUNT",
-            "kSourceProjectionCount + (GXR_AST_REPLACE_UNDERSIDE ? 0 : 1)",
+            "kSourceProjectionCount + 1",
             "layers[kSourceProjectionCount]",
             "XR_SESSION_STATE_VISIBLE",
             "XR_SESSION_STATE_FOCUSED",
@@ -77,9 +78,7 @@ class AndroidSurfaceTriggerResourceTest {
             .forEach { invariant -> assertTrue(source.replace(" ", "").contains(invariant), invariant) }
         assertTrue(source.replace(" ", "").contains("output.layers=layers.data()"))
         assertTrue(source.replace(" ", "").contains("constboolappended=!appEnabled"))
-        // Index 2 is used only by the compile-time 3-projection experiment;
-        // host integration compiles and exercises the separate legacy 2-view path.
-        assertTrue(source.contains("GXR_AST_REPLACE_UNDERSIDE && GXR_AST_SOURCE_PROJECTION_COUNT != 3"))
+        assertFalse(source.contains("info->layers[2]"))
         assertTrue(source.contains("nextCreateApiLayerInstance(createInfo, &next, instance)"))
         assertFalse(source.contains("glDrawArrays"))
         assertFalse(source.contains("glBlitFramebuffer"))
@@ -119,6 +118,11 @@ class AndroidSurfaceTriggerResourceTest {
         assertFalse(patchSource.contains("nativeProjectionHelperPatch"))
         assertFalse(patchSource.contains("patchNativeEndFrameHelper"))
         assertFalse(patchSource.contains("gxrEndFrame"))
+        assertTrue(patchSource.contains("android_surface_underside_projection_v1"))
+        assertTrue(patchSource.contains("libgxr_ast_underside.so"))
+        assertFalse(patchSource.contains("surfacePlacementOption"))
+        assertTrue(xrGalaxyXrHighResolutionPatch.options.isEmpty())
+        assertFalse(source.contains("GXR_AST_REPLACE_UNDERSIDE"))
         // Legacy bundles also select this dependency on older unverified topologies. The
         // finalizer must skip before reading/mutating the manifest, just like resource setup.
         val finalizer = patchSource.substringAfter("val xrGalaxyXrHighResolutionPatch")
@@ -222,6 +226,8 @@ class AndroidSurfaceTriggerResourceTest {
     @Test
     fun `retired projection and permission-matrix resources are absent`() {
         listOf(
+            "libgxr_ast_underside.so",
+            "XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1.json",
             "libgxr_pst.so",
             "XR_APILAYER_local_GalaxyXR_permission_surface_trace_v1.json",
             "libgxr_nqv.so",

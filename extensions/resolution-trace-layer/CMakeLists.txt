@@ -68,13 +68,3 @@ add_gxr_surface_trigger_target(
     gxr_ast_5001712
     2
 )
-
-# Opt-in, exact 2.0.22/5002322 experiment; shipping helpers remain unchanged.
-add_gxr_surface_trigger_target(
-    gxr_android_surface_underside_5002322_v1
-    gxr_ast_underside
-    3
-)
-target_compile_definitions(gxr_android_surface_underside_5002322_v1 PRIVATE
-    GXR_AST_REPLACE_UNDERSIDE=1
-)
