@@ -480,6 +480,9 @@ private fun verifyRecommendedBundleOutput(inputApk: File, outputApk: File, fixtu
 }
 
 private fun verifyHighResolutionZip(apk: ZipFile, fixture: HighResolutionFixture) {
+    check(apk.getEntry("lib/arm64-v8a/libgxr_ast_underside.so") == null)
+    check(apk.getEntry("assets/openxr/1/api_layers/implicit.d/" +
+        "XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1.json") == null)
     val installedHelper = apk.requireEntryBytes("lib/arm64-v8a/libgxr_ast.so")
     installedHelper.requireBytesAt(0, byteArrayOf(0x7f, 0x45, 0x4c, 0x46))
     val expectedResourceName = androidSurfaceTriggerResourceLibraryForBuild(

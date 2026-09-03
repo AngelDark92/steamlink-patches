@@ -16,6 +16,20 @@ Bundle selection does not broaden native compatibility: high-resolution output r
 
 **Video dither is retired from all catalogs and bundles.** OLED-generated shaders default to dithering off, while preserving the calibration profile and output precision. [Developer opt-in instructions](PATCH_CATALOG.md#video-dither-retired-developer-opt-in) retain the information needed to enable it in a local build; no dither checkbox remains in Morphe.
 
+### Retired underside experiment — 2026-09-03
+
+The user reported that the 2.0.22/5002322 Surface-backed underside experiment
+"doesn't work" and requested retirement. Its option, implementation, build target
+and bundled resources are removed. No new capture was reviewed, so the cause and
+GPU effect remain undetermined. The tested terminal quad is the only active mode;
+both existing helper binaries, including 2.0.20/5001712, remain unchanged.
+
+### Terminal-quad helper CPU revision — 2026-09-03
+
+The shared resolution patch now supplies 3-projection helper `v1.4-20260903` and 5001712 2-projection helper `v1.2-20260903`. Its generation-validated, non-owning render-thread cache removes steady-frame shared-ownership reference-count operations while the registry retains session ownership. It relies on OpenXR's externally synchronized destruction; lifecycle changes invalidate cached handles. Event readers still acquire ownership, and `xrPollEvent` dispatch processes data only for `XR_SUCCESS`, never `XR_EVENT_UNAVAILABLE`. Existing recommendation bundles automatically receive these helpers through their unchanged resolution-patch dependency.
+
+Host CTest registry and actual 2-/3-projection helper integration checks passed, as did both Android rebuilds using NDK `27.2.12479018` and cached OpenXR `1.1.43` headers. These revisions have no headset result or measured speed gain yet. All 6 exact supported version/build pairs, continuous 2x2 quad submission, source formats, and GPU work remain unchanged; this does not enable 10-bit output. Compare against the previous artifact with the same base, scene, options, and host settings, checking cold launch, stop/restart, palm/DFR transitions, and loss/resume. See the [patch catalog](PATCH_CATALOG.md#galaxy-xr-high-resolution-3-projection-fix-xrgalaxyxrhighresolutionpatch) for validation boundaries and A/B guidance.
+
 
 ## Additional setup context
 
@@ -28,7 +42,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.12.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.12.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
+> **[v1.13.0-dev.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.13.0-dev.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;23 patches</summary>
 <br>

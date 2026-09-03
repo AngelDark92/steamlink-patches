@@ -92,9 +92,9 @@ internal const val ANDROID_SURFACE_TRIGGER_5001712_RESOURCE_LIBRARY =
 internal const val ANDROID_SURFACE_TRIGGER_MANIFEST =
     "XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json"
 internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
-    "android-surface-trigger-passthrough-v1.3-20260902"
+    "android-surface-trigger-passthrough-v1.4-20260903"
 internal const val ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID =
-    "android-surface-trigger-5001712-v1.1-20260902"
+    "android-surface-trigger-5001712-v1.2-20260903"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -114,6 +114,7 @@ internal fun projectionModesConflict(existingMode: String, requestedMode: String
         activeProjectionModes.any { it.mode == existingMode }
 
 private val retiredProjectionModes = setOf(
+    "android_surface_underside_projection_v1",
     "android_surface_trigger_warmup_omit_v1",
     "android_surface_trigger_dfr_rearm_v1",
     "single_projection_reconstruction_v1",
@@ -134,6 +135,7 @@ private val retiredProjectionModes = setOf(
     "single_projection_native_probe_v1",
 )
 private val retiredProjectionLibraries = setOf(
+    "libgxr_ast_underside.so",
     "libgxr_ast_warmup_omit.so",
     "libgxr_ast_dfr_rearm.so",
     "libgxr_single_projection_reconstruction_efficient_v1.so",

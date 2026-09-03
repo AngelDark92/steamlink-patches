@@ -15,6 +15,7 @@ class AndroidSurfaceTriggerResourceTest {
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
         listOf(
+            "android_surface_underside_projection_v1",
             "android_surface_trigger_dfr_rearm_v1",
             "single_projection_reconstruction_v1",
             "single_projection_reconstruction_efficient_v1",
@@ -68,7 +69,9 @@ class AndroidSurfaceTriggerResourceTest {
             "XR_SESSION_STATE_FOCUSED",
             "XR_SWAPCHAIN_USAGE_SAMPLED_BIT",
             "std::shared_ptr<SessionState>",
-            "std::mutex sessionsMutex",
+            "gxr::SessionRegistry<XrSession, SessionState>",
+            "sessions.findForFrame(session, renderSessionCache)",
+            "if (result != XR_SUCCESS || !data) return result",
             "std::mutex swapchainsMutex",
         ).forEach { invariant -> assertTrue(source.contains(invariant), invariant) }
         listOf("format=0", "sampleCount=0", "faceCount=0", "arraySize=0", "mipCount=0")
@@ -87,6 +90,13 @@ class AndroidSurfaceTriggerResourceTest {
         assertFalse(source.contains("GXR_AST_DFR_REARM"))
         assertFalse(source.contains("surface_trigger_rearm"))
         assertFalse(source.contains("appendedFrames.fetch_add"))
+        assertFalse(source.contains("cachedSession.lock()"))
+        val registry = source("extensions/resolution-trace-layer/src/session_registry.h")
+        assertTrue(registry.contains("generation_.load(std::memory_order_acquire)"))
+        assertTrue(registry.contains("generation_.fetch_add(1, std::memory_order_release)"))
+        assertTrue(registry.contains("std::map<Handle, std::shared_ptr<State>>"))
+        assertTrue(registry.contains("State* findForFrame"))
+        assertTrue(registry.contains("cache.registry == this"))
 
         val patchSource = source(
             "patches/src/main/kotlin/app/template/patches/steamlink/androidxr/OptionalXrPatches.kt",
@@ -108,6 +118,11 @@ class AndroidSurfaceTriggerResourceTest {
         assertFalse(patchSource.contains("nativeProjectionHelperPatch"))
         assertFalse(patchSource.contains("patchNativeEndFrameHelper"))
         assertFalse(patchSource.contains("gxrEndFrame"))
+        assertTrue(patchSource.contains("android_surface_underside_projection_v1"))
+        assertTrue(patchSource.contains("libgxr_ast_underside.so"))
+        assertFalse(patchSource.contains("surfacePlacementOption"))
+        assertTrue(xrGalaxyXrHighResolutionPatch.options.isEmpty())
+        assertFalse(source.contains("GXR_AST_REPLACE_UNDERSIDE"))
         // Legacy bundles also select this dependency on older unverified topologies. The
         // finalizer must skip before reading/mutating the manifest, just like resource setup.
         val finalizer = patchSource.substringAfter("val xrGalaxyXrHighResolutionPatch")
@@ -156,7 +171,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "b6e53152edcd9b0ec3943ff2224ced837d136c782fb17b547d3effd506d677b4",
+            "5db15199e6e3bcd5602b4fc04ad4e61a38916a5d1957c3dd25662e4c36c7aebf",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
@@ -192,7 +207,7 @@ class AndroidSurfaceTriggerResourceTest {
         ).use { it.readBytes() }
         assertContentEquals(byteArrayOf(0x7F, 0x45, 0x4C, 0x46), helper.copyOfRange(0, 4))
         assertEquals(
-            "32af9545254c2f51349660f76995cdab502baff39211b121451da8a621c66ec0",
+            "e40ce72fb3c9e430ed99b949acc1678319120add329ad08e355e2ea448ded60b",
             MessageDigest.getInstance("SHA-256").digest(helper)
                 .joinToString("") { "%02x".format(it) },
         )
@@ -211,6 +226,8 @@ class AndroidSurfaceTriggerResourceTest {
     @Test
     fun `retired projection and permission-matrix resources are absent`() {
         listOf(
+            "libgxr_ast_underside.so",
+            "XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1.json",
             "libgxr_pst.so",
             "XR_APILAYER_local_GalaxyXR_permission_surface_trace_v1.json",
             "libgxr_nqv.so",

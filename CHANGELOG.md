@@ -1,3 +1,21 @@
+## [1.13.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.13.0-dev.1...v1.13.0-dev.2) (2026-09-03)
+
+### 🐛 Bug Fixes
+
+* removed experimental patch ([d49ab3e](https://github.com/AngelDark92/steamlink-patches/commit/d49ab3e60693d5632cfe63b6ac75a1ae665cffa0))
+
+## [1.13.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.2-dev.1...v1.13.0-dev.1) (2026-09-03)
+
+### ✨ New Features
+
+* underside projection on XR_KHR_android_surface_swapchain experiment ([64d24d3](https://github.com/AngelDark92/steamlink-patches/commit/64d24d376aaa7c181cc2a1120e4e5674a552e0ef))
+
+## [1.12.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.1...v1.12.2-dev.1) (2026-09-03)
+
+### 🐛 Bug Fixes
+
+* CPU overhead optimizations ([b3b092e](https://github.com/AngelDark92/steamlink-patches/commit/b3b092e1c9f9760d162404d6ae1482ce53a4c389))
+
 ## [1.12.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.0...v1.12.1) (2026-09-03)
 
 ### 🐛 Bug Fixes
