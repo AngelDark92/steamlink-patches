@@ -1,15 +1,12 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
-import app.morphe.patcher.patch.booleanOption
-import app.morphe.patcher.patch.rawResourcePatch
-import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.steamlink.util.BinaryPatchHelper.findUniqueAndReplace
 
 // The video fragment shader ships with the dither line commented out with "//" prefix.
 // Enabling changes those two bytes to spaces, activating the dither at runtime.
-// COUPLING: oledCalibrationPatch replaces the entire 1087-byte shader block first; this patch
-// must then target the calibrated variant patterns below instead of the stock ones.
+// Archived byte helper, not a registered/selectable patch. Kept for reversible shader tests
+// and the developer opt-in instructions in PATCH_CATALOG.md. No recommended bundle calls it.
 private val SHADER_TAIL = (
     "color.rgb += fract(UniDitherOffsets.a * .43 + UniDitherOffsets.rgb + " +
     "gl_FragCoord.x * 1.67 + gl_FragCoord.y * 1.127 ) * .00292;"
@@ -80,26 +77,3 @@ internal fun setDitherState(bytes: ByteArray, enabled: Boolean): ByteArray {
     }
 }
 
-@Suppress("unused")
-val videoDitherPatch = rawResourcePatch(
-    name = "Video dither",
-    description = "Enables or disables VRLink video dithering, including the highp sRGB8 fallback and experimental RGB10_A2 shader variants.",
-    default = true,
-) {
-    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
-    dependsOn(oledCalibrationPatch)
-
-    val enable by booleanOption(
-        key = "enable",
-        default = true,
-        title = "Enable dither",
-        description = "Stock shader toggles its dormant line; legacy calibrated shader toggles its scale; highp output shaders toggle DITHER_ENABLE while retaining the correct .00392 or .00073 scale.",
-        required = true,
-    )
-
-    execute {
-        val file = get("lib/arm64-v8a/libvrlink_scene.so")
-        val bytes = file.readBytes()
-        file.writeBytes(setDitherState(bytes, enable!!))
-    }
-}
