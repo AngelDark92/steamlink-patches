@@ -1,3 +1,9 @@
+## [1.12.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.1...v1.12.2-dev.1) (2026-09-03)
+
+### 🐛 Bug Fixes
+
+* CPU overhead optimizations ([b3b092e](https://github.com/AngelDark92/steamlink-patches/commit/b3b092e1c9f9760d162404d6ae1482ce53a4c389))
+
 ## [1.12.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.0...v1.12.1) (2026-09-03)
 
 ### 🐛 Bug Fixes
