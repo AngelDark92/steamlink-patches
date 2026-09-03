@@ -1,3 +1,9 @@
+## [1.12.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.0...v1.12.1-dev.1) (2026-09-03)
+
+### 🐛 Bug Fixes
+
+* remade readme ([f10c81d](https://github.com/AngelDark92/steamlink-patches/commit/f10c81dfaa10699dbadd3db569ae9284eadb5e88))
+
 ## [1.12.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.11.0...v1.12.0) (2026-09-03)
 
 ### 🐛 Bug Fixes
