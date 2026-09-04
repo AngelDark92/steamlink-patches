@@ -1,3 +1,9 @@
+## [1.14.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.13.0...v1.14.0-dev.1) (2026-09-04)
+
+### ✨ New Features
+
+* add modern tongue bridge for build 5002322 ([3d5912c](https://github.com/AngelDark92/steamlink-patches/commit/3d5912c57626d5b40fe08fe796736efedf9cd948))
+
 ## [1.13.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.12.1...v1.13.0) (2026-09-03)
 
 ### 🐛 Bug Fixes
