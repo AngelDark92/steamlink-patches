@@ -1,3 +1,9 @@
+## [1.14.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.1...v1.14.2-dev.1) (2026-09-06)
+
+### 🐛 Bug Fixes
+
+* removed unexistent builds and added a few more patches for dithering and 10-bit support ([ff1c452](https://github.com/AngelDark92/steamlink-patches/commit/ff1c45241b8a46f06cbeddbb8bc29f30ec26b037))
+
 ## [1.14.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.0...v1.14.1) (2026-09-06)
 
 ### 🐛 Bug Fixes
