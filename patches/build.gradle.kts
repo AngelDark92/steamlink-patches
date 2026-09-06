@@ -121,18 +121,36 @@ val assembleMinimalExtension by tasks.registering(JavaExec::class) {
     }
 }
 
+val batteryExtensionOutputDir = layout.buildDirectory.dir("generated/battery-extension-resources")
+val assembleBatteryExtension by tasks.registering(JavaExec::class) {
+    group = "build"
+    description = "Assemble battery-only settings helper without launcher or runtime permission changes"
+    val source = file("src/main/resources/steamlink/androidxr/smali/com/valvesoftware/steamlink/GxrBatterySettings.smali")
+    val outputFile = batteryExtensionOutputDir.map { it.file("extensions/battery-extension.mpe") }
+    inputs.file(source)
+    outputs.file(outputFile)
+    classpath = smaliAssembler
+    mainClass.set("com.android.tools.smali.smali.Main")
+    doFirst {
+        val out = outputFile.get().asFile
+        out.parentFile.mkdirs()
+        args("a", "-a", "33", "-o", out.absolutePath, source.absolutePath)
+    }
+}
+
 // Include the assembled extension.mpe in the patches JAR.
 sourceSets.main {
     resources.srcDir(extensionOutputDir)
     resources.srcDir(minimalExtensionOutputDir)
+    resources.srcDir(batteryExtensionOutputDir)
 }
 
 tasks.named("processResources") {
-    dependsOn(assembleExtension, assembleMinimalExtension)
+    dependsOn(assembleExtension, assembleMinimalExtension, assembleBatteryExtension)
 }
 
 tasks.named("sourcesJar") {
-    dependsOn(assembleExtension, assembleMinimalExtension)
+    dependsOn(assembleExtension, assembleMinimalExtension, assembleBatteryExtension)
 }
 
 tasks {

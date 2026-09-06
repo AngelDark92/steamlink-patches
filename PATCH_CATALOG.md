@@ -4,14 +4,20 @@ Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
 Steam Link 2.0.20 build 5001712 has an independently decoded base and exact guarded layouts for the permission prompt, legacy native gates, OLED/output precision, controller cadence, and Visual Delay Fix. These adaptations are statically validated; APK installation and headset runtime validation remain pending. Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with its own guarded native layout. Its available source is a reconstruction from a malformed hybrid APK; pristine-APK Morphe patching, installation, and headset runtime validation remain pending.
-Steam Link 2.0.20 build 5001712 and the other legacy recommendation bundle use the same 16
-direct patches listed below. Steam Link 2.0.22 build 5002318 keeps its native-XR-safe 7-patch
+Steam Link 2.0.20 build 5001712 and the other legacy recommendation bundle use the same 17
+direct patches listed below. Steam Link 2.0.22 build 5002318 uses a 9-patch
 recommendation with GXR face bridge (version 5002318 and below), while build 5002322 recommends only 6 patches:
 GXR tongue bridge (version 5002322 and above), Galaxy XR
 high-resolution 3-projection fix, Microphone input preset (`voice-recognition`), OLED color
 calibration (`final-balanced`, recommended `rgb10-a2-experimental` output), Unrestricted battery usage, and Visual
 Delay Fix (`60` ms). Appear on top is excluded from 5002322. Video dither is removed as a
 selectable patch; the OLED patch offers optional dithering, disabled by default.
+
+Startup permission requests and startup splash/XR launch-mode changes are separate, default-off
+patches selected explicitly by the older-build bundles. Both exclude exact 2.0.22/5002322;
+its 6-patch bundle preserves stock launcher, splash, XR start mode and runtime permission handling,
+with only the selected battery patch adding a battery-settings hook. The revised startup flows
+have not been validated on a headset; historical native-rendering results below remain separate evidence.
 
 Morphe Manager 1.7 cannot distinguish builds that share versionName `2.0.22`; build-code
 filtering requires Manager 1.22 or newer with compatibility checks enabled. Expert mode may
@@ -25,10 +31,10 @@ bundle. Appear on top and Change package name remain optional and are never reco
 
 | Bundle | Exact targets | Direct patch set |
 |---|---|---|
-| `Galaxy XR recommended set (2.0.20/5001712)` | 2.0.20/5001712 | 16-patch legacy set below, including Device identity with Meta Quest Pro spoof |
+| `Galaxy XR recommended set (2.0.20/5001712)` | 2.0.20/5001712 | 17-patch legacy set below, including Device identity with Meta Quest Pro spoof |
 | `Galaxy XR recommended set (2.0.22/5002322)` | 2.0.22/5002322 | Only the 6 final patches above |
-| `Galaxy XR recommended set (2.0.22/5002318)` | 2.0.22/5002318 | Native-XR-safe 7-patch set using the full face bridge plus Device identity with Galaxy XR identity |
-| `Galaxy XR legacy foundation (through 2.0.22/5002244)` | 2.0.20/5001740, 2.0.22/5002244 | Same 16-patch legacy set as 5001712, including Meta Quest Pro spoof; unavailable native adaptations remain guarded no-ops |
+| `Galaxy XR recommended set (2.0.22/5002318)` | 2.0.22/5002318 | 9-patch set using the full face bridge, Device identity with Galaxy XR identity, and both explicit startup patches |
+| `Galaxy XR legacy foundation (through 2.0.22/5002244)` | 2.0.20/5001740, 2.0.22/5002244 | Same 17-patch legacy set as 5001712, including Meta Quest Pro spoof; unavailable native adaptations remain guarded no-ops |
 
 Both legacy bundles directly select:
 
@@ -45,9 +51,10 @@ Both legacy bundles directly select:
 11. XR Core Runtime
 12. XR Device Config Baseline
 13. XR Input Routing Config
-14. XR Launcher Bootstrap (Home Space)
+14. Startup splash and XR launch mode (before 5002322)
 15. XR Manifest Capability Pack
 16. Device identity (Recommended: Meta Quest Pro / `Oculus Quest Pro` model)
+17. Startup permission requests (before 5002322)
 
 Leave **HMD identity** on **Recommended**, or explicitly choose **Meta Quest Pro**, for either
 legacy bundle. Recommended resolves by exact version/build: 2.0.20/5001712 and 5001740, plus
@@ -87,7 +94,7 @@ Sub-patch only (not exposed): `disablePermissionPromptNativePatch`
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` @ `0x142c0c` (2.0.20/5001712), `0x142a9c` (2.0.20/5001740), `0x1422c4` (2.0.22/5002244), `0x14478c` (2.0.22/5002296), or `0x1472a8` (2.0.22/5002313) | 8 bytes: replaces the exact `RequestAndroidPermissions()` prologue with `movz w0,#1; ret` |
 
-Selection uses exact `(versionName, versionCode)` before checking the pinned library size. A known exact pair with the wrong size or bytes fails closed; a wrong/unknown pair is unchanged. Native-XR builds 5002318 and 5002322 return before reading the library. Build 5002296 reaches this internal patch only as a dependency of the exact high-resolution patch.
+Selection uses exact `(versionName, versionCode)` before checking the pinned library size. A known exact pair with the wrong size or bytes fails closed; a wrong/unknown pair is unchanged. Native-XR builds 5002318 and 5002322 return before reading the library. Build 5002296 reaches this internal patch through the explicit older startup splash patch's guarded XR foundation dependency.
 
 ---
 
@@ -123,21 +130,33 @@ Selection uses exact `(versionName, versionCode)` before checking the pinned lib
 
 ---
 
-### XR Launcher Bootstrap (`xrLauncherBootstrapPatch`)
-**Default: disabled individually; selected by both legacy recommendation bundles** (legacy builds only) — depends on `xrManifestCapabilityPackPatch`
+### Startup splash and XR launch mode (before 5002322) (`xrLauncherBootstrapPatch`)
+**Default: disabled individually; selected by both legacy bundles and the 5002318 bundle** — exact 2.0.20/5001712, 2.0.20/5001740 and 2.0.22/5002244, 5002296, 5002313, 5002318 only; depends on the guarded `xrManifestCapabilityPackPatch` and shared launcher helpers
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `application/activity@android:name` | Adds `com.valvesoftware.steamlink.GalaxyXRPermissionActivity` (exported=true, MAIN/LAUNCHER, 1280×800px layout) |
 | `AndroidManifest.xml` direct `application/property` | Removes application-wide `android.window.PROPERTY_XR_ACTIVITY_START_MODE` (present in 5002313) before applying activity-specific modes |
 | `AndroidManifest.xml` VR activity/property | Adds `android.window.PROPERTY_XR_ACTIVITY_START_MODE = XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED`; recognizes later `VRLink` or 5001740's `android.app.NativeActivity` with `android.app.lib_name=vrlink_scene` |
-| `AndroidManifest.xml` VR activity/intent-filter/category | Adds `org.khronos.openxr.intent.category.IMMERSIVE_HMD` |
+| `AndroidManifest.xml` VR activity/intent-filter/category | Adds `org.khronos.openxr.intent.category.IMMERSIVE_HMD` on legacy foundation builds; preserves native 5002318 intent routing |
 | `AndroidManifest.xml` `SteamLink activity/intent-filter` | Removes LAUNCHER intent-filter |
-| `AndroidManifest.xml` `SteamLink activity/layout` | Sets `android:defaultWidth=1536.0px`, `android:defaultHeight=960.0px` |
+| `AndroidManifest.xml` `SteamLink activity/layout` | Sets `android:defaultWidth=1536.0px`, `android:defaultHeight=960.0px` on legacy foundation builds; preserves native 5002318 picker dimensions |
+| `GalaxyXRPermissionActivity` | Enables the black "Launching Steam Link" screen; runtime permission requests remain disabled unless the separate permission patch is selected |
+
+### Startup permission requests (before 5002322) (`xrStartupPermissionsPatch`)
+**Default: disabled individually; selected by both legacy bundles and the 5002318 bundle** — same exact earlier-build targets as the splash patch; no 5002322 compatibility or runtime mutation
+
+| Artifact | Edit |
+|---|---|
+| `AndroidManifest.xml` `uses-permission` | Adds missing `android.permission.HAND_TRACKING`, `EYE_TRACKING_FINE`, `FACE_TRACKING`, `RECORD_AUDIO`, and `BLUETOOTH_CONNECT` declarations |
+| `AndroidManifest.xml` launcher | Routes through the shared transparent `GalaxyXRPermissionActivity`; leaves splash styling, picker sizing and XR start mode to the separate splash patch |
+| `GalaxyXRPermissionActivity` | Enables runtime requests for those 5 permissions before Steam Link opens; shared helper flags for permission requests and the visible splash default to false |
+
+Face bridge, tongue bridge, high resolution and battery no longer select either public startup patch as an implicit dependency. Battery and Appear on top retain the transparent older-build settings bootstrap; neither enables runtime tracking/microphone/Bluetooth requests or the splash by itself.
 
 ---
 
 ### XR Input Routing Config (`xrInputRoutingConfigPatch`)
-**Default: disabled individually; selected by both legacy recommendation bundles** (legacy builds only) — depends on `xrLauncherBootstrapPatch`
+**Default: disabled individually; selected by both legacy recommendation bundles** (legacy builds only) — depends on `xrManifestCapabilityPackPatch`
 | Artifact | Edit |
 |---|---|
 | `assets/config/ui_config.json` | Full replace — XR pointer aim/select bindings for touch_controller and hand_interaction_ext; haptic bindings |
@@ -161,7 +180,7 @@ Selection uses exact `(versionName, versionCode)` before checking the pinned lib
 ---
 
 ### GXR Face Bridge (version 5002318 and below) (`gxrFacebridgePatch`)
-**Default: disabled individually; compatible only through build 5002318 and selected by the two legacy bundles plus the 5002318 bundle** — depends on the guarded permission bootstrap
+**Default: disabled individually; compatible only through build 5002318 and selected by the 2 legacy bundles plus the 5002318 bundle** — adds the guarded face-permission declaration without installing a launcher or requesting runtime permissions
 | Artifact | Edit |
 |---|---|
 | `lib/arm64-v8a/libgxr_face_bridge.so` | New file (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) |
@@ -189,7 +208,7 @@ for any other layout.
 | 64–67 | TongueLeft, TongueRight, TongueUp, TongueDown |
 | 68 | Standard FB2 TongueOut |
 | 69 | Standard TongueRetreat, preserved as zero |
-| `AndroidManifest.xml` | Adds `android.permission.FACE_TRACKING` through the shared guarded permission patch |
+| `AndroidManifest.xml` | Adds missing `android.permission.FACE_TRACKING` through the shared guarded manifest helper; stock 5002322 already declares it. No launcher, splash or runtime permission request is added. |
 
 ---
 
@@ -205,11 +224,13 @@ for any other layout.
 ---
 
 ### Unrestricted Battery Usage (`unrestrictedBatteryUsagePatch`)
-**Default: disabled individually; selected by all 4 recommendation bundles** — uses the build-aware launcher foundation plus private minimal permission/settings bootstrap
+**Default: disabled individually; selected by all 4 recommendation bundles** — battery-only stock-activity hook on exact 5002322; transparent settings bootstrap on exact earlier builds
 | Artifact | Edit |
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` |
-| `GalaxyXRPermissionActivity` | Opens the app-specific Battery usage page at startup when not unrestricted; falls back to the direct exemption prompt, then app details |
+| `GalaxyXRPermissionActivity` (earlier builds) | Opens the app-specific Battery usage page at startup when not unrestricted; falls back to the direct exemption prompt, then app details. Uses a transparent launcher with splash and runtime permission flags off unless separately selected. |
+| `SteamLink.onCreate` (exact 2.0.22/5002322) | Invokes `GxrBatterySettings.request(Activity, Bundle)` after stock `SDLActivity.onCreate`, before stock parameter-register reuse; skips restored activity instances and already unrestricted apps |
+| Battery extension DEX (5002322 call site) | Adds the battery-only settings helper with the same settings fallbacks; no replacement launcher, custom splash, XR start-mode override or additional runtime permission requests |
 
 ---
 
@@ -218,7 +239,7 @@ for any other layout.
 
 | Artifact | Exact guarded edit |
 |---|---|
-| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW`, adds unmanaged Full Space, and sets `GXR_RESOLUTION_MODE=android_surface_trigger_passthrough_v1` |
+| `AndroidManifest.xml` | Removes `SYSTEM_ALERT_WINDOW` and sets `GXR_RESOLUTION_MODE=android_surface_trigger_passthrough_v1`; preserves stock launcher, splash and XR start mode. The explicit older splash patch owns the unmanaged Full Space override. |
 | `lib/arm64-v8a/libgxr_ast.so` | Release-built, stripped implicit OpenXR API layer selected by exact build. Build 2.0.20/5001712 copies Valve's 2 projection pointers, places the quad at index 2, and submits 3 layers. Supported 2.0.22 builds retain the existing 3-pointer, quad-at-index-3, 4-layer contract. |
 | Bundled `libgxr_ast_5001712.so` | Exact 2.0.20/5001712 payload installed under the standard `libgxr_ast.so` name. It is never selected for a 2.0.22 target. |
 | `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_android_surface_trigger_passthrough_v1.json` | Registers the surface-trigger API layer; disable environment is `GXR_DISABLE_ANDROID_SURFACE_TRIGGER`. |
@@ -503,7 +524,8 @@ and its 6-patch recommendation is unchanged.
 |---|---|
 | `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `gxrModernTongueBridgePatch` (5002322-only 24 B), `oledCalibrationPatch` (1087-byte GLSL block plus 2 or 3 guarded swapchain instructions) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
-| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, shared face-tracking permission used by `gxrFacebridgePatch` and `gxrModernTongueBridgePatch`, `appearOnTopPatch`, `xrGalaxyXrHighResolutionPatch`, `changePackageNamePatch` |
+| `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `xrStartupPermissionsPatch`, shared face-tracking declaration used by `gxrFacebridgePatch` and `gxrModernTongueBridgePatch`, `unrestrictedBatteryUsagePatch`, `appearOnTopPatch`, `xrGalaxyXrHighResolutionPatch`, `changePackageNamePatch` |
+| `SteamLink.onCreate` (5002322) | `nativeBatterySettingsPatch`: battery-only settings hook; earlier builds use the guarded transparent bootstrap |
 | `lib/arm64-v8a/libgxr_ast.so` | `xrGalaxyXrHighResolutionPatch` |
 | `res/values/ids.xml` | `androidXrLibPatch`, `controllerVelocityPatch`, `gxrFacebridgeLibPatch` (all: idempotent create-if-missing only) |
 
