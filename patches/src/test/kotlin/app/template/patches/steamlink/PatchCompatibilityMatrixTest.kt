@@ -35,6 +35,8 @@ class PatchCompatibilityMatrixTest {
         }
         recommendedBundles.forEach { patch ->
             assertTrue(patch.default, patch.name)
+            assertTrue(oledCalibrationPatch in patch.dependencyClosure(), patch.name)
+            assertEquals("rgb10-a2-experimental", oledCalibrationPatch.options["outputPrecision"].default)
         }
         assertEquals("Appear on top (legacy)", appearOnTopPatch.name)
     }
@@ -89,7 +91,7 @@ class PatchCompatibilityMatrixTest {
         assertEquals("voice-recognition", microphoneInputPresetPatch.options["preset"].default)
         assertEquals(60, hmdOnlyPatch.options["offsetMs"].default)
         assertEquals("final-balanced", oledCalibrationPatch.options["profile"].default)
-        assertEquals("srgb8-highp", oledCalibrationPatch.options["outputPrecision"].default)
+        assertEquals("rgb10-a2-experimental", oledCalibrationPatch.options["outputPrecision"].default)
         assertFalse(deviceIdentityPatch in galaxyXrRecommended5002322Patch.dependencyClosure())
         listOf(forceHmdInitializationGatesPatch, forceLobbyPermissionStateGatePatch, forceStreamXrGatesPatch)
             .forEach { assertFalse(it in galaxyXrRecommended5002322Patch.dependencyClosure()) }

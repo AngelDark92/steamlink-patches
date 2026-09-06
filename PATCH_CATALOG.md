@@ -8,7 +8,7 @@ Steam Link 2.0.20 build 5001712 and the other legacy recommendation bundle use t
 direct patches listed below. Steam Link 2.0.22 build 5002318 keeps its native-XR-safe 7-patch
 recommendation, while build 5002322 recommends only 6 patches: GXR face bridge, Galaxy XR
 high-resolution 3-projection fix, Microphone input preset (`voice-recognition`), OLED color
-calibration (`final-balanced`, safe `srgb8-highp` output), Unrestricted battery usage, and Visual
+calibration (`final-balanced`, recommended `rgb10-a2-experimental` output), Unrestricted battery usage, and Visual
 Delay Fix (`60` ms). Appear on top is excluded from 5002322. Video dither is removed as a
 selectable patch, and newly generated OLED shaders disable dithering.
 
@@ -38,7 +38,7 @@ Both legacy bundles directly select:
 5. GXR face bridge
 6. Galaxy XR high-resolution 3-projection fix
 7. Microphone input preset (`voice-recognition`)
-8. OLED color calibration (`final-balanced`, `srgb8-highp`)
+8. OLED color calibration (`final-balanced`, `rgb10-a2-experimental`)
 9. Unrestricted battery usage
 10. Visual Delay Fix (`60` ms)
 11. XR Core Runtime
@@ -385,9 +385,9 @@ The independently decoded 5001712 layout is 2,221,072 bytes with stock SHA-256 `
 | `profile` | `final-balanced` | initial / final-balanced / custom | Selects gamma+saturation pair |
 | `gamma` | `1.20` | 0.50–2.50 | Custom-profile `vec3(GAMMA)` argument in `pow()` |
 | `saturation` | `1.45` | 0.00–3.00 | Custom-profile second argument in `mix()` |
-| `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and every layout-specific projection swapchain format |
+| `outputPrecision` | `rgb10-a2-experimental` | srgb8-highp / rgb10-a2-experimental | Selects shader transfer/dither scale and every layout-specific projection swapchain format |
 
-`srgb8-highp` is the default fallback whenever end-to-end ten-bit preservation is unproved. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the exact guarded 2,221,072-byte 2.0.20/5001712, 2,220,528-byte 2.0.20/5001740, 2,251,920-byte 2.0.22/5002244, 2,276,872-byte 2.0.22/5002313, 2,277,488-byte 2.0.22/5002318, or 2,283,400-byte 2.0.22/5002322 library layout, the unique shader/NUL boundary, every layout-specific original/already-patched instruction context, and a uniform current swapchain state. The 5001712 stock library SHA-256 is `80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495`. Galaxy XR OpenXR swapchain support and end-to-end Steam Link Main10/P010 preservation remain unverified; an unsupported format can prevent stream swapchain setup.
+`rgb10-a2-experimental` is the default for OLED calibration in all 4 recommended bundles and when selected individually. `srgb8-highp` remains an explicit fallback. This changes the option default, not native compatibility: 5002172 and 5002206 remain guarded no-ops because they have no verified OLED layout. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the exact guarded 2,221,072-byte 2.0.20/5001712, 2,220,528-byte 2.0.20/5001740, 2,251,920-byte 2.0.22/5002244, 2,276,872-byte 2.0.22/5002313, 2,277,488-byte 2.0.22/5002318, or 2,283,400-byte 2.0.22/5002322 library layout, the unique shader/NUL boundary, every layout-specific original/already-patched instruction context, and a uniform current swapchain state. The 5001712 stock library SHA-256 is `80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495`. Successful RGB10_A2 projection submission was observed on Galaxy XR with 2.0.20/5001712. Other builds and end-to-end Steam Link Main10/P010 preservation through the panel remain unverified; an unsupported format can prevent stream swapchain setup.
 
 Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation remains a runtime acceptance gate for both modes.
 
