@@ -38,6 +38,7 @@ class PatchCompatibilityMatrixTest {
             assertTrue(patch.default, patch.name)
             assertTrue(oledCalibrationPatch in patch.dependencyClosure(), patch.name)
             assertEquals("rgb10-a2-experimental", oledCalibrationPatch.options["outputPrecision"].default)
+            assertEquals("off", oledCalibrationPatch.options["dithering"].default)
         }
         assertEquals("Appear on top (legacy)", appearOnTopPatch.name)
         assertEquals("GXR face bridge (version 5002318 and below)", gxrFacebridgePatch.name)
@@ -60,8 +61,6 @@ class PatchCompatibilityMatrixTest {
         )
         listOf(
             "2.0.20" to 5001740,
-            "2.0.22" to 5002172,
-            "2.0.22" to 5002206,
             "2.0.22" to 5002244,
         ).forEach { (version, versionCode) ->
             assertEquals(
@@ -94,6 +93,7 @@ class PatchCompatibilityMatrixTest {
         assertEquals("voice-recognition", microphoneInputPresetPatch.options["preset"].default)
         assertEquals(60, hmdOnlyPatch.options["offsetMs"].default)
         assertEquals("final-balanced", oledCalibrationPatch.options["profile"].default)
+        assertEquals("off", oledCalibrationPatch.options["dithering"].default)
         assertEquals("rgb10-a2-experimental", oledCalibrationPatch.options["outputPrecision"].default)
         assertFalse(deviceIdentityPatch in galaxyXrRecommended5002322Patch.dependencyClosure())
         assertFalse(gxrFacebridgePatch.supports("2.0.22", 5002322))

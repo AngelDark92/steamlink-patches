@@ -13,8 +13,6 @@ class DeviceIdentityPatchTest {
         listOf(
             "2.0.20" to "5001712",
             "2.0.20" to "5001740",
-            "2.0.22" to "5002172",
-            "2.0.22" to "5002206",
             "2.0.22" to "5002244",
         ).forEach { (version, code) ->
             assertEquals("meta-quest-pro", resolveDeviceIdentityProfile("recommended", version, code))

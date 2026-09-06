@@ -97,7 +97,7 @@ val galaxyXrRecommended5002318Patch = rawResourcePatch(
 @Suppress("unused")
 val galaxyXrLegacyFoundationPatch = rawResourcePatch(
     name = "Galaxy XR legacy foundation (through 2.0.22/5002244)",
-    description = "Selects the 16-patch Galaxy XR legacy set, including Meta Quest Pro identity, native gates, face bridge, OLED calibration, microphone, battery, Visual Delay, and XR foundation. High-resolution output is guarded to verified layouts; unavailable on 5001740, 5002172, and 5002206.",
+    description = "Selects the 16-patch Galaxy XR legacy set, including Meta Quest Pro identity, native gates, face bridge, OLED calibration, microphone, battery, Visual Delay, and XR foundation. High-resolution output is guarded to verified layouts; unavailable on 5001740.",
     default = true,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY_RECOMMENDED.toTypedArray())

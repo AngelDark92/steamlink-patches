@@ -136,6 +136,15 @@ tasks.named("sourcesJar") {
 }
 
 tasks {
+    register<JavaExec>("auditOledDecodedCompatibility") {
+        group = "verification"
+        description = "Read-only OLED option audit against hash-pinned decoded 5001712 and 5002322 libraries"
+        dependsOn(classes)
+        classpath = sourceSets["main"].runtimeClasspath
+        mainClass.set("util.OledDecodedCompatibilityAudit")
+        args(rootProject.projectDir.absolutePath)
+    }
+
     register<JavaExec>("auditDecodedSteamLinkPatches") {
         group = "verification"
         description = "Audit compatible 5001712 patches, high resolution on 6 bases, Visual Delay on 5 bases, and 4 recommendation fixtures"
