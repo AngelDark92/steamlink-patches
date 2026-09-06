@@ -22,7 +22,7 @@ routing. Saved explicit Samsung, Stock, or PICO profiles remain respected rather
 overridden.
 
 The exact 2.0.22/5002322 bundle selects only face bridge, high-resolution fix, microphone
-`voice-recognition`, OLED `final-balanced` with safe `srgb8-highp`, battery usage, and Visual Delay
+`voice-recognition`, OLED `final-balanced` with recommended `rgb10-a2-experimental`, battery usage, and Visual Delay
 `60` ms. Native-XR build 5002318 retains that 6-patch set plus Device identity, where Recommended
 continues to resolve to Galaxy XR. Other supported targets outside the exact legacy recommendation
 set likewise retain Galaxy XR as their automatic choice. Neither native bundle enables legacy

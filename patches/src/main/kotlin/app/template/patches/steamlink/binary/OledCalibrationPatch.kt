@@ -327,25 +327,25 @@ val oledCalibrationPatch = rawResourcePatch(
 
     val outputPrecision by stringOption(
         key = "outputPrecision",
-        default = "srgb8-highp",
+        default = "rgb10-a2-experimental",
         values = mapOf(
-            "8-bit sRGB highp control (safe)" to "srgb8-highp",
-            "RGB10_A2 linear output (experimental)" to "rgb10-a2-experimental",
+            "RGB10_A2 linear output (recommended)" to "rgb10-a2-experimental",
+            "8-bit sRGB highp fallback" to "srgb8-highp",
         ),
         title = "Video output precision",
-        description = "Safe control retains GL_SRGB8_ALPHA8. Experimental mode requests linear GL_RGB10_A2 and applies an explicit sRGB EOTF. Galaxy XR runtime support is unverified.",
+        description = "Recommended output requests linear GL_RGB10_A2 with an explicit sRGB EOTF on every guarded layout. RGB10 projection submission was observed on Galaxy XR with 2.0.20/5001712; other builds and full panel precision remain unverified. Select 8-bit sRGB as a fallback.",
         required = true,
     )
 
     execute {
-        val file = get("lib/arm64-v8a/libvrlink_scene.so")
-        val bytes = file.readBytes()
         // Shader and swapchain edits are coupled. On an unrecognized native layout, skip both
         // rather than aborting the complete APK experiment or writing fixed offsets blindly.
         val layout = VIDEO_LIBRARY_LAYOUTS.singleOrNull {
             it.versionName == packageMetadata.versionName &&
                 it.versionCode.toString() == packageMetadata.versionCode
         } ?: return@execute
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        val bytes = file.readBytes()
         if (bytes.size != layout.fileSize) {
             throw PatchException(
                 "Unsupported libvrlink_scene.so size=${bytes.size} for Steam Link " +
