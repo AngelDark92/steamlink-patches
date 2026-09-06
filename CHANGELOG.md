@@ -1,3 +1,21 @@
+## [1.14.2-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2-dev.2...v1.14.2-dev.3) (2026-09-06)
+
+### 🐛 Bug Fixes
+
+* fix for device identity on 2.0.22 ([f53650b](https://github.com/AngelDark92/steamlink-patches/commit/f53650b80886661a1693c92c68e02eb437d26aff))
+
+## [1.14.2-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2-dev.1...v1.14.2-dev.2) (2026-09-06)
+
+### 🐛 Bug Fixes
+
+* Implement startup boundary validation and battery settings integration ([7220432](https://github.com/AngelDark92/steamlink-patches/commit/722043271d27d987180e7c1c02d5a24e920d050e))
+
+## [1.14.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.1...v1.14.2-dev.1) (2026-09-06)
+
+### 🐛 Bug Fixes
+
+* removed unexistent builds and added a few more patches for dithering and 10-bit support ([ff1c452](https://github.com/AngelDark92/steamlink-patches/commit/ff1c45241b8a46f06cbeddbb8bc29f30ec26b037))
+
 ## [1.14.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.0...v1.14.1) (2026-09-06)
 
 ### 🐛 Bug Fixes
