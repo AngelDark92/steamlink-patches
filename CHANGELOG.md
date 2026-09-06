@@ -1,3 +1,9 @@
+## [1.14.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.0...v1.14.1-dev.1) (2026-09-06)
+
+### 🐛 Bug Fixes
+
+* RGB10_A2 now default ([5375d2b](https://github.com/AngelDark92/steamlink-patches/commit/5375d2bb683fbf3d4a55a92561db1171a1cf2076))
+
 ## [1.14.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.13.0...v1.14.0) (2026-09-05)
 
 ### ✨ New Features
