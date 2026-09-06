@@ -46,7 +46,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.14.2-dev.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.14.2-dev.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;25 patches total
+> **[v1.14.2-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.14.2-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;25 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;25 patches</summary>
 <br>
@@ -63,7 +63,7 @@ This section is generated from the patch catalog during releases.
 | [Appear on top (legacy)](#appear-on-top-legacy) | Legacy overlay-permission fallback retained for older Steam Link builds. Adds SYSTEM_ALERT_WINDOW and the compositor signal window. | 5001712, 5001740, 5002244, 5002313, 5002318 |  |
 | [Change package name](#change-package-name) | Renames the manifest package and Steam Link's internal VR-launch component so the patched app can coexist with the original installation. | 5001712, 5001740, 5002244, 5002313 | • Package name |
 | [Controller velocity fix](#controller-velocity-fix) | Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame. | 5001712, 5001740, 5002244, 5002313 | • Maximum sample gap (ms)<br>• Controller pose-send cadence<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
-| [Device identity](#device-identity) | Overrides the HMD identity reported to SteamVR. Recommended selects Meta Quest Pro for exact legacy bundle targets through 5002244, including 2.0.20/5001712; otherwise Galaxy XR. The Galaxy profile installs its complete transport identity while preserving stock controller/hand routing and extensions. | 5001712, 5001740, 5002244, 5002313, 5002318 | • HMD identity |
+| [Device identity](#device-identity) | Overrides the HMD identity reported to SteamVR. Recommended selects Meta Quest Pro for exact legacy bundle targets through 5002244, including 2.0.20/5001712; otherwise Galaxy XR. The Galaxy profile installs its complete transport identity while preserving stock controller/hand routing and extensions. Optional on 2.0.22/5002322; explicit Quest Pro and Pico profiles populate exact Galaxy XR product entries. | 5001712, 5001740, 5002244, 5002313, 5002318, 5002322 | • HMD identity |
 | [Force HMD initialization gates](#force-hmd-initialization-gates) | Bypasses the two verified capability gates in QSVLDeviceHmd::Init for Steam Link builds 5001712, 5001740, 5002244, and 5002313. | 5001712, 5001740, 5002244, 5002313 |  |
 | [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for Steam Link builds 5001712, 5001740, 5002244, and 5002313. | 5001712, 5001740, 5002244, 5002313 |  |
 | [Force stream XR gates](#force-stream-xr-gates) | Bypasses the three verified XR gates in builds 5001712, 5001740, and 5002244. Build 5002313 rewrote XrSceneStream::Init and is intentionally left unchanged. | 5001712, 5001740, 5002244, 5002313 |  |

@@ -1,3 +1,9 @@
+## [1.14.2-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2-dev.2...v1.14.2-dev.3) (2026-09-06)
+
+### 🐛 Bug Fixes
+
+* fix for device identity on 2.0.22 ([f53650b](https://github.com/AngelDark92/steamlink-patches/commit/f53650b80886661a1693c92c68e02eb437d26aff))
+
 ## [1.14.2-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2-dev.1...v1.14.2-dev.2) (2026-09-06)
 
 ### 🐛 Bug Fixes
