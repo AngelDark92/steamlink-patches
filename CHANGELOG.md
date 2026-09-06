@@ -1,3 +1,9 @@
+## [1.14.2-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2-dev.1...v1.14.2-dev.2) (2026-09-06)
+
+### 🐛 Bug Fixes
+
+* Implement startup boundary validation and battery settings integration ([7220432](https://github.com/AngelDark92/steamlink-patches/commit/722043271d27d987180e7c1c02d5a24e920d050e))
+
 ## [1.14.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.1...v1.14.2-dev.1) (2026-09-06)
 
 ### 🐛 Bug Fixes

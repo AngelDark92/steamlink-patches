@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-09-06T15:35:05",
-  "description": "## [1.14.2-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.1...v1.14.2-dev.1) (2026-09-06)\n\n### 🐛 Bug Fixes\n\n* removed unexistent builds and added a few more patches for dithering and 10-bit support ([ff1c452](https://github.com/AngelDark92/steamlink-patches/commit/ff1c45241b8a46f06cbeddbb8bc29f30ec26b037))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.14.2-dev.1/patches-1.14.2-dev.1.mpp",
+  "created_at": "2026-09-06T16:16:28",
+  "description": "## [1.14.2-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2-dev.1...v1.14.2-dev.2) (2026-09-06)\n\n### 🐛 Bug Fixes\n\n* Implement startup boundary validation and battery settings integration ([7220432](https://github.com/AngelDark92/steamlink-patches/commit/722043271d27d987180e7c1c02d5a24e920d050e))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.14.2-dev.2/patches-1.14.2-dev.2.mpp",
   "signature_download_url": "",
-  "version": "1.14.2-dev.1"
+  "version": "1.14.2-dev.2"
 }
