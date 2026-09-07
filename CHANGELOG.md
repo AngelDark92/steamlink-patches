@@ -1,3 +1,9 @@
+## [1.15.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2...v1.15.0-dev.1) (2026-09-07)
+
+### ✨ New Features
+
+* new fovea layer experiment ([6e6719f](https://github.com/AngelDark92/steamlink-patches/commit/6e6719ff4d57d616ff2497f652ed3c1a14f0732d))
+
 ## [1.14.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.1...v1.14.2) (2026-09-06)
 
 ### 🐛 Bug Fixes
