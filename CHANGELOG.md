@@ -1,3 +1,9 @@
+## [1.15.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.15.0-dev.1...v1.15.0-dev.2) (2026-09-07)
+
+### 🐛 Bug Fixes
+
+* retired experiment with fovea ([9476757](https://github.com/AngelDark92/steamlink-patches/commit/9476757f626c66e67866b1a5284fbb7b3cd6bed5))
+
 ## [1.15.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2...v1.15.0-dev.1) (2026-09-07)
 
 ### ✨ New Features
