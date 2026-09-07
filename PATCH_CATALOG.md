@@ -267,6 +267,39 @@ REFERENCE`, establishing perceived parity with Valve's native 3-projection APK w
 
 ---
 
+### Experimental Galaxy XR Android-Surface Fovea
+
+Default off; experimental catalog; exact Steam Link 2.0.22/5002322 only. Installs
+`lib/arm64-v8a/libgxr_asf.so` and the implicit layer manifest
+`XR_APILAYER_local_GalaxyXR_android_surface_fovea_v1.json`; sets resolution mode
+`android_surface_fovea_v1` and removes `SYSTEM_ALERT_WINDOW`. The exact
+`GetProjectionLayers` function hash verifies the underside/base/fovea ordering.
+No native Valve instructions, launcher, or recommended bundle membership change.
+
+This experiment supplies the actual fovea image through an Android Surface. It
+keeps 3 projection layers, with the original fovea pose/FOV/alpha/order, and replaces
+the fovea subimages with a side-by-side Surface image. It does not append a quad.
+Images are copied while the original swapchain image is still acquired and waited,
+before forwarding its release, then transferred to the Surface for submission.
+These transfers add GPU work; resolution or performance improvement is unproven.
+
+Select this instead of the recommended bundle and the normal high-resolution patch.
+Select other desired patches individually. Both resolution modes reject simultaneous
+selection. If OLED calibration is selected, explicitly choose **8-bit sRGB highp
+fallback** (`srgb8-highp`): this initial experiment rejects RGB10_A2/FP16 rather than
+  silently reducing their precision. Unsupported layouts or transfer failure pass
+through Valve's original layers, which may retain the low-resolution problem.
+An `xrEndFrame` rejection is returned to Valve (the same frame cannot safely be
+retried), so the app may stop before subsequent frames can fall back. Copy validation
+consumes GL error flags; this is an isolated experiment, not a production optimization.
+
+No prior actual-fovea-to-Surface experiment was found in the relevant history. The
+retired underside experiment supplied static black; sampler proxies used ordinary
+swapchains; fovea quads changed layer type. Those failures do not establish whether
+actual fovea Surface projections trigger the vendor compositor policy. The runtime
+may still require a quad, so high-resolution equivalence needs a headset comparison.
+See [focused capture and A/B instructions](diagnostics/steamlink-surface-fovea/README.md).
+
 ### Retired: Surface-backed underside projection
 
 On 2026-09-03 the user reported that the exact 2.0.22/5002322 experiment "doesn't

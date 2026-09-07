@@ -11,7 +11,9 @@ import kotlin.test.assertTrue
 
 class AndroidSurfaceTriggerResourceTest {
     @Test
-    fun `production is the only active resolution mode`() {
+    fun `production and surface fovea modes are mutually exclusive`() {
+        assertTrue(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_FOVEA_MODE))
+        assertTrue(projectionModesConflict(ANDROID_SURFACE_FOVEA_MODE, ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
         listOf(

@@ -7,6 +7,7 @@ import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL
 import app.template.patches.shared.Constants.isHighResolutionSteamLinkBuild
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -95,6 +96,10 @@ internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
     "android-surface-trigger-passthrough-v1.4-20260903"
 internal const val ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID =
     "android-surface-trigger-5001712-v1.2-20260903"
+internal const val ANDROID_SURFACE_FOVEA_MODE = "android_surface_fovea_v1"
+internal const val ANDROID_SURFACE_FOVEA_LIBRARY = "libgxr_asf.so"
+internal const val ANDROID_SURFACE_FOVEA_MANIFEST =
+    "XR_APILAYER_local_GalaxyXR_android_surface_fovea_v1.json"
 private data class ProjectionModeResources(
     val mode: String,
     val library: String,
@@ -106,6 +111,11 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_MODE,
         ANDROID_SURFACE_TRIGGER_LIBRARY,
         ANDROID_SURFACE_TRIGGER_MANIFEST,
+    ),
+    ProjectionModeResources(
+        ANDROID_SURFACE_FOVEA_MODE,
+        ANDROID_SURFACE_FOVEA_LIBRARY,
+        ANDROID_SURFACE_FOVEA_MANIFEST,
     ),
 )
 
@@ -255,6 +265,12 @@ private fun androidSurfaceTriggerResourcesPatch(
             return@execute
         }
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
+        if (requestedMode == ANDROID_SURFACE_FOVEA_MODE) {
+            if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
+                throw PatchException("Surface fovea experiment requires exact Steam Link 2.0.22/5002322")
+            }
+            validateSurfaceFoveaLayout(sceneFile.readBytes())
+        }
         // This final API-layer fix does not patch libvrlink_scene.so. Accept the guarded
         // changes made by the other recommended patches in any execution order, but fail
         // closed if a retired renderer left an explicit native helper dependency behind.
@@ -318,6 +334,30 @@ val xrGalaxyXrHighResolutionPatch = resourcePatch(
         ensureIdsXml(get("res/values/ids.xml"))
         document("AndroidManifest.xml").use { document ->
             configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_TRIGGER_MODE)
+        }
+    }
+}
+
+/** Independent alternative: do not select alongside the recommended bundle, which
+ * recursively installs the terminal-quad fix. Other desired patches can be selected
+ * individually. Resource and manifest conflicts are checked in either patch order. */
+@Suppress("unused")
+val experimentalAndroidSurfaceFoveaPatch = resourcePatch(
+    name = "Experimental Galaxy XR Android-Surface Fovea",
+    description = "Exact 2.0.22/5002322 experiment: transfers actual 8-bit fovea pixels to an Android Surface and replaces only the fovea projection images, retaining 3 projections without the 2x2 trigger quad. Extra GPU copies; high-resolution behavior unverified. Select instead of the recommended bundle/high-resolution fix; set OLED Video output precision to sRGB8 highp. Unsupported formats pass through without the fix.",
+    default = false,
+) {
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_EXPERIMENTAL.filter { compatibility ->
+        compatibility.targets.any { it.version == "2.0.22" && it.versionCodes?.values?.contains(5002322) == true }
+    }.toTypedArray())
+    dependsOn(androidSurfaceTriggerResourcesPatch(ANDROID_SURFACE_FOVEA_MODE))
+    finalize {
+        if (packageMetadata.versionName != "2.0.22" || packageMetadata.versionCode != "5002322") {
+            throw PatchException("Surface fovea experiment requires exact Steam Link 2.0.22/5002322")
+        }
+        ensureIdsXml(get("res/values/ids.xml"))
+        document("AndroidManifest.xml").use { document ->
+            configurePermissionFreeProjectionMode(document, ANDROID_SURFACE_FOVEA_MODE)
         }
     }
 }

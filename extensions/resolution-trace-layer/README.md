@@ -3,9 +3,14 @@
 The Surface-backed underside experiment for 2.0.22/5002322 is **retired** after the
 user reported "doesn't work" on 2026-09-03. Its option, code, build target and
 bundled helper are removed. No new capture was reviewed; no cause or GPU result is
-claimed. The existing terminal quad is the only active path, and both packaged
+claimed. The existing terminal quad remains the recommended path, and both packaged
 helper binaries remain unchanged, including 2.0.20/5001712. Repatch a clean source
 with the current high-resolution patch to return to that path.
+
+The separate **Experimental Galaxy XR Android-Surface Fovea** added on 2026-09-07
+transfers actual fovea pixels through an Android Surface, unlike that retired static
+black experiment. It targets only 2.0.22/5002322 and has no terminal quad. See
+[experiment instructions](../../diagnostics/steamlink-surface-fovea/README.md).
 
 The existing high-resolution patch installs this shared API layer. Recommendation
 bundles already depend on that patch; they do not contain separate copies of its

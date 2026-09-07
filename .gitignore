@@ -162,3 +162,4 @@ Resources/
 extensions/resolution-trace-layer/build-android-new/
 extensions/resolution-trace-layer/build-android-cpu/
 extensions/resolution-trace-layer/build-host-tests/
+extensions/resolution-trace-layer/build-android-fovea/

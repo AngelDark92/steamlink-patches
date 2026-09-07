@@ -4,6 +4,13 @@ Implementation notes, compatibility details, validation status, and build instru
 
 ## Compatibility and implementation notes
 
+The optional **Experimental Galaxy XR Android-Surface Fovea** tests actual fovea
+pixels in a Surface-backed projection on exact 2.0.22/5002322. It replaces the normal
+resolution fix for this A/B and is excluded from recommended bundles. Choose other
+patches individually and use OLED **8-bit sRGB highp fallback** for this first probe.
+It adds GPU transfers and its high-resolution behavior is unverified. Instructions:
+[Surface fovea experiment](diagnostics/steamlink-surface-fovea/README.md).
+
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
 Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations include v2.0.20 builds 5001712 and 5001740 plus v2.0.22 builds 5002244, 5002313, 5002318, and 5002322. High resolution and the explicit older startup patches additionally recognize exact v2.0.22 build 5002296. The available 5001740 source is an analysis reconstruction from a malformed hybrid APK, so pristine-APK Morphe patching, installation, and headset runtime validation remain pending. The permission-free high-resolution fix accepts exact builds 5001712, 5002244, 5002296, 5002313, 5002318, and 5002322; 5002322 has historical headset validation of the native rendering fix, while the revised startup flows have no headset validation. Other decoded-base adaptations are statically validated. Reconstruction, quad-view, permission-matrix, warm-up/omit, and DFR re-arm experiments are retired.
@@ -46,7 +53,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.14.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.14.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;25 patches total
+> **[v1.14.2](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.14.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;26 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;25 patches</summary>
 <br>
@@ -84,6 +91,22 @@ This section is generated from the patch catalog during releases.
 | [XR Device Config Baseline](#xr-device-config-baseline) | Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets. | 5001712, 5001740, 5002244, 5002313 |  |
 | [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. | 5001712, 5001740, 5002244, 5002313 |  |
 | [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. | 5001712, 5001740, 5002244, 5002313 |  |
+
+</details>
+
+<details open>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.0.22 (5002322) |
+| :---: |
+| Experimental patches for Steam Link 2.0.22 build 5002322. |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Experimental Galaxy XR Android-Surface Fovea](#experimental-galaxy-xr-android-surface-fovea) | Exact 2.0.22/5002322 experiment: transfers actual 8-bit fovea pixels to an Android Surface and replaces only the fovea projection images, retaining 3 projections without the 2x2 trigger quad. Extra GPU copies; high-resolution behavior unverified. Select instead of the recommended bundle/high-resolution fix; set OLED Video output precision to sRGB8 highp. Unsupported formats pass through without the fix. | 5002322 |  |
 
 </details>
 
