@@ -8,10 +8,6 @@ import app.morphe.patcher.patch.Patch
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_BUILD_ID
 import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_TRIGGER_MANIFEST
-import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_FOVEA_MODE
-import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_FOVEA_LIBRARY
-import app.template.patches.steamlink.androidxr.ANDROID_SURFACE_FOVEA_MANIFEST
-import app.template.patches.steamlink.androidxr.experimentalAndroidSurfaceFoveaPatch
 import app.template.patches.steamlink.androidxr.MODERN_TONGUE_REPLACEMENT_5002322
 import app.template.patches.steamlink.androidxr.MODERN_TONGUE_VADDR_5002322
 import app.template.patches.steamlink.androidxr.androidSurfaceTriggerResourceLibraryForBuild
@@ -211,52 +207,6 @@ private suspend fun runSingleAudit(args: Array<String>) {
             verifyHighResolutionOutput(output, fixture)
             verifyStandaloneHighResolutionBoundary(input, output, fixture)
             println("PASS ${fixture.versionName}/${fixture.versionCode} high-resolution output: $output")
-        }
-
-        "surface-fovea" -> {
-            val fixture = highResolutionFixtures.single { it.versionCode == "5002322" }
-            val input = fixtureFile(fixtureDirectory, fixture)
-            val caseDirectory = File(outputDirectory, "surface-fovea-$index-5002322")
-            val output = File(caseDirectory, "steamlink-5002322-surface-fovea-unsigned.apk")
-            val selected = when (index) {
-                0 -> experimentalAndroidSurfaceFoveaPatch
-                1 -> rawResourcePatch(name = "Surface fovea selected alongside production", default = false) {
-                    dependsOn(xrGalaxyXrHighResolutionPatch, experimentalAndroidSurfaceFoveaPatch)
-                }
-                2 -> rawResourcePatch(name = "Production selected alongside surface fovea", default = false) {
-                    dependsOn(experimentalAndroidSurfaceFoveaPatch, xrGalaxyXrHighResolutionPatch)
-                }
-                3 -> rawResourcePatch(name = "Surface fovea with 8-bit OLED", default = false) {
-                    dependsOn(oledCalibrationPatch, experimentalAndroidSurfaceFoveaPatch)
-                }
-                else -> error("surface-fovea index must be 0..3")
-            }
-            if (index == 3) oledCalibrationPatch.options["outputPrecision"] = "srgb8-highp"
-            if (index in 1..2) {
-                val failure = runCatching {
-                    executePatch(input, selected, File(caseDirectory, "temporary"), null)
-                }.exceptionOrNull()
-                check(failure != null && failure.stackTraceToString().contains("mutually exclusive")) {
-                    "Surface fovea/production conflict did not fail with the expected reason: $failure"
-                }
-                println("PASS surface fovea rejects conflicting resolution selection, order $index")
-            } else {
-                executePatch(input, selected, File(caseDirectory, "temporary"), output)
-                ZipFile(output).use { apk ->
-                    val expected = requireNotNull(DecodedSteamLinkPatchAudit::class.java.getResourceAsStream(
-                        "/steamlink/androidxr/$ANDROID_SURFACE_FOVEA_LIBRARY",
-                    )).use { it.readBytes() }
-                    check(apk.requireEntryBytes("lib/arm64-v8a/$ANDROID_SURFACE_FOVEA_LIBRARY").contentEquals(expected))
-                    apk.requireEntryBytes("assets/openxr/1/api_layers/implicit.d/$ANDROID_SURFACE_FOVEA_MANIFEST")
-                    check(apk.getEntry("lib/arm64-v8a/libgxr_ast.so") == null)
-                    check(apk.getEntry("assets/openxr/1/api_layers/implicit.d/$ANDROID_SURFACE_TRIGGER_MANIFEST") == null)
-                    val manifest = apk.requireEntryBytes("AndroidManifest.xml")
-                    manifest.requireEncodedString(ANDROID_SURFACE_FOVEA_MODE)
-                    check(!manifest.containsEncodedString("android.permission.SYSTEM_ALERT_WINDOW"))
-                }
-                if (index == 0) verifyStandaloneHighResolutionBoundary(input, output, fixture)
-                println("PASS surface fovea $index offline packaging: $output")
-            }
         }
 
         "startup-excluded" -> {

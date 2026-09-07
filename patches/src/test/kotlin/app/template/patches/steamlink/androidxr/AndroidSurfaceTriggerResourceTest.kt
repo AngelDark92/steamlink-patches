@@ -11,12 +11,11 @@ import kotlin.test.assertTrue
 
 class AndroidSurfaceTriggerResourceTest {
     @Test
-    fun `production and surface fovea modes are mutually exclusive`() {
-        assertTrue(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_FOVEA_MODE))
-        assertTrue(projectionModesConflict(ANDROID_SURFACE_FOVEA_MODE, ANDROID_SURFACE_TRIGGER_MODE))
+    fun `production is the only active resolution mode`() {
         assertFalse(projectionModesConflict("", ANDROID_SURFACE_TRIGGER_MODE))
         assertFalse(projectionModesConflict(ANDROID_SURFACE_TRIGGER_MODE, ANDROID_SURFACE_TRIGGER_MODE))
         listOf(
+            "android_surface_fovea_v1",
             "android_surface_underside_projection_v1",
             "android_surface_trigger_dfr_rearm_v1",
             "single_projection_reconstruction_v1",
@@ -228,6 +227,8 @@ class AndroidSurfaceTriggerResourceTest {
     @Test
     fun `retired projection and permission-matrix resources are absent`() {
         listOf(
+            "libgxr_asf.so",
+            "XR_APILAYER_local_GalaxyXR_android_surface_fovea_v1.json",
             "libgxr_ast_underside.so",
             "XR_APILAYER_local_GalaxyXR_android_surface_underside_projection_v1.json",
             "libgxr_pst.so",

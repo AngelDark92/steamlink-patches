@@ -68,16 +68,3 @@ add_gxr_surface_trigger_target(
     gxr_ast_5001712
     2
 )
-
-# Opt-in 5002322 experiment: actual fovea pixels in an Android Surface, no quad.
-add_library(gxr_android_surface_fovea_v1 SHARED src/android_surface_fovea_layer.cpp)
-target_include_directories(gxr_android_surface_fovea_v1 PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
-target_compile_definitions(gxr_android_surface_fovea_v1 PRIVATE XR_USE_PLATFORM_ANDROID XR_USE_GRAPHICS_API_OPENGL_ES NDEBUG)
-target_compile_options(gxr_android_surface_fovea_v1 PRIVATE -O2 -ffunction-sections -fdata-sections)
-target_link_options(gxr_android_surface_fovea_v1 PRIVATE -Wl,--gc-sections)
-target_link_libraries(gxr_android_surface_fovea_v1 PRIVATE EGL GLESv3 log android)
-set_target_properties(gxr_android_surface_fovea_v1 PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES OUTPUT_NAME gxr_asf)
-if(CMAKE_STRIP)
-    add_custom_command(TARGET gxr_android_surface_fovea_v1 POST_BUILD
-        COMMAND "${CMAKE_STRIP}" --strip-unneeded "$<TARGET_FILE:gxr_android_surface_fovea_v1>" VERBATIM)
-endif()

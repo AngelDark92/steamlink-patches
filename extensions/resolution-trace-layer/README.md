@@ -7,10 +7,10 @@ claimed. The existing terminal quad remains the recommended path, and both packa
 helper binaries remain unchanged, including 2.0.20/5001712. Repatch a clean source
 with the current high-resolution patch to return to that path.
 
-The separate **Experimental Galaxy XR Android-Surface Fovea** added on 2026-09-07
-transfers actual fovea pixels through an Android Surface, unlike that retired static
-black experiment. It targets only 2.0.22/5002322 and has no terminal quad. See
-[experiment instructions](../../diagnostics/steamlink-surface-fovea/README.md).
+The actual-pixel **Android-Surface Fovea** experiment was also tried and retired
+on 2026-09-07 after the user reported "It's not working." Its code, target and
+helper are removed; no runtime failure cause is inferred. See the
+[historical record](../../diagnostics/steamlink-surface-fovea/README.md).
 
 The existing high-resolution patch installs this shared API layer. Recommendation
 bundles already depend on that patch; they do not contain separate copies of its

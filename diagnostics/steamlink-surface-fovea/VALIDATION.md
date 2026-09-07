@@ -1,5 +1,15 @@
 # Local validation — 2026-09-07
 
+**Historical, retired:** the user subsequently reported "It's not working" on
+2026-09-07. Offline checks below did not establish runtime success. Referenced
+experiment scripts and generated packages have since been removed; this is not
+a current rebuild or testing guide. The failure mechanism remains unknown.
+
+Retirement checks: 100 remaining Kotlin/JUnit tests passed; generated catalogs
+contain no selectable fovea experiment. Both production helper SHA-256 hashes
+are unchanged. Fovea identifiers remain only for stale-resource removal and
+regression checks. No headset or user capture files were modified.
+
 This records offline evidence, not a headset result.
 
 - New Android ARM64 helper compiled with NDK r27c, Android API 29, Release,
@@ -36,4 +46,4 @@ download dependencies, install APKs or operate a headset.
 
 No APK was installed. Resolution parity, Surface projection acceptance, alpha
 seams, orientation, pose/content timing and performance remain unverified.
-Use the adjacent README and capture script for the user-run A/B.
+The subsequent user-run A/B was reported unsuccessful; the capture script is now removed.
