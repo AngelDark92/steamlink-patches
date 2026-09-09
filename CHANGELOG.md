@@ -1,3 +1,9 @@
+## [1.15.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.15.0-dev.2...v1.15.0-dev.3) (2026-09-09)
+
+### 🐛 Bug Fixes
+
+* rgb 8-bit made default because of banding on 10-bit patch ([81e941b](https://github.com/AngelDark92/steamlink-patches/commit/81e941b1333adbf65f0ae79a5b43e53ec6cdaa22))
+
 ## [1.15.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.15.0-dev.1...v1.15.0-dev.2) (2026-09-07)
 
 ### 🐛 Bug Fixes
