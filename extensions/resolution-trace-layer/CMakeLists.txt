@@ -68,3 +68,28 @@ add_gxr_surface_trigger_target(
     gxr_ast_5001712
     2
 )
+
+# Independent actual-video experiment. Never overwrite the shipping trigger binaries.
+foreach(build IN ITEMS 5001712 5002322)
+    if(build EQUAL 5001712)
+        set(projections 2)
+    else()
+        set(projections 3)
+    endif()
+    foreach(fp16 IN ITEMS 0 1)
+        set(target gxr_surface_video_${build}_${fp16})
+        add_library(${target} SHARED src/android_surface_video_layer.cpp)
+        target_include_directories(${target} PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
+        target_compile_definitions(${target} PRIVATE XR_USE_PLATFORM_ANDROID XR_USE_GRAPHICS_API_OPENGL_ES
+            GXR_VIDEO_PROJECTIONS=${projections} GXR_VIDEO_FP16=${fp16})
+        target_compile_options(${target} PRIVATE -O2 -Wall -Wextra -Wno-missing-field-initializers
+            -ffunction-sections -fdata-sections)
+        target_link_options(${target} PRIVATE -Wl,--gc-sections)
+        target_link_libraries(${target} PRIVATE log android nativewindow EGL GLESv3)
+        set_target_properties(${target} PROPERTIES CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
+        if(CMAKE_STRIP)
+            add_custom_command(TARGET ${target} POST_BUILD
+                COMMAND "${CMAKE_STRIP}" --strip-unneeded "$<TARGET_FILE:${target}>" VERBATIM)
+        endif()
+    endforeach()
+endforeach()

@@ -52,6 +52,8 @@ Builds **2.0.22/5002296** and **2.0.22/5002313** have individually selectable pa
 
 ### Patch selection notes
 
+- An opt-in [actual-video Android Surface experiment](diagnostics/steamlink-surface-video/README.md) is available for **2.0.20/5001712** and **2.0.22/5002322** in the experimental bundle. Its guide lists the individual companion patches and 8-bit/FP16 settings. Deselect the recommended bundle and high-resolution trigger when using it. Headset playback, HDR and physical panel precision are unverified.
+
 - For either legacy bundle, keep **HMD identity** on **Recommended for this build**, or select **Meta Quest Pro**. If you previously saved Samsung, Stock, or Pico, change that setting to use the recommended identity.
 - The 5002322 bundle includes high-resolution output, face tracking support, microphone tuning, OLED color calibration, unrestricted battery usage, and Visual Delay Fix. The 5002318 bundle also includes Device identity.
 - On **2.0.22/5002322**, **Device identity** is available only when explicitly selected; it is not in the recommended bundle. Select **Meta Quest Pro** explicitly to test that identity. Native identity profiles populate the exact `xrvst2ue`/`xrvst2` product entries, because this build does not use `unknown` when its product entry is missing. This correction still needs a new headset run and does not fix the separate streaming regression.

@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 project(gxr_resolution_host_tests LANGUAGES CXX)
 
 enable_testing()
+add_executable(surface_video_policy_tests surface_video_policy_tests.cpp)
+target_compile_features(surface_video_policy_tests PRIVATE cxx_std_17)
+add_test(NAME surface_video_policy_tests COMMAND surface_video_policy_tests)
 find_package(Threads REQUIRED)
 
 # The real registry is platform-independent. These tests need neither an Android
@@ -16,6 +19,10 @@ set_tests_properties(session_registry_tests PROPERTIES TIMEOUT 30)
 # stubs. Keep the registry suite independently runnable without an SDK checkout.
 set(OPENXR_SDK_SOURCE_DIR "" CACHE PATH "OpenXR SDK checkout with include/openxr headers")
 if(OPENXR_SDK_SOURCE_DIR)
+    add_executable(surface_video_frame_tests surface_video_frame_tests.cpp)
+    target_compile_features(surface_video_frame_tests PRIVATE cxx_std_17)
+    target_include_directories(surface_video_frame_tests PRIVATE "${OPENXR_SDK_SOURCE_DIR}/include")
+    add_test(NAME surface_video_frame_tests COMMAND surface_video_frame_tests)
     foreach(projection_count IN ITEMS 2 3)
         set(test_target surface_trigger_tests_${projection_count})
         add_executable(${test_target} surface_trigger_tests.cpp)

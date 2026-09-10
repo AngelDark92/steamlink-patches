@@ -95,13 +95,14 @@ internal const val ANDROID_SURFACE_TRIGGER_BUILD_ID =
     "android-surface-trigger-passthrough-v1.4-20260903"
 internal const val ANDROID_SURFACE_TRIGGER_5001712_BUILD_ID =
     "android-surface-trigger-5001712-v1.2-20260903"
-private data class ProjectionModeResources(
+internal data class ProjectionModeResources(
     val mode: String,
     val library: String,
     val manifest: String?,
 )
 
 private val activeProjectionModes = listOf(
+    ProjectionModeResources(SURFACE_VIDEO_MODE, SURFACE_VIDEO_LIBRARY, SURFACE_VIDEO_MANIFEST),
     ProjectionModeResources(
         ANDROID_SURFACE_TRIGGER_MODE,
         ANDROID_SURFACE_TRIGGER_LIBRARY,
@@ -160,7 +161,7 @@ private fun ByteArray.containsAscii(value: String): Boolean {
 internal fun retiredNativeProjectionHook(sceneBytes: ByteArray): String? =
     retiredProjectionLibraries.firstOrNull(sceneBytes::containsAscii)
 
-private fun projectionModeResource(name: String): ByteArray =
+internal fun projectionModeResource(name: String): ByteArray =
     (object {}.javaClass.getResourceAsStream("/steamlink/androidxr/$name")
         ?: throw PatchException("Missing bundled XR projection-mode resource: $name"))
         .use { it.readBytes() }
@@ -174,7 +175,7 @@ internal fun androidSurfaceTriggerResourceLibraryForBuild(
     ANDROID_SURFACE_TRIGGER_LIBRARY
 }
 
-private fun installProjectionModeResources(
+internal fun installProjectionModeResources(
     libDir: File,
     layerDir: File,
     requested: ProjectionModeResources,
@@ -215,7 +216,7 @@ private fun installProjectionModeResources(
     }
 }
 
-private fun configurePermissionFreeProjectionMode(document: Document, requestedMode: String) {
+internal fun configurePermissionFreeProjectionMode(document: Document, requestedMode: String) {
     val manifest = document.documentElement
     val app = manifest.getElementsByTagName("application").item(0) as Element
     val permissionName = "android.permission.SYSTEM_ALERT_WINDOW"
@@ -223,8 +224,6 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
     val matchingPermissions = (0 until permissionNodes.length)
         .mapNotNull { permissionNodes.item(it) as? Element }
         .filter { it.getAttribute("android:name") == permissionName }
-
-    matchingPermissions.forEach { manifest.removeChild(it) }
 
     val metadataName = "com.valvesoftware.steamlink.GXR_RESOLUTION_MODE"
     val existingMetadata = app.getElementsByTagName("meta-data").let { nodes ->
@@ -239,6 +238,7 @@ private fun configurePermissionFreeProjectionMode(document: Document, requestedM
                 "$requestedMode conflicts with $existingMode",
         )
     }
+    matchingPermissions.forEach { manifest.removeChild(it) }
     val metadata = existingMetadata ?: document.createElement("meta-data").also(app::appendChild)
     metadata.setAttribute("android:name", metadataName)
     metadata.setAttribute("android:value", requestedMode)
