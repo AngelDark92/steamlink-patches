@@ -1,3 +1,9 @@
+## [1.16.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.15.0...v1.16.0-dev.1) (2026-09-10)
+
+### ✨ New Features
+
+* new experiment redirecting all video to XR_KHR_android_surface_swapchain for 10-bit and hdr test ([57ea984](https://github.com/AngelDark92/steamlink-patches/commit/57ea98493b4837a3e0e959e8ba5ad345e5bbfd58))
+
 ## [1.15.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.14.2...v1.15.0) (2026-09-09)
 
 ### 🐛 Bug Fixes

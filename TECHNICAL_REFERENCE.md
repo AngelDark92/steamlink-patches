@@ -51,7 +51,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.15.0-dev.3+surface-video.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.15.0-dev.3+surface-video.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`experimental`&nbsp;&nbsp;•&nbsp;&nbsp;26 patches total
+> **[v1.16.0-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.16.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;26 patches total
 <details open>
 <summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
