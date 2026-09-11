@@ -1,3 +1,9 @@
+## [1.16.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.16.0-dev.1...v1.16.0-dev.2) (2026-09-11)
+
+### 🐛 Bug Fixes
+
+* removed experiment ([a052388](https://github.com/AngelDark92/steamlink-patches/commit/a05238848b5fa264964bc2e05ba01017beb14adf))
+
 ## [1.16.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.15.0...v1.16.0-dev.1) (2026-09-10)
 
 ### ✨ New Features
