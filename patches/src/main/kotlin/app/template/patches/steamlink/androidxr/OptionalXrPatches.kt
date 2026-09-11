@@ -102,7 +102,6 @@ internal data class ProjectionModeResources(
 )
 
 private val activeProjectionModes = listOf(
-    ProjectionModeResources(SURFACE_VIDEO_MODE, SURFACE_VIDEO_LIBRARY, SURFACE_VIDEO_MANIFEST),
     ProjectionModeResources(
         ANDROID_SURFACE_TRIGGER_MODE,
         ANDROID_SURFACE_TRIGGER_LIBRARY,
@@ -115,6 +114,7 @@ internal fun projectionModesConflict(existingMode: String, requestedMode: String
         activeProjectionModes.any { it.mode == existingMode }
 
 private val retiredProjectionModes = setOf(
+    "surface_video_v1", // Tried on 2026-09-11; low-resolution output. Cleanup only.
     "android_surface_fovea_v1", // Tried on 2026-09-07; user reported it did not work.
     "android_surface_underside_projection_v1",
     "android_surface_trigger_warmup_omit_v1",
@@ -137,6 +137,7 @@ private val retiredProjectionModes = setOf(
     "single_projection_native_probe_v1",
 )
 private val retiredProjectionLibraries = setOf(
+    "libgxr_surface_video.so",
     "libgxr_asf.so",
     "libgxr_ast_underside.so",
     "libgxr_ast_warmup_omit.so",
