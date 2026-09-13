@@ -1,3 +1,9 @@
+## [1.16.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.16.0-dev.2...v1.16.0-dev.3) (2026-09-13)
+
+### 🐛 Bug Fixes
+
+* clarification ([b7d1cb0](https://github.com/AngelDark92/steamlink-patches/commit/b7d1cb0ac1d9fcd36780602f54c27204fae88ea6))
+
 ## [1.16.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.16.0-dev.1...v1.16.0-dev.2) (2026-09-11)
 
 ### 🐛 Bug Fixes
