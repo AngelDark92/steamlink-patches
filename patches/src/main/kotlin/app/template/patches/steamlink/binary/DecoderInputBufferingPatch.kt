@@ -10,11 +10,20 @@ import java.security.MessageDigest
 
 internal const val DECODER_BUFFER_LIBRARY = "libgxr_dbuf.so"
 internal const val DECODER_BUFFER_CONFIG_MAGIC = "GXRDBUFCONFIG01!"
+internal const val DECODER_TELEMETRY_CONFIG_MAGIC = "GXRDBUFCONFIG02!"
 private const val STOCK_MEDIA_LIBRARY = "libmediandk.so"
 private val decoderPayloadHashes = mapOf(
     "5002322" to "54b2486151a1ecda67f2bd214f892b9df34798116d125e9e3d3869bcaf64bbdc",
     "5002363" to "fc8934f90c96aef04c36117ab3ac9677e7d8f5755701d030e6e9d019ac50cd1b",
 )
+private val decoderTelemetryPayloadHashes = mapOf(
+    "5002322" to "32f53c049ae984814cc7f6951ebc486a9f081b758d81e5259daaf0ed0923abc7",
+    "5002363" to "e15dee330970891091320286c2d1db80f1e637a05aee4d2d130fd4dadba94448",
+)
+internal val decoderModes = mapOf("Observe" to "observe", "Buffered" to "buffered",
+    "Observe + pipeline telemetry" to "observe-telemetry", "Buffered + pipeline telemetry" to "buffered-telemetry")
+internal fun decoderHelperResource(code: String, mode: String): String =
+    "/steamlink/decoder/libgxr_dbuf_${code}${if (mode.endsWith("-telemetry")) "_telemetry" else ""}.so"
 
 private data class DecoderRegion(val offset: Int, val size: Int, val sha256: String)
 private data class DecoderLayout(
@@ -180,12 +189,22 @@ internal fun configureDecoderInputBufferingHelper(bytes: ByteArray, mode: String
     val value = when (mode) {
         "observe" -> 0
         "buffered" -> 1
+        "observe-telemetry" -> 2
+        "buffered-telemetry" -> 3
         else -> throw PatchException("Unknown decoder input buffering mode: $mode")
     }
     val elf = DecoderElf(bytes)
     decoderRequire(elf.neededEntries().count { it.first == STOCK_MEDIA_LIBRARY } == 1,
         "bundled helper must retain its libmediandk.so dependency")
-    val magic = DECODER_BUFFER_CONFIG_MAGIC.toByteArray(Charsets.US_ASCII)
+    val candidateMagics = listOf(DECODER_BUFFER_CONFIG_MAGIC, DECODER_TELEMETRY_CONFIG_MAGIC)
+    val present = candidateMagics.filter { candidate ->
+        val valueBytes = candidate.toByteArray(Charsets.US_ASCII)
+        (0..bytes.size - valueBytes.size).any { start -> valueBytes.indices.all { bytes[start + it] == valueBytes[it] } }
+    }
+    decoderRequire(present.size == 1, "expected exactly one supported helper configuration version")
+    val telemetryCapable = present.single() == DECODER_TELEMETRY_CONFIG_MAGIC
+    decoderRequire(value < 2 || telemetryCapable, "pipeline telemetry requires the v2 helper")
+    val magic = present.single().toByteArray(Charsets.US_ASCII)
     decoderRequire(magic.size == 16, "invalid configuration magic")
     val matches = (0..bytes.size - magic.size).filter { start ->
         magic.indices.all { bytes[start + it] == magic[it] }
@@ -194,12 +213,12 @@ internal fun configureDecoderInputBufferingHelper(bytes: ByteArray, mode: String
     val offset = matches.single() + magic.size
     decoderRequire(offset <= bytes.size - 4, "truncated native helper configuration")
     val old = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).getInt(offset)
-    decoderRequire(old in 0..1, "unsupported native helper configuration mode")
+    decoderRequire(old in 0..(if (telemetryCapable) 3 else 1), "unsupported native helper configuration mode")
     return bytes.copyOf().apply { ByteBuffer.wrap(this).order(ByteOrder.LITTLE_ENDIAN).putInt(offset, value) }
 }
 
-internal fun verifyDecoderInputBufferingPayload(bytes: ByteArray, code: String) {
-    decoderRequire(decoderPayloadHashes[code] == bytes.decoderHash(),
+internal fun verifyDecoderInputBufferingPayload(bytes: ByteArray, code: String, telemetry: Boolean = false) {
+    decoderRequire((if (telemetry) decoderTelemetryPayloadHashes else decoderPayloadHashes)[code] == bytes.decoderHash(),
         "native payload hash does not match the compiled helper for $code")
 }
 
@@ -217,9 +236,9 @@ val decoderInputBufferingPatch = rawResourcePatch(
     val mode by stringOption(
         key = "mode",
         default = "buffered",
-        values = mapOf("Observe" to "observe", "Buffered" to "buffered"),
+        values = decoderModes,
         title = "Decoder input mode",
-        description = "Observe measures Valve's existing buffer ownership. Buffered assembles incomplete frames in bounded staging memory before acquiring a decoder input buffer; complete-frame submission remains synchronous.",
+        description = "Observe uses Valve's stock input path. Buffered stages incomplete frames before synchronous decoder submission. Pipeline telemetry adds frame IDs, codec timings and distinct fault reasons for a Perfetto capture; it is diagnostic, not a freeze fix. Plain Observe/Buffered retain the original v1 helper.",
         required = true,
     )
     execute {
@@ -229,17 +248,22 @@ val decoderInputBufferingPatch = rawResourcePatch(
         val sceneFile = get("lib/arm64-v8a/libvrlink_scene.so")
         val original = sceneFile.readBytes()
         val patched = patchDecoderInputBufferingDependency(original, version, code)
-        val resource = "/steamlink/decoder/libgxr_dbuf_$code.so"
+        val selectedMode = requireNotNull(mode)
+        val resource = decoderHelperResource(code, selectedMode)
         val payload = (object {}.javaClass.getResourceAsStream(resource)
             ?: throw PatchException("Missing bundled decoder input helper: $resource"))
             .use { it.readBytes() }
-        verifyDecoderInputBufferingPayload(payload, code)
-        val helper = configureDecoderInputBufferingHelper(payload, requireNotNull(mode))
+        verifyDecoderInputBufferingPayload(payload, code, selectedMode.endsWith("-telemetry"))
+        val helper = configureDecoderInputBufferingHelper(payload, selectedMode)
         val helperFile = get("lib/arm64-v8a/$DECODER_BUFFER_LIBRARY")
         if (helperFile.exists()) {
             val existing = helperFile.readBytes()
-            decoderRequire(listOf("observe", "buffered").any {
-                existing.contentEquals(configureDecoderInputBufferingHelper(payload, it))
+            decoderRequire(decoderModes.values.any { knownMode ->
+                val knownPayload = (object {}.javaClass.getResourceAsStream(decoderHelperResource(code, knownMode))
+                    ?: throw PatchException("Missing decoder helper for validated transition"))
+                    .use { it.readBytes() }
+                verifyDecoderInputBufferingPayload(knownPayload, code, knownMode.endsWith("-telemetry"))
+                existing.contentEquals(configureDecoderInputBufferingHelper(knownPayload, knownMode))
             }, "existing decoder helper is not this experiment; start from a pristine APK")
         }
         // Validate scene and helper completely before writing either APK entry.

@@ -29,7 +29,8 @@ foreach ($code in @('5002322', '5002363')) {
     if ($CopyResources) {
         $resources = Join-Path $repo 'patches/src/main/resources/steamlink/decoder'
         $null = New-Item -ItemType Directory -Force -Path $resources
-        Copy-Item -LiteralPath $library -Destination (Join-Path $resources "libgxr_dbuf_$code.so")
+        # v1 resources intentionally stay byte-identical for the original modes.
+        Copy-Item -LiteralPath $library -Destination (Join-Path $resources "libgxr_dbuf_${code}_telemetry.so")
     }
     Get-FileHash -LiteralPath $library -Algorithm SHA256
 }

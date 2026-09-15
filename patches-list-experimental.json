@@ -537,13 +537,15 @@
         {
           "key": "mode",
           "title": "Decoder input mode",
-          "description": "Observe measures Valve's existing buffer ownership. Buffered assembles incomplete frames in bounded staging memory before acquiring a decoder input buffer; complete-frame submission remains synchronous.",
+          "description": "Observe uses Valve's stock input path. Buffered stages incomplete frames before synchronous decoder submission. Pipeline telemetry adds frame IDs, codec timings and distinct fault reasons for a Perfetto capture; it is diagnostic, not a freeze fix. Plain Observe/Buffered retain the original v1 helper.",
           "required": true,
           "type": "kotlin.String",
           "default": "buffered",
           "values": {
             "Observe": "observe",
-            "Buffered": "buffered"
+            "Buffered": "buffered",
+            "Observe + pipeline telemetry": "observe-telemetry",
+            "Buffered + pipeline telemetry": "buffered-telemetry"
           }
         }
       ]

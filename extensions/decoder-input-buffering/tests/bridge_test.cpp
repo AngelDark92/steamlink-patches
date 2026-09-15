@@ -19,7 +19,7 @@ static bool testHooksEnabled = true;
 static unsigned testInstalls = 0;
 namespace gxr::dbuf {
 bool hooksActive() noexcept { return testHooksEnabled; }
-bool installHooks(HookBindings&) noexcept { ++testInstalls; return true; }
+bool installHooks(HookBindings&, bool) noexcept { ++testInstalls; return true; }
 void* originalFunction(HookId id) noexcept { return hooks.orig[static_cast<size_t>(id)]; }
 std::uintptr_t sceneAddress(std::uintptr_t offset) noexcept { return hooks.base + offset; }
 }

@@ -24,7 +24,8 @@ class DecoderInputBufferingPatchTest {
         assertFalse(patch.default)
         assertTrue(patch.dependencies.isEmpty())
         assertEquals("buffered", patch.options["mode"].default)
-        assertEquals(mapOf("Observe" to "observe", "Buffered" to "buffered"), patch.options["mode"].values)
+        assertEquals(mapOf("Observe" to "observe", "Buffered" to "buffered",
+            "Observe + pipeline telemetry" to "observe-telemetry", "Buffered + pipeline telemetry" to "buffered-telemetry"), patch.options["mode"].values)
         assertEquals(setOf("mode"), patch.options.map { it.key }.toSet())
         val pairs = patch.compatibility.orEmpty().flatMap { compatibility ->
             assertEquals(EXPERIMENTAL_COMPATIBILITY_NAME, compatibility.name)
@@ -79,6 +80,31 @@ class DecoderInputBufferingPatchTest {
             }
             assertFailsWith<PatchException> { configureDecoderInputBufferingHelper(corruptMode, "buffered") }
             assertFailsWith<PatchException> { configureDecoderInputBufferingHelper(original, "unknown") }
+        }
+    }
+
+    @Test
+    fun telemetry_resources_are_exact_guarded_and_mode_changes_are_idempotent() {
+        for (code in listOf("5002322", "5002363")) {
+            val bytes = requireNotNull(javaClass.getResourceAsStream(decoderHelperResource(code, "observe-telemetry"))).use { it.readBytes() }
+            verifyDecoderInputBufferingPayload(bytes, code, true)
+            assertFailsWith<PatchException> { verifyDecoderInputBufferingPayload(bytes, code, false) }
+            val magic = DECODER_TELEMETRY_CONFIG_MAGIC.toByteArray()
+            val at = (0..bytes.size - magic.size).single { i -> magic.indices.all { bytes[i + it] == magic[it] } } + 16
+            for ((mode, number) in listOf("observe-telemetry" to 2, "buffered-telemetry" to 3)) {
+                val configured = configureDecoderInputBufferingHelper(bytes, mode)
+                val expected = bytes.copyOf().apply { ByteBuffer.wrap(this).order(ByteOrder.LITTLE_ENDIAN).putInt(at, number) }
+                assertContentEquals(expected, configured)
+                assertContentEquals(configured, configureDecoderInputBufferingHelper(configured, mode))
+                for (next in listOf("observe-telemetry", "buffered-telemetry")) {
+                    assertContentEquals(configureDecoderInputBufferingHelper(bytes, next), configureDecoderInputBufferingHelper(configured, next))
+                }
+            }
+            val old = requireNotNull(javaClass.getResourceAsStream(decoderHelperResource(code, "observe"))).use { it.readBytes() }
+            assertFailsWith<PatchException> { configureDecoderInputBufferingHelper(old, "observe-telemetry") }
+            assertFailsWith<PatchException> { configureDecoderInputBufferingHelper(bytes.copyOf().apply {
+                ByteBuffer.wrap(this).order(ByteOrder.LITTLE_ENDIAN).putInt(at, 4)
+            }, "observe-telemetry") }
         }
     }
 

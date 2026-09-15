@@ -10,6 +10,7 @@ if (!$output.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) { thro
 $null = New-Item -ItemType Directory -Force -Path $output
 $cases = @(
     @{ Name = 'pool'; Source = 'staging_pool_test.cpp'; Flags = @() },
+    @{ Name = 'pipeline'; Source = 'pipeline_test.cpp'; Flags = @() },
     @{ Name = 'bridge-5002322'; Source = 'bridge_test.cpp'; Flags = @('-DGXR_BUILD_CODE=5002322') },
     @{ Name = 'bridge-5002363'; Source = 'bridge_test.cpp'; Flags = @('-DGXR_BUILD_CODE=5002363') }
 )

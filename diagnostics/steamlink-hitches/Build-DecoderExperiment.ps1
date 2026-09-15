@@ -1,6 +1,6 @@
 <#
 Build the current Kotlin source and native resources into a local experimental MPP,
-then run 14 isolated Morphe APK cases from that archive and generate all catalogs.
+then run 26 isolated Morphe APK cases from that archive and generate all catalogs.
 Requires the final native helpers to have been built first. Does not build/sign/install
 APKs on a device, use ADB, modify SteamVR, or change Gradle release metadata.
 The previous 5002363-local MPP is preserved. Repeated runs use unique workspace output
@@ -53,7 +53,7 @@ $versionMatch = [regex]::Match((Get-Content -LiteralPath (Join-Path $repo 'gradl
 if (!$versionMatch.Success) { throw 'Missing current Gradle version' }
 if (!$Version) { $Version = $versionMatch.Groups[1].Value }
 if ($Version -ne $versionMatch.Groups[1].Value) { throw 'Requested archive version must match the existing Gradle version' }
-$artifactName = "patches-$Version-decoder-staging-v1-local.mpp"
+$artifactName = "patches-$Version-decoder-pipeline-v2-local.mpp"
 $catalogNames = @('patches-list.json','patches-list-all.json','patches-list-stable.json','patches-list-experimental.json')
 $catalogBefore = Join-Path $run 'catalogs-before'
 $null = New-Item -ItemType Directory -Path $catalogBefore
@@ -144,7 +144,7 @@ print(json.dumps(summary))
             $staged,$apkInput.Path,$apkInput.Version,$apkInput.Code,'buffered','baseline',$baselineDirectory) (Join-Path $run "$($apkInput.Code)-baseline.log")
         Remove-CaseTemporary $baselineDirectory
         $baselineApk = Join-Path $baselineDirectory 'result-unsigned.apk'
-        foreach ($mode in @('observe','buffered')) {
+        foreach ($mode in @('observe','buffered','observe-telemetry','buffered-telemetry')) {
             foreach ($selection in @('standalone','bundle-first','decoder-first')) {
                 $name = "$($apkInput.Code)-$mode-$selection"
                 $caseDirectory = Join-Path $run "apks/$name"
@@ -213,11 +213,12 @@ print('PASS catalog regression: all existing JSON preserved; stable catalog enti
             if ((Get-FileHash -LiteralPath $path).Hash -ne (Get-FileHash -LiteralPath $saved).Hash) { throw "Backup verification failed: $path" }
         }
     }
+    $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $artifact)
     Copy-Item -LiteralPath $staged -Destination $artifact -Force
     foreach ($name in $catalogNames) { Copy-Item -LiteralPath (Join-Path $catalogRoot $name) -Destination (Join-Path $repo $name) -Force }
     if ((Get-FileHash -LiteralPath $staged).Hash -ne (Get-FileHash -LiteralPath $artifact).Hash) { throw 'Published artifact differs from audited bytes' }
     $summary = [ordered]@{ Status = 'passed'; Artifact = $artifact; Sha256 = (Get-FileHash -LiteralPath $artifact).Hash.ToLowerInvariant();
-        AuditDirectory = $run; ApkCases = 14; Inputs = '2 verified original APKs; no reconstructed fallback';
+        AuditDirectory = $run; ApkCases = 26; Inputs = '2 verified original APKs; no reconstructed fallback';
         Validation = 'Cached compile/JUnit; MPP-first Morphe APK audits; 4 catalogs'; SignedOrInstalled = $false }
     $summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run 'result.json') -Encoding utf8
     $summary | ConvertTo-Json

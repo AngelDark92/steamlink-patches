@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdio>
 #include <cstring>
+#include <dlfcn.h>
 #include <elf.h>
 #include <link.h>
 #include <limits>
@@ -16,7 +17,9 @@ namespace {
 static_assert(sizeof(void*) == 8, "The audited decoder layouts require arm64 pointers");
 constexpr char kTag[] = "GXRDecoderBuffer";
 constexpr std::size_t kSlotCount = 11;
-constexpr std::size_t kMaxPages = kSlotCount;
+constexpr std::size_t kNativeHookCount = 8;
+constexpr std::size_t kMaxSlotCount = kSlotCount + 7;
+constexpr std::size_t kMaxPages = kMaxSlotCount;
 struct Function { std::uintptr_t va; std::size_t size; std::uint64_t fnv; };
 struct Slot { std::uintptr_t va; HookId id; };
 
@@ -26,7 +29,7 @@ struct Slot { std::uintptr_t va; HookId id; };
 constexpr unsigned char kBuildId[20] = {
     0x58,0x5d,0x88,0xd6,0x46,0xa8,0xc6,0xef,0xe9,0x4b,
     0xdd,0x9f,0xc6,0xc9,0xdb,0xbc,0x68,0xfc,0x13,0xba};
-constexpr Function kFunctions[kHookCount] = {
+constexpr Function kFunctions[kNativeHookCount] = {
     {0xfd110,0xf8,0x40034be38d07dfc3ULL},
     {0xfd208,0x2a4,0x20bafaa65d1bfa01ULL},
     {0xfc928,0x3fc,0xeb909bc5729bd084ULL},
@@ -35,18 +38,23 @@ constexpr Function kFunctions[kHookCount] = {
     {0xfdb28,0xd4,0xb74824191a6dfc65ULL},
     {0x166ecc,0x180,0x1c3bc1c71ca78655ULL},
     {0x167050,0x294,0x9a55ea26b84322b3ULL}};
-constexpr Slot kSlots[kSlotCount] = {
+constexpr Slot kSlots[kMaxSlotCount] = {
     {0x222a60,HookId::Acquire}, {0x222a58,HookId::Submit},
     {0x222a50,HookId::Init}, {0x222a78,HookId::Flush},
     {0x222a80,HookId::Stop}, {0x22d6c8,HookId::Stop},
     {0x222a40,HookId::Destructor}, {0x22d6e8,HookId::Destructor},
     {0x22f208,HookId::Periodic},
-    {0x224e78,HookId::AcceptPacket}, {0x224f70,HookId::AcceptPacket}};
+    {0x224e78,HookId::AcceptPacket}, {0x224f70,HookId::AcceptPacket},
+    {0x22d660,HookId::DequeueInput}, {0x22d670,HookId::QueueInput},
+    {0x22d640,HookId::DequeueOutput}, {0x22d648,HookId::ReleaseOutput},
+    {0x22d680,HookId::AcquireLatestImage}, {0x22d688,HookId::ImageTimestamp},
+    {0x22d658,HookId::NativeFault}};
+constexpr Function kFaultFunction{0x165fb8,0xc,0x1332d003845cad11ULL};
 #elif GXR_BUILD_CODE == 5002363
 constexpr unsigned char kBuildId[20] = {
     0xc3,0x1b,0xb9,0x79,0x12,0x3b,0x76,0x73,0x69,0x30,
     0xd3,0xc8,0x20,0xd8,0xd0,0x61,0x9f,0xb5,0xbe,0xd2};
-constexpr Function kFunctions[kHookCount] = {
+constexpr Function kFunctions[kNativeHookCount] = {
     {0xfded8,0xf8,0x6d1678c899b6672aULL},
     {0xfdfd0,0x2a4,0xe0f694e071a5887cULL},
     {0xfd6f0,0x3fc,0x5a4b00256043ab3bULL},
@@ -55,13 +63,18 @@ constexpr Function kFunctions[kHookCount] = {
     {0xfe8f0,0xd4,0x6790d1bbfc3615b5ULL},
     {0x167d98,0x180,0xa7f0789574c539d0ULL},
     {0x167f1c,0x294,0x3bc1adb38942122dULL}};
-constexpr Slot kSlots[kSlotCount] = {
+constexpr Slot kSlots[kMaxSlotCount] = {
     {0x224ab0,HookId::Acquire}, {0x224aa8,HookId::Submit},
     {0x224aa0,HookId::Init}, {0x224ac8,HookId::Flush},
     {0x224ad0,HookId::Stop}, {0x22f7a8,HookId::Stop},
     {0x224a90,HookId::Destructor}, {0x22f7c8,HookId::Destructor},
     {0x2312f8,HookId::Periodic},
-    {0x226ec8,HookId::AcceptPacket}, {0x226fc0,HookId::AcceptPacket}};
+    {0x226ec8,HookId::AcceptPacket}, {0x226fc0,HookId::AcceptPacket},
+    {0x22f740,HookId::DequeueInput}, {0x22f750,HookId::QueueInput},
+    {0x22f720,HookId::DequeueOutput}, {0x22f728,HookId::ReleaseOutput},
+    {0x22f760,HookId::AcquireLatestImage}, {0x22f768,HookId::ImageTimestamp},
+    {0x22f738,HookId::NativeFault}};
+constexpr Function kFaultFunction{0x166dec,0xc,0x1332d003845cad11ULL};
 #else
 #error "GXR_BUILD_CODE must select the exact audited 5002322 or 5002363 layout"
 #endif
@@ -79,6 +92,28 @@ std::atomic<void*> gOriginal[kHookCount]{};
 void* gReplacement[kHookCount]{};
 std::atomic_flag gInstalling = ATOMIC_FLAG_INIT;
 bool gAttempted = false;  // Accessed only while gInstalling is held.
+bool gDiagnostic = false;
+// Deliberately retained for the lifetime of all installed API pointers, including
+// a partial rollback. Never use RTLD_DEFAULT, which may resolve another hook.
+void* gMediaHandle = nullptr;
+
+bool resolveMediaFunctions(std::uintptr_t* functions) noexcept {
+    constexpr const char* names[] = {
+        "AMediaCodec_dequeueInputBuffer", "AMediaCodec_queueInputBuffer",
+        "AMediaCodec_dequeueOutputBuffer", "AMediaCodec_releaseOutputBuffer",
+        "AImageReader_acquireLatestImage", "AImage_getTimestamp"};
+    if (!gMediaHandle) gMediaHandle = dlopen("libmediandk.so", RTLD_NOW | RTLD_LOCAL);
+    if (!gMediaHandle) return false;
+    for (std::size_t i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
+        void* symbol = dlsym(gMediaHandle, names[i]);
+        Dl_info info{};
+        if (!symbol || !dladdr(symbol, &info) || !info.dli_fname) return false;
+        const char* slash = std::strrchr(info.dli_fname, '/');
+        if (std::strcmp(slash ? slash + 1 : info.dli_fname, "libmediandk.so") != 0) return false;
+        functions[kNativeHookCount + i] = reinterpret_cast<std::uintptr_t>(symbol);
+    }
+    return true;
+}
 
 bool fail(const char* why) noexcept {
     __android_log_print(ANDROID_LOG_ERROR, kTag, "hook installation disabled: %s", why);
@@ -195,7 +230,8 @@ bool restorePages(Page* pages, std::size_t count, std::size_t pageSize) noexcept
 }
 
 bool rollback(Page* pages, std::size_t pageCount, std::size_t pageSize,
-              const std::uintptr_t* addresses, void* const* originals) noexcept {
+              const std::uintptr_t* addresses, void* const* originals,
+              std::size_t slotCount) noexcept {
     gActive.store(false, std::memory_order_release);
     bool complete = true;
     for (std::size_t p = 0; p < pageCount; ++p) {
@@ -207,7 +243,7 @@ bool rollback(Page* pages, std::size_t pageCount, std::size_t pageSize,
             }
             pages[p].writable = true;
         }
-        for (std::size_t i = 0; i < kSlotCount; ++i) {
+        for (std::size_t i = 0; i < slotCount; ++i) {
             if ((addresses[i] & ~(pageSize - 1)) == pages[p].address)
                 __atomic_store_n(reinterpret_cast<void**>(addresses[i]), originals[i], __ATOMIC_RELEASE);
         }
@@ -230,12 +266,15 @@ std::uintptr_t sceneAddress(std::uintptr_t offset) noexcept {
     return base && sum(base, offset, address) ? address : 0;
 }
 
-bool installHooks(HookBindings& bindings) noexcept {
+bool installHooks(HookBindings& bindings, bool diagnostic) noexcept {
+    const std::size_t hookCount = diagnostic ? kHookCount : kNativeHookCount;
+    const std::size_t slotCount = diagnostic ? kMaxSlotCount : kSlotCount;
     if (gInstalling.test_and_set(std::memory_order_acquire)) return fail("concurrent installation");
     struct Unlock { ~Unlock() { gInstalling.clear(std::memory_order_release); } } unlock;
     if (gAttempted) {
         if (!hooksActive()) return fail("previous installation did not complete; retry disallowed");
-        for (std::size_t i = 0; i < kHookCount; ++i)
+        if (diagnostic != gDiagnostic) return fail("different diagnostic mode");
+        for (std::size_t i = 0; i < hookCount; ++i)
             if (bindings.replacement[i] != gReplacement[i]) return fail("different replacement set");
         bindings.base = gBase.load(std::memory_order_acquire);
         Scene current;
@@ -245,8 +284,9 @@ bool installHooks(HookBindings& bindings) noexcept {
             gActive.store(false, std::memory_order_release);
             return fail("scene disappeared or reloaded; retry disallowed");
         }
-        for (std::size_t i = 0; i < kHookCount; ++i) bindings.orig[i] = originalFunction(static_cast<HookId>(i));
-        for (const auto& slot : kSlots) {
+        for (std::size_t i = 0; i < hookCount; ++i) bindings.orig[i] = originalFunction(static_cast<HookId>(i));
+        for (std::size_t i = 0; i < slotCount; ++i) {
+            const auto& slot = kSlots[i];
             auto** ptr = reinterpret_cast<void**>(bindings.base + slot.va);
             if (__atomic_load_n(ptr, __ATOMIC_ACQUIRE) != gReplacement[static_cast<std::size_t>(slot.id)]) {
                 gActive.store(false, std::memory_order_release);
@@ -256,7 +296,7 @@ bool installHooks(HookBindings& bindings) noexcept {
         return true;
     }
     gAttempted = true;
-    for (std::size_t i = 0; i < kHookCount; ++i)
+    for (std::size_t i = 0; i < hookCount; ++i)
         if (!bindings.replacement[i]) return fail("missing replacement");
     Scene scene;
     dl_iterate_phdr(findScene, &scene);
@@ -268,18 +308,26 @@ bool installHooks(HookBindings& bindings) noexcept {
         return fail("invalid runtime page size");
     const auto pageSize = static_cast<std::size_t>(pageValue);
     std::uintptr_t functions[kHookCount]{};
-    for (std::size_t i = 0; i < kHookCount; ++i) {
+    for (std::size_t i = 0; i < kNativeHookCount; ++i) {
         const auto& fn = kFunctions[i];
         if (!contains(scene, fn.va, fn.size, PF_R | PF_X) ||
             !addressOf(scene, fn.va, fn.size, functions[i]) ||
             hashCode(functions[i], fn.size) != fn.fnv)
             return fail("immutable function bytes differ");
     }
+    if (diagnostic) {
+        const auto faultIndex = static_cast<std::size_t>(HookId::NativeFault);
+        if (!contains(scene, kFaultFunction.va, kFaultFunction.size, PF_R | PF_X) ||
+            !addressOf(scene, kFaultFunction.va, kFaultFunction.size, functions[faultIndex]) ||
+            hashCode(functions[faultIndex], kFaultFunction.size) != kFaultFunction.fnv)
+            return fail("stock fault function bytes differ");
+        if (!resolveMediaFunctions(functions)) return fail("could not resolve genuine media API originals");
+    }
     Page pages[kMaxPages]{};
     std::size_t pageCount = 0;
-    std::uintptr_t addresses[kSlotCount]{};
-    void* originals[kSlotCount]{};
-    for (std::size_t i = 0; i < kSlotCount; ++i) {
+    std::uintptr_t addresses[kMaxSlotCount]{};
+    void* originals[kMaxSlotCount]{};
+    for (std::size_t i = 0; i < slotCount; ++i) {
         const auto& slot = kSlots[i];
         if ((slot.va & (alignof(void*) - 1)) ||
             !contains(scene, slot.va, sizeof(void*), PF_R | PF_W) ||
@@ -309,29 +357,30 @@ bool installHooks(HookBindings& bindings) noexcept {
         pages[p].writable = true;
     }
     // Recheck after protection changes before publishing originals or mutating slots.
-    for (std::size_t i = 0; i < kSlotCount; ++i) {
+    for (std::size_t i = 0; i < slotCount; ++i) {
         if (__atomic_load_n(reinterpret_cast<void**>(addresses[i]), __ATOMIC_ACQUIRE) != originals[i]) {
             if (!restorePages(pages, pageCount, pageSize)) fail("could not restore pages after pointer conflict");
             return fail("pointer changed during installation");
         }
     }
     bindings.base = scene.base;
+    gDiagnostic = diagnostic;
     gBase.store(scene.base, std::memory_order_release);
-    for (std::size_t i = 0; i < kHookCount; ++i) {
+    for (std::size_t i = 0; i < hookCount; ++i) {
         bindings.orig[i] = reinterpret_cast<void*>(functions[i]);
         gOriginal[i].store(bindings.orig[i], std::memory_order_release);
         gReplacement[i] = bindings.replacement[i];
     }
-    for (std::size_t i = 0; i < kSlotCount; ++i)
+    for (std::size_t i = 0; i < slotCount; ++i)
         __atomic_store_n(reinterpret_cast<void**>(addresses[i]),
                          bindings.replacement[static_cast<std::size_t>(kSlots[i].id)], __ATOMIC_RELEASE);
     if (!restorePages(pages, pageCount, pageSize)) {
-        rollback(pages, pageCount, pageSize, addresses, originals);
+        rollback(pages, pageCount, pageSize, addresses, originals, slotCount);
         return fail("could not restore target page protections");
     }
     gActive.store(true, std::memory_order_release);
     __android_log_print(ANDROID_LOG_INFO, kTag, "installed %zu data hooks for build %d on %zu-byte pages",
-                        kSlotCount, GXR_BUILD_CODE, pageSize);
+                        slotCount, GXR_BUILD_CODE, pageSize);
     return true;
 }
 

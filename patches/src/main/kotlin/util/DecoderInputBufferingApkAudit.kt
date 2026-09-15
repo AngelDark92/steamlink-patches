@@ -42,7 +42,7 @@ object DecoderInputBufferingApkAudit {
         val baseline = args.getOrNull(7)?.let { File(it).canonicalFile }
         require(archive.isFile && input.isFile)
         require(isDecoderInputBufferingBuild(version, code)) { "Unsupported exact APK pair" }
-        require(mode in setOf("observe", "buffered"))
+        require(mode in setOf("observe", "buffered", "observe-telemetry", "buffered-telemetry"))
         require(selection in setOf("baseline", "standalone", "bundle-first", "decoder-first"))
         val usesBundle = selection != "standalone"
         if (selection in setOf("bundle-first", "decoder-first")) require(baseline?.isFile == true)
@@ -157,7 +157,7 @@ object DecoderInputBufferingApkAudit {
         ZipFile(reference).use { original -> ZipFile(output).use { patched ->
             val expectedScene = patchDecoderInputBufferingDependency(original.bytes(SCENE), version, code)
             check(patched.bytes(SCENE).contentEquals(expectedScene)) { "Scene differs from decoder-only change to reference" }
-            val resource = "/steamlink/decoder/libgxr_dbuf_$code.so"
+            val resource = app.template.patches.steamlink.binary.decoderHelperResource(code, mode)
             val expectedHelper = requireNotNull(DecoderInputBufferingApkAudit::class.java.getResourceAsStream(resource))
                 .use { configureDecoderInputBufferingHelper(it.readBytes(), mode) }
             check(patched.bytes(HELPER).contentEquals(expectedHelper)) { "Packaged native helper/config mismatch" }

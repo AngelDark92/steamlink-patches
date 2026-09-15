@@ -6,7 +6,9 @@
 namespace gxr::dbuf {
 
 enum class HookId : std::size_t {
-    Acquire, Submit, Init, Flush, Stop, Destructor, Periodic, AcceptPacket, Count
+    Acquire, Submit, Init, Flush, Stop, Destructor, Periodic, AcceptPacket,
+    DequeueInput, QueueInput, DequeueOutput, ReleaseOutput, AcquireLatestImage,
+    ImageTimestamp, NativeFault, Count
 };
 inline constexpr std::size_t kHookCount = static_cast<std::size_t>(HookId::Count);
 
@@ -20,7 +22,9 @@ struct HookBindings {
 // All originals are published before any pointer changes. Wrappers must delegate
 // to originalFunction() while hooksActive() is false. This also keeps the stock
 // behavior available if an OS protection failure prevents complete rollback.
-bool installHooks(HookBindings& bindings) noexcept;
+// Diagnostic API wrappers must not take the input helper mutex: output callbacks
+// hold the stock codec shared lock, while Stop/Flush wait for its exclusive lock.
+bool installHooks(HookBindings& bindings, bool diagnostic = false) noexcept;
 bool hooksActive() noexcept;
 void* originalFunction(HookId id) noexcept;
 std::uintptr_t sceneAddress(std::uintptr_t offset) noexcept;
