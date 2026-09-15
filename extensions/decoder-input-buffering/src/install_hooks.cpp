@@ -1,4 +1,5 @@
 #include "install_hooks.h"
+#include "fec_guard_compat.h"
 
 #include <android/log.h>
 #include <atomic>
@@ -24,7 +25,9 @@ struct Function { std::uintptr_t va; std::size_t size; std::uint64_t fnv; };
 struct Slot { std::uintptr_t va; HookId id; };
 
 // Generated from actual function bytes recorded by decoder-hook-layouts.json.
-// FNV checks immutable code here; the APK installer also checks SHA-256.
+// FNV checks complete code here; the APK installer also checks SHA-256.
+// AcceptPacket alone permits the exact duplicate-guard instruction, normalized
+// to stock before the complete function is checked.
 #if GXR_BUILD_CODE == 5002322
 constexpr unsigned char kBuildId[20] = {
     0x58,0x5d,0x88,0xd6,0x46,0xa8,0xc6,0xef,0xe9,0x4b,
@@ -311,8 +314,12 @@ bool installHooks(HookBindings& bindings, bool diagnostic) noexcept {
     for (std::size_t i = 0; i < kNativeHookCount; ++i) {
         const auto& fn = kFunctions[i];
         if (!contains(scene, fn.va, fn.size, PF_R | PF_X) ||
-            !addressOf(scene, fn.va, fn.size, functions[i]) ||
-            hashCode(functions[i], fn.size) != fn.fnv)
+            !addressOf(scene, fn.va, fn.size, functions[i]))
+            return fail("immutable function bytes differ");
+        const auto checksum = i == static_cast<std::size_t>(HookId::AcceptPacket)
+            ? normalizedFecPacketHash(reinterpret_cast<const unsigned char*>(functions[i]), fn.size)
+            : hashCode(functions[i], fn.size);
+        if (checksum != fn.fnv)
             return fail("immutable function bytes differ");
     }
     if (diagnostic) {

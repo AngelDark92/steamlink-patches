@@ -4,7 +4,9 @@ These tools capture an already-running USB-authorized Android device and analyze
 
 ## Capture
 
-Current experiment: [UDP receive buffer](EXPERIMENT-2026-09-15-udp-receive-buffer.md). Before recommending another change, read the [tried-experiment ledger](TRIED-EXPERIMENTS.md), including the user's unsuccessful `asyncSend=true` test.
+Current finding: [UDP 8 MiB trial failed; freezes worsened](UDP-RESULTS-2026-09-15.md). Before recommending another change, read the [tried-experiment ledger](TRIED-EXPERIMENTS.md), including the unsuccessful UDP increase, decoder staging, and `asyncSend=true` tests.
+
+Next trial: [FEC duplicate reservation guard implementation and selection](EXPERIMENT-2026-09-15-fec-duplicate-reservation.md), separate from bundles and used with stock UDP plus current Observe pipeline telemetry. Headset effectiveness remains pending. The [original proposal](RECOVERY-PATCH-PROPOSAL-2026-09-15.md) retains native reasoning, PC-side recovery findings and a separate legacy-transport candidate; those host/transport candidates are not included in this patch.
 
 From the `steamlink-patches` directory, with the headset connected and streaming:
 
@@ -24,6 +26,8 @@ python diagnostics/steamlink-hitches/capture_live.py `
 - Captures can contain private app logs, device identifiers, and local network information. Raw artifacts belong under ignored `build/`, not source control.
 
 ## Analyze memory and logs
+
+For completed fine socket captures, use `analyze_udp_counters.py COUNTERS_FILE --uid CURRENT_PACKAGE_UID --port 10400 --output NEW_DIRECTORY`. Read the current package UID; reinstalling can change it. The parser requires the successful collector's `result.json`, preserves exact counter deltas, and excludes missing/ambiguous sockets and changed identities. `--self-test` exercises parsing and reset handling. Socket accounting does not measure packet age or effective receive-buffer capacity.
 
 ```powershell
 python diagnostics/steamlink-hitches/summarize_capture.py build/hitch-capture-NEW-RUN

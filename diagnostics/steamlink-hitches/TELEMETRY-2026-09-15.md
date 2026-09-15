@@ -1,5 +1,7 @@
 # Decoder pipeline telemetry v2 — 2026-09-15
 
+**Current FEC trial revision:** use the [FEC guard deliverable and selection](EXPERIMENT-2026-09-15-fec-duplicate-reservation.md). Its rebuilt pipeline helpers accept the guard and add post-Periodic marker snapshots plus packet-context acquisition observations. The original v2 archive described below is historical and cannot be combined with the new guard. Existing live evidence below concerns earlier helper hashes; current helper activation remains pending.
+
 ## Why this exists
 
 The user still experienced whole-view freezes with Decoder input buffering v1. USB inspection of the installed **2.0.23/5002363** APK confirmed the exact v1 Buffered helper: SHA-256 `fc8934f90c96aef04c36117ab3ac9677e7d8f5755701d030e6e9d019ac50cd1b`, mode 1, successful hook activation. V1 is **tried, not a proven fix**. Do not propose the same staging change again as though it were untested.
@@ -88,7 +90,7 @@ At initial publication the v2 APK had **not** been installed or tested on the he
 
 User installation is now verified on **2.0.23/5002363**, mode 2, exact configured helper hash, all 18 hooks active, buffering disabled. The first and follow-up traces contain 306,058 and 136,871 GXR2 events. They directly expose input reservations, reset recovery and **UDP receive-buffer overflow at the app socket**. The finer capture attributes 3,793 dropped packets to that socket, including 971 during an output-gap interval without a decoder-input timeout or flush.
 
-See [Observe results and exact next patch candidate](OBSERVE-RESULTS-2026-09-15.md) for timings, limitations, native addresses on both supported builds, and the 1→8 MiB receive-buffer experiment. No socket patch was applied during that capture. The subsequently user-authorized [UDP patch is now built and APK-validated](EXPERIMENT-2026-09-15-udp-receive-buffer.md), with headset testing pending. Buffered v1 remains tried and insufficient; ADB was stopped after capture.
+See [Observe results and the historical patch candidate](OBSERVE-RESULTS-2026-09-15.md) for timings, limitations, native addresses on both supported builds, and the 1→8 MiB receive-buffer experiment. No socket patch was applied during that capture. The subsequent [UDP live trial failed and worsened freezes](UDP-RESULTS-2026-09-15.md); it is no longer recommended. Buffered v1 remains tried and insufficient; ADB was stopped after capture.
 
 The [Android XR and cross-PC follow-up](XR-HOST-COMPARISON-2026-09-15.md) checks the compositor through all 19 measured output gaps, live Android routing/thermal state, actual 2.0.20 transport/decoder differences, and historical/current host evidence. XR presentation continues through those gaps. The legacy transport's 24 MiB request versus the newer transport's 1 MiB request is a version-specific lead; host timing and receiver headroom remain unresolved contributors.
 

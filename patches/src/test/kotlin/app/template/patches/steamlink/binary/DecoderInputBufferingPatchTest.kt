@@ -18,6 +18,36 @@ import kotlin.test.assertTrue
 
 class DecoderInputBufferingPatchTest {
     @Test
+    fun fec_guard_accepts_only_current_pipeline_helpers_for_the_exact_base() {
+        for (code in listOf("5002322", "5002363")) {
+            for (mode in decoderModes.values) {
+                val payload = requireNotNull(javaClass.getResourceAsStream(decoderHelperResource(code, mode)))
+                    .use { it.readBytes() }
+                val helper = configureDecoderInputBufferingHelper(payload, mode)
+                if (mode.endsWith("-telemetry")) {
+                    validateFecDuplicateReservationGuardDecoderHelper(helper, code)
+                    assertFailsWith<PatchException> {
+                        validateFecDuplicateReservationGuardDecoderHelper(helper,
+                            if (code == "5002322") "5002363" else "5002322")
+                    }
+                    assertFailsWith<PatchException> {
+                        validateFecDuplicateReservationGuardDecoderHelper(helper.copyOf().apply {
+                            this[lastIndex] = (this[lastIndex].toInt() xor 1).toByte()
+                        }, code)
+                    }
+                    // A v2 helper configured in a plain mode is not an accepted combination either.
+                    assertFailsWith<PatchException> {
+                        validateFecDuplicateReservationGuardDecoderHelper(
+                            configureDecoderInputBufferingHelper(payload, "observe"), code)
+                    }
+                } else {
+                    assertFailsWith<PatchException> { validateFecDuplicateReservationGuardDecoderHelper(helper, code) }
+                }
+            }
+        }
+    }
+
+    @Test
     fun standalone_patch_has_exact_experimental_targets_and_no_bundle_membership() {
         val patch = decoderInputBufferingPatch
         assertEquals("Decoder input buffering (experimental)", patch.name)

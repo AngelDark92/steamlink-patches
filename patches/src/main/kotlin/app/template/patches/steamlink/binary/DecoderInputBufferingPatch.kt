@@ -17,8 +17,8 @@ private val decoderPayloadHashes = mapOf(
     "5002363" to "fc8934f90c96aef04c36117ab3ac9677e7d8f5755701d030e6e9d019ac50cd1b",
 )
 private val decoderTelemetryPayloadHashes = mapOf(
-    "5002322" to "32f53c049ae984814cc7f6951ebc486a9f081b758d81e5259daaf0ed0923abc7",
-    "5002363" to "e15dee330970891091320286c2d1db80f1e637a05aee4d2d130fd4dadba94448",
+    "5002322" to "202a84fd1211f3e2816ba1e0c01de27be9e11f0be7ac323b172ad7e6bc87852b",
+    "5002363" to "027a00121ad19b2a48eaa9331dac15864c74e07f3e2099bea6936e1f0a8691d7",
 )
 internal val decoderModes = mapOf("Observe" to "observe", "Buffered" to "buffered",
     "Observe + pipeline telemetry" to "observe-telemetry", "Buffered + pipeline telemetry" to "buffered-telemetry")
@@ -170,10 +170,13 @@ internal fun patchDecoderInputBufferingDependency(
         .chunked(2).map { it.toInt(16).toByte() }.toByteArray()
     decoderRequire(bytes.copyOfRange(0x2d0, 0x2d0 + note.size).contentEquals(note),
         "GNU build ID does not match $version/$code")
+    // Accept only the separately selectable FEC guard's exact instruction.
+    // Hash a normalized copy; never undo the guard in the output library.
+    val normalized = normalizeFecDuplicateReservationGuardInstruction(bytes, version, code)
     layout.regions.forEach { region ->
         decoderRequire(elf.fileOffset(region.offset.toLong(), region.size, executable = true) == region.offset,
             "decoder function mapping changed at 0x${region.offset.toString(16)}")
-        decoderRequire(bytes.copyOfRange(region.offset, region.offset + region.size).decoderHash() == region.sha256,
+        decoderRequire(normalized.copyOfRange(region.offset, region.offset + region.size).decoderHash() == region.sha256,
             "stock decoder function changed at 0x${region.offset.toString(16)} for $version/$code")
     }
     val dependencies = elf.neededEntries().filter { it.first in setOf(STOCK_MEDIA_LIBRARY, DECODER_BUFFER_LIBRARY) }
@@ -222,6 +225,18 @@ internal fun verifyDecoderInputBufferingPayload(bytes: ByteArray, code: String, 
         "native payload hash does not match the compiled helper for $code")
 }
 
+/** Old helpers hash the stock packet function and cannot hook the FEC guard. */
+internal fun validateFecDuplicateReservationGuardDecoderHelper(bytes: ByteArray, code: String) {
+    val resource = decoderHelperResource(code, "observe-telemetry")
+    val payload = (object {}.javaClass.getResourceAsStream(resource)
+        ?: throw PatchException("Missing bundled decoder input helper: $resource")).use { it.readBytes() }
+    verifyDecoderInputBufferingPayload(payload, code, telemetry = true)
+    decoderRequire(listOf("observe-telemetry", "buffered-telemetry").any {
+        bytes.contentEquals(configureDecoderInputBufferingHelper(payload, it))
+    }, "FEC duplicate reservation guard requires this release's pipeline telemetry helper. " +
+        "Start from the original APK and select Observe + pipeline telemetry, or omit Decoder input buffering.")
+}
+
 @Suppress("unused")
 val decoderInputBufferingPatch = rawResourcePatch(
     name = "Decoder input buffering (experimental)",
@@ -255,6 +270,9 @@ val decoderInputBufferingPatch = rawResourcePatch(
             .use { it.readBytes() }
         verifyDecoderInputBufferingPayload(payload, code, selectedMode.endsWith("-telemetry"))
         val helper = configureDecoderInputBufferingHelper(payload, selectedMode)
+        if (!original.contentEquals(normalizeFecDuplicateReservationGuardInstruction(original, version, code))) {
+            validateFecDuplicateReservationGuardDecoderHelper(helper, code)
+        }
         val helperFile = get("lib/arm64-v8a/$DECODER_BUFFER_LIBRARY")
         if (helperFile.exists()) {
             val existing = helperFile.readBytes()

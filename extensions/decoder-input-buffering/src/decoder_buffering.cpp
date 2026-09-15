@@ -55,6 +55,73 @@ void* codecForFec(void* fec) {
 }
 bool buffered() { return (gxr_decoder_buffering_config.mode & 1) == 1; }
 bool diagnostic() { return gxr_decoder_buffering_config.mode >= 2; }
+constexpr uintptr_t AcceptPacketPeriodicReturn = GXR_BUILD_CODE == 5002363 ? 0x167f4c : 0x167080;
+#ifdef GXR_DBUF_HOST_TEST
+uintptr_t testPeriodicReturnAddress = 0;
+using FecEventObserver = void (*)(const char*, int64_t, int64_t, int64_t, int64_t);
+FecEventObserver testFecEventObserver = nullptr;
+#endif
+void fecEvent(const char* name, int64_t frame, int64_t a, int64_t b, int64_t c) {
+    gxr::pipeline::event(name, frame, a, b, c);
+#ifdef GXR_DBUF_HOST_TEST
+    if (testFecEventObserver) testFecEventObserver(name, frame, a, b, c);
+#endif
+}
+struct PacketDiagnosticContext {
+    void* fec;
+    uint16_t frame;
+    uint64_t acquires = 0, snapshots = 0;
+    unsigned candidateFlags = 0;
+};
+thread_local PacketDiagnosticContext* packetDiagnosticContext = nullptr;
+struct PacketDiagnosticScope {
+    PacketDiagnosticContext context{};
+    PacketDiagnosticContext* previous = nullptr;
+    bool active;
+    PacketDiagnosticScope(void* fec, void* packet) : active(diagnostic() && fec && packet) {
+        if (!active) return;
+        context.fec = fec;
+        context.frame = read<uint16_t>(packet, 2);
+        previous = packetDiagnosticContext;
+        packetDiagnosticContext = &context;
+    }
+    ~PacketDiagnosticScope() {
+        if (!active) return;
+        packetDiagnosticContext = previous;
+        if (context.candidateFlags)
+            fecEvent("fecPacketOutcome", context.frame, context.candidateFlags,
+                     context.acquires, context.snapshots);
+    }
+    PacketDiagnosticScope(const PacketDiagnosticScope&) = delete;
+    PacketDiagnosticScope& operator=(const PacketDiagnosticScope&) = delete;
+};
+void snapshotAfterPacketPeriodic(void* fec, uintptr_t caller) {
+    auto* context = packetDiagnosticContext;
+    if (!diagnostic() || !context || context->fec != fec ||
+        caller != hooks.base + AcceptPacketPeriodicReturn) return;
+    ++context->snapshots;
+    const size_t slot = context->frame & 127;
+    const auto accepted = read<uint32_t>(fec, 0x11c + 4 * slot);
+    const auto submitted = read<uint32_t>(fec, 0x920 + 4 * slot);
+    auto* rx = read<void*>(fec, 0x98 + 8 * (context->frame & 15));
+    const unsigned flags = (read<uint8_t>(rx, 0xc) ? 1u : 0u) |
+        (accepted == context->frame ? 2u : 0u) | (submitted == context->frame ? 4u : 0u);
+    if (!(flags & 6u)) return;
+    context->candidateFlags = flags;
+    // This is a marker-state observation, not proof that an early guard returned.
+    fecEvent("fecDuplicateCandidate", context->frame, flags, accepted, submitted);
+}
+void snapshotFecAcquire(void* codec, uint32_t frame) {
+    if (!diagnostic()) return;
+    auto* fec = fecForCodec(codec);
+    auto* context = packetDiagnosticContext;
+    const bool classified = fec && context && context->fec == fec;
+    if (classified) ++context->acquires;
+    const size_t slot = frame & 127;
+    const int64_t accepted = fec ? int64_t(read<uint32_t>(fec, 0x11c + 4 * slot)) : -1;
+    const int64_t submitted = fec ? int64_t(read<uint32_t>(fec, 0x920 + 4 * slot)) : -1;
+    fecEvent("fecAcquireState", frame, accepted, submitted, classified ? int64_t(context->frame) : -1);
+}
 enum class FaultReason : size_t { StagingCapacity, NullData, UnownedPointer, StaleGeneration,
     NegativeSize, Oversize, CodecUnavailable, CodecGeneration, CodecCapacity, CodecSubmit, Count };
 const char* reasonName(FaultReason reason) {
@@ -147,6 +214,7 @@ uint8_t* acquire(void* codec, uint32_t frame, size_t* capacity) {
     gxr::pipeline::Scope span("assemblyAcquire", frame);
     std::unique_lock<std::recursive_mutex> lock(mutex(), std::defer_lock);
     { gxr::pipeline::Scope wait("acquireLockWait", frame); lock.lock(); }
+    snapshotFecAcquire(codec, frame);
     auto s = state(codec);
     ++s->acquires;
     s->lastAcquireFrame = frame;
@@ -262,10 +330,16 @@ void destroy(void* codec) {
 }
 void periodic(void* fec) {
     if (!gxr::dbuf::hooksActive()) { original<VoidFn>(HookIndex::Periodic)(fec); return; }
+#ifdef GXR_DBUF_HOST_TEST
+    const uintptr_t caller = testPeriodicReturnAddress;
+#else
+    const uintptr_t caller = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+#endif
     if (!buffered()) {
         if (diagnostic() && __atomic_load_n(static_cast<uint8_t*>(fec) + 0xc50, __ATOMIC_RELAXED))
             gxr::pipeline::event("periodicFault");
         original<VoidFn>(HookIndex::Periodic)(fec);
+        snapshotAfterPacketPeriodic(fec, caller);
         return;
     }
     // A timeout from another transfer thread can enter here. A pre-read of the
@@ -276,6 +350,7 @@ void periodic(void* fec) {
     if (diagnostic() && __atomic_load_n(static_cast<uint8_t*>(fec) + 0xc50, __ATOMIC_RELAXED))
         gxr::pipeline::event("periodicFault");
     original<VoidFn>(HookIndex::Periodic)(fec);
+    snapshotAfterPacketPeriodic(fec, caller);
     auto it = states().find(codecForFec(fec));
     if (it == states().end() || !buffered() || it->second->pinned) return;
     auto& s = *it->second;
@@ -295,7 +370,12 @@ void periodic(void* fec) {
     report(s, "periodic");
 }
 void acceptPacket(void* fec, void* packet) {
-    if (!gxr::dbuf::hooksActive() || !buffered()) {
+    if (!gxr::dbuf::hooksActive()) {
+        original<PacketFn>(HookIndex::AcceptPacket)(fec, packet);
+        return;
+    }
+    PacketDiagnosticScope diagnostics(fec, packet);
+    if (!buffered()) {
         original<PacketFn>(HookIndex::AcceptPacket)(fec, packet);
         return;
     }

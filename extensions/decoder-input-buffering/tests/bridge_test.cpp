@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <condition_variable>
 #include <exception>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -30,6 +31,17 @@ constexpr size_t IndexOffset = GXR_BUILD_CODE == 5002363 ? 0xd0 : 0xc8;
     throw std::runtime_error("line " + std::to_string(line) + ": " + expression);
 }
 #define CHECK(expression) do { if (!(expression)) test::fail(#expression, __LINE__); } while (false)
+
+struct FecEvent { std::string name; int64_t frame, a, b, c; };
+std::vector<FecEvent> fecEvents;
+void observeFecEvent(const char* name, int64_t frame, int64_t a, int64_t b, int64_t c) {
+    fecEvents.push_back({name, frame, a, b, c});
+}
+std::vector<FecEvent> eventsNamed(const char* name) {
+    std::vector<FecEvent> result;
+    for (const auto& event : fecEvents) if (event.name == name) result.push_back(event);
+    return result;
+}
 
 struct Fixture;
 Fixture* current = nullptr;
@@ -88,10 +100,16 @@ struct Fixture {
     uint32_t acquiredFrame = 0, submittedFrame = 0;
     bool submittedMarker = false;
     int submittedBytes = -1;
+    std::function<void(void*, void*)> diagnosticPacketAction;
+    unsigned realPackets = 0;
 
     explicit Fixture(bool useBuffering = true) {
         CHECK(current == nullptr);
         CHECK(states().empty());
+        CHECK(packetDiagnosticContext == nullptr);
+        fecEvents.clear();
+        testFecEventObserver = &observeFecEvent;
+        testPeriodicReturnAddress = 0;
         current = this;
         testHooksEnabled = true;
         gxr_decoder_buffering_config.mode = useBuffering ? 1 : 0;
@@ -121,6 +139,8 @@ struct Fixture {
         states().clear();
         current = nullptr;
         testHooksEnabled = true;
+        testFecEventObserver = nullptr;
+        testPeriodicReturnAddress = 0;
     }
     template <class F> static void bind(HookIndex id, F function) {
         hooks.orig[static_cast<size_t>(id)] = reinterpret_cast<void*>(function);
@@ -250,6 +270,7 @@ void nativePeriodic(void* fec) {
         f.fec.put<uint8_t>(0xc50, 0);
         flush(f.codec.ptr());
         f.clearReferences(); // This happens after codec Flush returns.
+        for (auto& rx : f.rx) rx.put<uint8_t>(0xc, 0);
     }
 }
 void nativeFault(void* fec) {
@@ -261,6 +282,11 @@ void nativeFault(void* fec) {
 }
 void nativeAcceptPacket(void* fec, void* packet) {
     auto& f = *current;
+    ++f.realPackets;
+    if (f.diagnosticPacketAction) {
+        f.diagnosticPacketAction(fec, packet);
+        return;
+    }
     CHECK(fec == f.fec.ptr() && packet == &f);
     periodic(fec); // Stock packet entry checks errors before Initialize/Acquire.
     size_t capacity = 0;
@@ -277,6 +303,109 @@ void nativeAcceptPacket(void* fec, void* packet) {
         f.rx[23 & 15].put<uint8_t*>(0x30, staging);
         f.packetPublished = true;
     }
+}
+
+void duplicateSnapshotsFollowOriginalRecovery() {
+    Fixture f(false);
+    gxr_decoder_buffering_config.mode = 2;
+    constexpr uint16_t fid = 23;
+    Memory<8> packet;
+    packet.put<uint16_t>(2, fid);
+    f.fec.put<uint32_t>(0x920 + 4 * (fid & 127), fid);
+    f.rx[fid & 15].put<uint8_t>(0xc, 1);
+    nativeFault(f.fec.ptr());
+    f.diagnosticPacketAction = [&](void* fec, void*) {
+        CHECK(packetDiagnosticContext && packetDiagnosticContext->frame == fid);
+        testPeriodicReturnAddress = hooks.base + AcceptPacketPeriodicReturn;
+        periodic(fec);
+        const auto candidate = eventsNamed("fecDuplicateCandidate");
+        CHECK(candidate.size() == 1 && candidate[0].a == 4); // Flag already cleared by original.
+        size_t capacity = 0;
+        CHECK(acquire(f.codec.ptr(), fid, &capacity) == f.input.data());
+        CHECK(capacity == f.input.size());
+    };
+    acceptPacket(f.fec.ptr(), packet.ptr());
+    CHECK(packetDiagnosticContext == nullptr);
+    CHECK(f.realPackets == 1 && f.realPeriodics == 1 && f.realFlushes == 1 && f.realAcquires == 1);
+    const auto candidate = eventsNamed("fecDuplicateCandidate");
+    CHECK(candidate.size() == 1 && candidate[0].frame == fid && candidate[0].b == 0 && candidate[0].c == fid);
+    const auto acquired = eventsNamed("fecAcquireState");
+    CHECK(acquired.size() == 1 && acquired[0].frame == fid && acquired[0].c == fid);
+    const auto outcomes = eventsNamed("fecPacketOutcome");
+    CHECK(outcomes.size() == 1 && outcomes[0].a == 4 && outcomes[0].b == 1 && outcomes[0].c == 1);
+}
+
+void nestedPacketContextRestoresAndClassifiesOnlyMatchingFec() {
+    Fixture f(false);
+    gxr_decoder_buffering_config.mode = 2;
+    Memory<8> outer, inner;
+    Memory<0xc60> otherFec;
+    outer.put<uint16_t>(2, 41);
+    inner.put<uint16_t>(2, 42);
+    f.fec.put<uint32_t>(0x11c + 4 * 41, 41);
+    f.fec.put<uint32_t>(0x11c + 4 * 42, 42);
+    otherFec.put<uint32_t>(0x11c + 4 * 41, 77);
+    otherFec.put<uint32_t>(0x920 + 4 * 41, 88);
+    f.diagnosticPacketAction = [&](void* fec, void* packet) {
+        const auto fid = read<uint16_t>(packet, 2);
+        testPeriodicReturnAddress = hooks.base + AcceptPacketPeriodicReturn;
+        periodic(fec);
+        if (fid == 41) {
+            auto* saved = packetDiagnosticContext;
+            acceptPacket(fec, inner.ptr());
+            CHECK(packetDiagnosticContext == saved && packetDiagnosticContext->frame == 41);
+        }
+        size_t capacity = 0;
+        CHECK(acquire(f.codec.ptr(), fid, &capacity));
+        if (fid == 41) {
+            f.link.put<void*>(0x10, otherFec.ptr());
+            CHECK(acquire(f.codec.ptr(), fid, &capacity));
+            f.link.put<void*>(0x10, f.fec.ptr());
+        }
+    };
+    acceptPacket(f.fec.ptr(), outer.ptr());
+    CHECK(packetDiagnosticContext == nullptr);
+    CHECK(f.realPackets == 2 && f.realPeriodics == 2 && f.realAcquires == 3);
+    const auto acquired = eventsNamed("fecAcquireState");
+    CHECK(acquired.size() == 3);
+    CHECK(acquired[0].c == 42 && acquired[1].c == 41);
+    CHECK(acquired[2].c == -1 && acquired[2].a == 77 && acquired[2].b == 88);
+    const auto outcomes = eventsNamed("fecPacketOutcome");
+    CHECK(outcomes.size() == 2 && outcomes[0].frame == 42 && outcomes[1].frame == 41);
+    CHECK(outcomes[0].b == 1 && outcomes[1].b == 1 && outcomes[0].c == 1 && outcomes[1].c == 1);
+}
+
+void diagnosticSnapshotsExcludeOtherPeriodicCallsAndNonCandidates() {
+    Fixture f(false);
+    gxr_decoder_buffering_config.mode = 2;
+    Memory<8> packet;
+    packet.put<uint16_t>(2, 9);
+    f.fec.put<uint32_t>(0x920 + 4 * 9, 9);
+    testPeriodicReturnAddress = hooks.base + AcceptPacketPeriodicReturn;
+    periodic(f.fec.ptr()); // Correct address, no packet context: no snapshot.
+    CHECK(fecEvents.empty());
+    f.diagnosticPacketAction = [&](void* fec, void*) {
+        testPeriodicReturnAddress = hooks.base + AcceptPacketPeriodicReturn + 4;
+        periodic(fec); // Packet context, wrong return address: no snapshot.
+        CHECK(packetDiagnosticContext->snapshots == 0);
+        testPeriodicReturnAddress = hooks.base + AcceptPacketPeriodicReturn;
+        Memory<0xc60> other;
+        snapshotAfterPacketPeriodic(other.ptr(), testPeriodicReturnAddress);
+        CHECK(packetDiagnosticContext->snapshots == 0);
+        f.fec.put<uint32_t>(0x920 + 4 * 9, 10);
+        periodic(fec); // Exact callsite with no marker match: no candidate/outcome.
+        CHECK(packetDiagnosticContext->snapshots == 1);
+    };
+    acceptPacket(f.fec.ptr(), packet.ptr());
+    CHECK(fecEvents.empty() && f.realPackets == 1 && f.realPeriodics == 3);
+    // Plain Observe must not attach any diagnostic packet context.
+    gxr_decoder_buffering_config.mode = 0;
+    f.diagnosticPacketAction = [&](void* fec, void*) {
+        CHECK(packetDiagnosticContext == nullptr);
+        periodic(fec);
+    };
+    acceptPacket(f.fec.ptr(), packet.ptr());
+    CHECK(fecEvents.empty() && packetDiagnosticContext == nullptr);
 }
 
 void installBindings() {
@@ -537,6 +666,9 @@ int main() {
         {"invalid ownership and size", test::invalidInputRejectsWithoutNativeAcquisition},
         {"destructor erases state", test::destructorErasesStateAfterOriginal},
         {"timeout serializes with packet publication", test::timeoutCannotRacePacketPublication},
+        {"duplicate snapshot follows original recovery", test::duplicateSnapshotsFollowOriginalRecovery},
+        {"nested packet context and matching FEC classification", test::nestedPacketContextRestoresAndClassifiesOnlyMatchingFec},
+        {"exclude unrelated periodic calls and non-candidates", test::diagnosticSnapshotsExcludeOtherPeriodicCallsAndNonCandidates},
     };
     for (const auto& item : cases) {
         try {

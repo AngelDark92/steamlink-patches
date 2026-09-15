@@ -27,6 +27,9 @@ RESULT_FIELDS = {
     'helperFault': ('reason_code', 'bytes', 'capacity'),
     'faultGeneration': ('entry_generation', 'current_generation', 'fec_already_faulted'),
     'nativeFault': ('scene_return_address', 'unused_b', 'unused_c'),
+    'fecDuplicateCandidate': ('flags', 'accepted_marker', 'submitted_attempt_marker'),
+    'fecPacketOutcome': ('candidate_flags', 'context_acquisitions', 'candidate_snapshots'),
+    'fecAcquireState': ('accepted_marker', 'submitted_attempt_marker', 'packet_context_frame_id'),
 }
 
 
@@ -46,6 +49,9 @@ def parse_gxr2(name):
             result['fault_reason'] = FAULT_REASONS[reason] if 0 <= reason < len(FAULT_REASONS) else 'unknown'
         if stage == 'nativeFault':
             result['scene_return_address_hex'] = hex(values[0])
+        if stage == 'fecDuplicateCandidate':
+            result['candidate_state'] = dict(descriptor_present=bool(values[0] & 1),
+                accepted_match=bool(values[0] & 2), submitted_attempt_match=bool(values[0] & 4))
     return result
 
 
@@ -94,6 +100,8 @@ def diagnostic_exports(events):
                                                         if 'scene_return_address_hex' in event)),
         'interpretation': 'CompleteSubmit entry observes a completed-frame submission attempt; '
                           'assemblyAcquire observes staging allocation, not first-packet arrival. '
+                          'FEC duplicate candidates are post-Periodic marker snapshots, not executed branch proof. '
+                          'Packet context -1 means other/unclassified acquisition; it does not identify a skipped-frame request. '
                           'No per-stage latency or physical presentation is inferred from grouping.',
     }, frames, faults
 

@@ -2,11 +2,11 @@
 
 ## Result
 
-Follow-up: the user-authorized [standalone UDP patch](EXPERIMENT-2026-09-15-udp-receive-buffer.md) is now built and APK-validated; its runtime outcome remains pending. The findings below describe the preceding unmodified-buffer capture. `asyncSend=true` is [recorded as tried and insufficient](TRIED-EXPERIMENTS.md).
+Follow-up: the [UDP 8 MiB live trial failed and worsened freezes](UDP-RESULTS-2026-09-15.md), despite 0 receive-buffer drops throughout its trace. This supersedes the proposed UDP experiment below. The findings below describe the preceding unmodified-buffer capture. UDP increase, decoder staging, and `asyncSend=true` are [recorded as unsuccessful](TRIED-EXPERIMENTS.md).
 
 **Steam Link's UDP receive socket drops packets around interrupted decoded-frame delivery.** The finer capture directly attributes 3,793 receive-buffer drops to the app's active socket. A sample interval overlapping a 161.755 ms output gap contains 971 drops; the gap has no decoder-input timeout, codec flush, or queue error. Decoder staging alone cannot prevent this failure mode; the earlier Buffered v1 capture also contains receive-buffer overflows.
 
-The next justified experiment is increasing the active VR transport's requested receive buffer from **1 MiB to 8 MiB**, separately selectable and outside bundles. This is a candidate mitigation for finite receive pauses, **not an implemented or runtime-proven fix**. The initial cause of insufficient draining/bursty arrival and the precise post-flush ownership defect remain unresolved.
+At the time of this capture, the proposed next experiment was increasing the active VR transport's requested receive buffer from **1 MiB to 8 MiB**, separately selectable and outside bundles. That experiment has now failed; it is no longer recommended. The initial cause of insufficient draining/bursty arrival and the precise post-flush ownership defect remain unresolved.
 
 ## Verified running configuration
 

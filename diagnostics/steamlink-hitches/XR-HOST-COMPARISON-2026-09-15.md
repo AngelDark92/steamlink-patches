@@ -2,7 +2,7 @@
 
 ## Current conclusion
 
-**User outcome update:** `asyncSend=true` was already tested and did **not** solve the freezes. It is no longer an untried recommendation. See the [tried-experiment ledger](TRIED-EXPERIMENTS.md). The user-authorized [UDP receive-buffer patch is built and APK-validated](EXPERIMENT-2026-09-15-udp-receive-buffer.md); its headset result is pending.
+**Latest outcome:** `asyncSend=true` did **not** solve the freezes. The subsequent **UDP 8 MiB trial also failed and worsened the freezes** on verified 2.0.23/5002363: 46 decoded gaps/120 s, longest 3.065 s, 300 decoder flushes, with 0 app socket drops throughout the trace. [New live evidence and rollback guidance](UDP-RESULTS-2026-09-15.md) supersede the earlier UDP recommendation below. See the [tried-experiment ledger](TRIED-EXPERIMENTS.md). The paired-archive assessment below remains historical evidence, not proof of a working remedy.
 
 The evidence supports a **new-client transport problem whose severity depends on the host**, rather than an Android XR compositor freeze or an established RTX 5090/14900K hardware fault.
 

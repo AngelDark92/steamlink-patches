@@ -6,9 +6,9 @@ The user authorized a separate UDP buffer experiment after confirming that `asyn
 
 **UDP receive buffer (experimental)** requests **8 MiB instead of 1 MiB** for `SVLDataLinkTransferUDP`'s VR receive socket. It is default-off, has no dependencies or options, and is not part of any recommended bundle. Supported exact pairs: **2.0.22/5002322** and **2.0.23/5002363**. Other builds retain their existing adaptations; this patch's mutation body returns unchanged on excluded builds before accessing the library.
 
-Runtime outcome: **pending user installation/testing**. Static or APK validation does not prove that Android accepted the requested capacity or that freezes improve.
+Runtime outcome: **failed trial on exact 2.0.23/5002363; freezes became worse and longer**. Installed bytes and Observe v2 were verified. The new 120 s trace has 46 decoded gaps >50 ms (previously 12), maximum 3.065 s (previously 1.804 s), and 300 codec flushes (previously 10), despite 0 app receive-buffer drops throughout the trace. See [live findings and rollback guidance](UDP-RESULTS-2026-09-15.md). Do not recommend this increase again as an untried fix. The exact 2.0.22/5002322 runtime outcome remains untested.
 
-## Use
+## Historical trial selection; use the live report for rollback
 
 Import the current UDP experiment MPP produced by [Build-UdpExperiment.ps1](Build-UdpExperiment.ps1). Select:
 
