@@ -1,3 +1,39 @@
+## [1.18.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.4...v1.18.0-dev.5) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* triggered build ([de94b1d](https://github.com/AngelDark92/steamlink-patches/commit/de94b1dad0574ce39dc10ef912b6f0019303ce7b))
+
+## [1.18.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.3...v1.18.0-dev.4) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* Add UDP receive buffer patch and audit utility ([a96073b](https://github.com/AngelDark92/steamlink-patches/commit/a96073b9d8c02b0ad6c01a56cab584cf9fdc7415))
+
+## [1.18.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.2...v1.18.0-dev.3) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* telemetry patch ([21f6d68](https://github.com/AngelDark92/steamlink-patches/commit/21f6d6817d63bffbc2620cb5315ce9434ce9294e))
+
+## [1.18.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.1...v1.18.0-dev.2) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* align Android packaging dependencies and improve verification steps ([119b0e1](https://github.com/AngelDark92/steamlink-patches/commit/119b0e12a005d34a7eabcb92582242fe8a0b0323))
+
+## [1.18.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.17.0...v1.18.0-dev.1) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* build gradle ([42372a1](https://github.com/AngelDark92/steamlink-patches/commit/42372a12d2288d03470a8a18f74431111fbf78be))
+* build gradle fix ([c50825f](https://github.com/AngelDark92/steamlink-patches/commit/c50825f0c2d9efc365b11a69c81f958249ba91aa))
+* Complete Cleanup ([f420521](https://github.com/AngelDark92/steamlink-patches/commit/f420521e03af75152e69a5326d3f0682cd989922))
+
+### ✨ New Features
+
+* experimental buffering patch for 2.0.22 and 2.0.23 ([4449a8f](https://github.com/AngelDark92/steamlink-patches/commit/4449a8f92a9de11adc5dccaee69bac025f1bf9e6))
+
 ## [1.17.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.16.0...v1.17.0) (2026-09-15)
 
 ### 🐛 Bug Fixes
