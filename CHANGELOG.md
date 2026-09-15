@@ -1,3 +1,9 @@
+## [1.17.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.16.0...v1.17.0-dev.1) (2026-09-15)
+
+### ✨ New Features
+
+* patches now compatible with version 2.0.23-5002363 ([7dc8349](https://github.com/AngelDark92/steamlink-patches/commit/7dc8349bddc90c895dcca7391c5d53667931752f))
+
 ## [1.16.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.15.0...v1.16.0) (2026-09-13)
 
 ### 🐛 Bug Fixes
