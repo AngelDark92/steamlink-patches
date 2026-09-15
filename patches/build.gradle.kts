@@ -200,7 +200,7 @@ tasks {
         classpath = sourceSets["main"].runtimeClasspath
         mainClass.set("util.VideoOutputAbGeneratorKt")
         args(
-            project.layout.projectDirectory.dir("../android-steamlinkvr-release-base-2.0.22-5002244").asFile.absolutePath,
+            project.layout.projectDirectory.dir("../decoded-apk-android-steamlinkvr-release-base-2.0.22-5002244").asFile.absolutePath,
             rootProject.layout.buildDirectory.dir("video-output-ab-5002244").get().asFile.absolutePath,
         )
     }

@@ -33,6 +33,14 @@ AppTarget(
 - Keep generated catalogs and tests synchronized with source compatibility. Report Gradle/static validation separately from actual Morphe APK patching, installation, ADB, headset, and SteamVR runtime proof.
 - Analysis reconstructions and malformed/hybrid APK extractions are evidence sources, not installable or byte-for-byte pristine APKs. Do not claim an end-to-end patching result without a pristine source APK.
 
+## Local artifact lifecycle
+
+- Apply the parent workspace's required cleanup rule whenever an experiment ends or a patch is finalized/applied. Keep a dated tried/retired record and validation evidence, then delete obsolete experiment APKs, bundles, decoded derivatives, compiler output, and stale source/resource copies.
+- Canonical patch code and payloads are under `patches/src/main`; do not create or use `patches/bin` as another source tree. Keep generated CMake build trees out of Git.
+- GitHub release workflows build Morphe bundles and catalogs; they do not currently regenerate the native `.so` payloads. Preserve source resource binaries, tracked release catalogs/docs, exact decoded bases, fixture APKs, and tools required by local audit scripts.
+- Root `build/` mixes disposable output with required `decoded-fixture-apks`, tool dependencies, and unique diagnostic evidence. Classify children individually; retain current captures and compact historical reports. Never delete it wholesale.
+- See `WORKSPACE_CLEANUP.md` for audited ownership, recovery commands, retained exceptions, and the dated cleanup record.
+
 ## Official Morphe references
 
 - Multi-version `AppTarget` example: https://github.com/MorpheApp/morphe-patcher/blob/v1.9.0-dev.1/docs/2_2_patch_anatomy.md#L12-L37

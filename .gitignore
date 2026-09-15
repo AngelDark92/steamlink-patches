@@ -65,6 +65,8 @@ hs_err_pid*
 
 # CMake
 cmake-build-*/
+patches/bin/
+extensions/resolution-trace-layer/build-*/
 extensions/controller-velocity-layer/build-*/
 .android-sdk/
 
