@@ -8,6 +8,7 @@ import app.template.patches.steamlink.galaxyXrRecommended5002363Patch
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import org.junit.Assume.assumeTrue
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -96,12 +97,11 @@ class DecoderInputBufferingPatchTest {
     fun production_helpers_change_only_dependency_string_and_reapply_idempotently() {
         val availableRoot = generateSequence(File(System.getProperty("user.dir")).absoluteFile) { it.parentFile }
             .firstOrNull { File(it, "decoded-apk-android-steamlinkvr-release-base-2.0.23-5002363").isDirectory }
-        org.junit.jupiter.api.Assumptions.assumeTrue(availableRoot != null,
-            "Actual decoded APK fixtures are required for this integration audit")
+        assumeTrue("Actual decoded APK fixtures are required for this integration audit",
+            availableRoot != null)
         val root = requireNotNull(availableRoot)
-        org.junit.jupiter.api.Assumptions.assumeTrue(
-            File(root, "decoded-apk-android-steamlinkvr-release-base-2.0.22-5002322/lib/arm64-v8a/libvrlink_scene.so").isFile,
-            "Actual 5002322 decoded native fixture is required")
+        assumeTrue("Actual 5002322 decoded native fixture is required",
+            File(root, "decoded-apk-android-steamlinkvr-release-base-2.0.22-5002322/lib/arm64-v8a/libvrlink_scene.so").isFile)
         listOf(Triple("2.0.22", "5002322", 0x69656), Triple("2.0.23", "5002363", 0x69925))
             .forEach { (version, code, offset) ->
                 val file = File(root, "decoded-apk-android-steamlinkvr-release-base-$version-$code/lib/arm64-v8a/libvrlink_scene.so")

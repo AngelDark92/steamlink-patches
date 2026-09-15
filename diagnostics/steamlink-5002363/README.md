@@ -66,6 +66,24 @@ When the pinned Gradle plugin resolves:
 
 Cached local route (requires the cached dependency JARs described in the script):
 
+The runner now matches Gradle's **JUnit 4** adapter and JVM 11 bytecode target.
+Its default tool directory is `build/startup-boundary-tools`. Alongside the existing
+Gson, JCommander, Kotlin-test and Morphe Desktop JARs, supply these Maven Central
+artifacts with the filenames shown (the Kotlin adapter must match `kotlin-test.jar`):
+
+| Local filename | Artifact in the verified cache |
+|---|---|
+| `junit4.jar` | `junit:junit:4.13.2` |
+| `hamcrest-core.jar` | `org.hamcrest:hamcrest-core:1.3` |
+| `kotlin-test-junit.jar` | `org.jetbrains.kotlin:kotlin-test-junit:2.3.21` |
+| `junit.jar` | `org.junit.platform:junit-platform-console-standalone:1.12.2` (test launch only) |
+
+The platform console JAR contains Jupiter APIs and must stay off the compiler
+classpath; otherwise it can hide imports unavailable in CI. Test execution uses
+its Vintage engine for JUnit 4. This cached compiler remains a fallback, not proof
+that the authenticated Gradle release build passed. See
+[`CI-JUNIT-FIX-20260915.md`](../steamlink-hitches/CI-JUNIT-FIX-20260915.md).
+
 ```powershell
 & diagnostics/steamlink-5002363/Compile-CachedAudit.ps1 -JavaHome F:/Runtimes/Java21 -OutputDirectory build/audit-5002363/my-check
 $auditCp = Get-Content build/audit-5002363/my-check/runtime-classpath.txt -Raw
