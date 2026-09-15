@@ -24,7 +24,7 @@ This repository contains the patch source and downloadable `.mpp` patch bundles,
 3. Click the **Downgrade** button at the **bottom right** of the page. (you will have to login to oculus and meta to be able to download)
 4. Choose the release channel if prompted, select version **2.0.23**, build **5002363**, and download its APK. Check both numbers before downloading.
 
-<img width="1493" height="948" alt="image" src="https://github.com/user-attachments/assets/f3cbc1ec-7033-4931-a32b-a5cc3229a350" />
+<img width="2986" height="1896" alt="Screenshot 2026-09-15 115003" src="https://github.com/user-attachments/assets/3cb2c534-f4b0-46a1-80be-1854d2ab2cbf" />
 
 **Firefox alternative:** [DownQ for Firefox](https://addons.mozilla.org/en-US/firefox/addon/downq-for-firefox/) is an **unofficial Firefox port**. Install that add-on and follow the Meta store steps above in Firefox. The Firefox download workflow has not been runtime-tested for this guide.
 
