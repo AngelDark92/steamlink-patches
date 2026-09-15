@@ -17,7 +17,26 @@ This repository contains the patch source and downloadable `.mpp` patch bundles,
 
 ## 1. Get the Steam Link VR APK
 
-On your PC, open the Steam console with `steam://open/console` on your web browser, then on steam run the command for the version you want:
+### Version 2.0.23 / 5002363: Meta store with DownQ
+
+1. On your PC, download and install [DownQ from the Chrome Web Store](https://chromewebstore.google.com/detail/downq/clocmpojdjmikkaepgkmplgooejmnchb) in **Google Chrome**.
+2. Open [Steam Link on the Meta store](https://www.meta.com/experiences/steam-link/5841245619310585/) in Chrome and sign in to your Meta account.
+3. Click the **Downgrade** button at the **bottom right** of the page.
+4. Choose the release channel if prompted, select version **2.0.23**, build **5002363**, and download its APK. Check both numbers before downloading.
+
+> **Screenshot placeholder 1:** DownQ installed in Chrome and the Steam Link Meta store page, with the bottom-right **Downgrade** button highlighted.
+
+<br><br><br><br>
+
+> **Screenshot placeholder 2:** DownQ version selection showing **2.0.23 / 5002363** and the APK download action.
+
+<br><br><br><br>
+
+**Firefox alternative:** [DownQ for Firefox](https://addons.mozilla.org/en-US/firefox/addon/downq-for-firefox/) is an **unofficial Firefox port**. Install that add-on and follow the Meta store steps above in Firefox. The Firefox download workflow has not been runtime-tested for this guide.
+
+### Older versions: Steam depot download
+
+On your PC, open the Steam console with `steam://open/console` in your web browser, then in Steam run the command for the version you want:
 
 | Steam Link version / build | Steam console command |
 |---|---|
@@ -30,7 +49,7 @@ After Steam reports that the download is complete, find the APK here (adjust the
 C:\Program Files (x86)\Steam\steamapps\content\app_250820\depot_250824\drivers\vrlink\resources\android-steamlinkvr-release.apk
 ```
 
-Copy the APK to your headset. If you already have another listed build, select that APK in Morphe instead.
+After downloading through either route, copy the APK to your headset. If you already have another listed build, select that APK in Morphe instead.
 
 ## 2. Select and apply the patches
 
