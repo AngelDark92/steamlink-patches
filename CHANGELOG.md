@@ -1,3 +1,9 @@
+## [1.18.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.3...v1.18.0-dev.4) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* Add UDP receive buffer patch and audit utility ([a96073b](https://github.com/AngelDark92/steamlink-patches/commit/a96073b9d8c02b0ad6c01a56cab584cf9fdc7415))
+
 ## [1.18.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.2...v1.18.0-dev.3) (2026-09-15)
 
 ### 🐛 Bug Fixes
