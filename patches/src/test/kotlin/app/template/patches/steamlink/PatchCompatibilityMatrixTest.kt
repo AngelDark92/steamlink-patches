@@ -21,6 +21,7 @@ import app.template.patches.steamlink.binary.forceHmdInitializationGatesPatch
 import app.template.patches.steamlink.binary.forceLobbyPermissionStateGatePatch
 import app.template.patches.steamlink.binary.forceStreamXrGatesPatch
 import app.template.patches.steamlink.binary.hmdOnlyPatch
+import app.template.patches.steamlink.binary.decoderInputBufferingPatch
 import app.template.patches.steamlink.binary.microphoneInputPresetPatch
 import app.template.patches.steamlink.binary.oledCalibrationPatch
 import app.template.patches.steamlink.identity.changePackageNamePatch
@@ -134,7 +135,7 @@ class PatchCompatibilityMatrixTest {
     }
 
     @Test
-    fun new_native_base_exposes_exactly_seven_individual_patches_and_no_legacy_mutations() {
+    fun new_native_base_exposes_eight_individual_patches_and_no_legacy_mutations() {
         val expected = setOf(
             xrGalaxyXrHighResolutionPatch,
             gxrModernTongueBridgePatch,
@@ -143,6 +144,7 @@ class PatchCompatibilityMatrixTest {
             hmdOnlyPatch,
             oledCalibrationPatch,
             deviceIdentityPatch,
+            decoderInputBufferingPatch,
         )
         assertEquals(expected, allIndividualPatches.filter { it.supports("2.0.23", 5002363) }.toSet())
         assertEquals(expected, allIndividualPatches.filter { it.supports("2.0.22", 5002322) }.toSet())
@@ -311,6 +313,7 @@ class PatchCompatibilityMatrixTest {
         )
 
         val allIndividualPatches = listOf(
+            decoderInputBufferingPatch,
             xrStartupPermissionsPatch,
             androidXrNativePermissionNamesPatch,
             appearOnTopPatch,

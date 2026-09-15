@@ -3,6 +3,17 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
+## Decoder input buffering (experimental)
+
+Separate, default-off experiment for exact **2.0.22/5002322** and **2.0.23/5002363**. It has no dependencies and is absent from every recommended bundle. Select it separately alongside the matching bundle. **Buffered** stages incomplete compressed frames in bounded memory before synchronous codec submission; **Observe** adds counters to stock input handling.
+
+- APK mutations: scene `DT_NEEDED` string at file offset `0x69656` (5002322) or `0x69925` (5002363), `libmediandk.so` → `libgxr_dbuf.so`; adds `lib/arm64-v8a/libgxr_dbuf.so` with a build-specific helper and configured mode.
+- Runtime: 11 guarded vtable/GOT pointers cover input, lifecycle, packet acceptance and recovery. No executable instructions, output images, shaders or OpenXR layers change. Conflicts with other hooks of those pointers/functions fail activation; original media dependency remains available through the helper.
+- Limits: 24 lazy 4 MiB staging allocations per codec, 96 MiB maximum; real input capacity checked before copying. The stock 20 ms complete-frame acquisition wait and real-error recovery remain.
+- [Exact layouts and hashes](diagnostics/steamlink-hitches/decoder-hook-layouts.json), [reasoning and pending runtime outcome](diagnostics/steamlink-hitches/EXPERIMENT-2026-09-15-decoder-staging-v1.md). This adds an 8th modern individual selection without changing the existing 6-patch bundles.
+
+## Existing adaptations
+
 Steam Link 2.0.20 build 5001712 has an independently decoded base and exact guarded layouts for the permission prompt, legacy native gates, OLED/output precision, controller cadence, and Visual Delay Fix. These adaptations are statically validated; APK installation and headset runtime validation remain pending. Steam Link 2.0.20 build 5001740 is an exact static-analysis legacy target with its own guarded native layout. Its available source is a reconstruction from a malformed hybrid APK; pristine-APK Morphe patching, installation, and headset runtime validation remain pending.
 Steam Link 2.0.20 build 5001712 and the other legacy recommendation bundle use the same 17
 direct patches listed below. Steam Link 2.0.22 build 5002318 uses a 9-patch

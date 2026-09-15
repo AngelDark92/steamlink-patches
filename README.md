@@ -68,6 +68,7 @@ Builds **2.0.22/5002296** and **2.0.22/5002313** have individually selectable pa
 
 - For either legacy bundle, keep **HMD identity** on **Recommended for this build**, or select **Meta Quest Pro**. If you previously saved Samsung, Stock, or Pico, change that setting to use the recommended identity.
 - The 5002322 and 5002363 bundles include high-resolution output, face tracking support, microphone tuning, OLED color calibration, unrestricted battery usage, and Visual Delay Fix. The 5002318 bundle also includes Device identity.
+- **Decoder input buffering (experimental)** is a separate, default-off patch for exact 5002322 and 5002363. Select it alongside the matching bundle to test **Buffered** mode, or choose **Observe** for stock-path counters. It is not included in any bundle. [Experiment record and runtime status](diagnostics/steamlink-hitches/EXPERIMENT-2026-09-15-decoder-staging-v1.md).
 - On **2.0.22/5002322** and **2.0.23/5002363**, **Device identity** is available only when explicitly selected; it is not in the recommended bundle. Select **Meta Quest Pro** explicitly to test that identity. Native identity profiles populate the exact `xrvst2ue`/`xrvst2` product entries, because this build does not use `unknown` when its product entry is missing. This correction still needs a new headset run and does not fix the separate streaming regression.
 - Older bundles explicitly include **Startup permission requests (before 5002322)** and **Startup splash and XR launch mode (before 5002322)**. These are separately selectable and unavailable on 5002322 and 5002363. Face/tongue and high-resolution patches do not silently select them.
 - On **5002322 and 5002363**, Valve owns the launcher, splash, XR activity launch mode and tracking/microphone/Bluetooth permission requests. **Unrestricted battery usage** only opens battery settings from the stock activity. The high-resolution rendering fix remains active; the revised startup flow requires headset validation.
@@ -80,7 +81,7 @@ Install **VRCFaceTracking** and the matching [Galaxy XR LinkFT module](https://g
 
 ## New base validation
 
-The [2.0.23/5002363 audit](diagnostics/steamlink-5002363/README.md) records the original APK, native addresses, patch scope, option checks and remaining headset validation. The 7 applicable individual patches are supported; the 14 legacy patches remain excluded because this base already uses Valve's native Android XR paths.
+The [2.0.23/5002363 audit](diagnostics/steamlink-5002363/README.md) records the original APK, native addresses, patch scope, option checks and remaining headset validation. Its 7 individual adaptations remain available, with decoder input buffering added as an 8th standalone experiment. The 14 legacy patches remain excluded because this base already uses Valve's native Android XR paths.
 
 ## More information
 
