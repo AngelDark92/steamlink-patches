@@ -3,6 +3,14 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
+## UDP receive buffer (experimental)
+
+Separate, default-off patch with no dependencies/options for exact **2.0.22/5002322** and **2.0.23/5002363**. No recommended bundle includes it. Requests **8 MiB instead of 1 MiB** for the active VR UDP receive socket.
+
+- Only `lib/arm64-v8a/libvrlink_scene.so` changes: instruction `08 02 a0 52` → `08 10 a0 52` at `0x1745a8` (5002322) or `0x1757a8` (5002363). The actual byte difference is at offset +1.
+- Exact metadata, ELF mapping, size, GNU build ID and normalized full-function hash guard the change. Reapplication is idempotent; unknown/changed target layouts fail closed. Excluded exact builds return unchanged before file access.
+- Coexists with recommended bundles and **Observe + pipeline telemetry**; no new native payload, manifest edit or host setting. Runtime improvement remains unverified. [Experiment and validation](diagnostics/steamlink-hitches/EXPERIMENT-2026-09-15-udp-receive-buffer.md).
+
 ## Decoder input buffering (experimental)
 
 Separate, default-off experiment for exact **2.0.22/5002322** and **2.0.23/5002363**. It has no dependencies and is absent from every recommended bundle. Select it separately alongside the matching bundle. **Buffered** stages incomplete compressed frames in bounded memory before synchronous codec submission; **Observe** adds counters to stock input handling.

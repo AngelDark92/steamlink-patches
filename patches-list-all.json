@@ -2303,6 +2303,59 @@
       "options": []
     },
     {
+      "name": "UDP receive buffer (experimental)",
+      "description": "For exact Steam Link 2.0.22/5002322 and 2.0.23/5002363. Requests 8 MiB instead of 1 MiB for the active VR UDP receive socket to tolerate short receive pauses and packet bursts. Experimental; effective capacity and hitch improvement require headset validation.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002322,
+                "ARMEABI_V7A": 5002322,
+                "X86_64": 5002322,
+                "X86": 5002322
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Experimental patches for Steam Link 2.0.22 build 5002322."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link Experimental",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.23",
+              "versionCodes": {
+                "ARM64_V8A": 5002363,
+                "ARMEABI_V7A": 5002363,
+                "X86_64": 5002363,
+                "X86": 5002363
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Experimental patches for Steam Link 2.0.23 build 5002363."
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Unrestricted battery usage",
       "description": "Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming.",
       "default": false,

@@ -4,6 +4,8 @@ These tools capture an already-running USB-authorized Android device and analyze
 
 ## Capture
 
+Current experiment: [UDP receive buffer](EXPERIMENT-2026-09-15-udp-receive-buffer.md). Before recommending another change, read the [tried-experiment ledger](TRIED-EXPERIMENTS.md), including the user's unsuccessful `asyncSend=true` test.
+
 From the `steamlink-patches` directory, with the headset connected and streaming:
 
 ```powershell

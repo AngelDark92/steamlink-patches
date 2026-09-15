@@ -84,6 +84,46 @@ java -jar Tools/apk-tools/apktool.jar d VirtualDesktop/split_data.apk -o Virtual
 
 ## Verification scope
 
+### Additional cleanup: decoder pipeline v2, 2026-09-15 19:51
+
+- Experiment status: Buffered v1 ran on exact 2.0.23/5002363 but whole-view freezes persisted; [tried record and telemetry follow-up](diagnostics/steamlink-hitches/TELEMETRY-2026-09-15.md). V2 is diagnostic instrumentation, initially awaiting user installation.
+- Retained evidence: [validation receipt](diagnostics/steamlink-hitches/decoder-pipeline-v2-validation.json), 113 Kotlin test results, native pool/24 bridge/6 wrapper scenarios, 26 pristine-APK cases and 10 reapplication/rollback cases, plus exact native guard/relocation audits and current live captures.
+- Removed **63 allowlisted targets, 2,794,626,624 bytes**: unsigned audit APKs and decoded temporary copies, cached compiler output, native CMake output, and duplicate MPP/catalog-work copies. All 63 targets were verified absent; 7 protected current artifact/resource/capture hashes were verified unchanged.
+- Preserved current `patches/build/libs/patches-1.18.0-dev.1-decoder-pipeline-v2-local.mpp`, all 4 canonical decoder helper resources (v1 comparison modes plus v2 telemetry), pristine inputs/decoded bases, SDK/tools, source, current traces and compact reports. Regenerate with `extensions/decoder-input-buffering/Build-Native.ps1 -CopyResources` (telemetry resources only), update validated pins, then `diagnostics/steamlink-hitches/Build-DecoderExperiment.ps1`.
+- Exact inventory/result: `build/decoder-buffering/telemetry-cleanup/{allowlist,result}.json`. Cleanup source: `diagnostics/steamlink-hitches/Cleanup-PipelineTelemetry.ps1`; no wholesale build-tree deletion.
+- External verification delta: `CustomHeadsetOpenVrGxR/ThirdParty/json` lost its pre-existing modified status during final Git verification. No deletion target was outside `steamlink-patches`; no attempt was made to restore concurrent work. Tools status remained unchanged.
+- Deferred: `build/decoder-buffering/pipeline-review-test.exe` (448,512 bytes) and `.pdb` (3,665,920 bytes). Automatic approval review rejected that earlier deletion with only “blocked by policy”; no alternate deletion mechanism was used. Retire these 2 generated files when removal is permitted. Other current diagnostic captures remain intentionally retained until the investigation ends.
+
+### Live Observe v2 evidence retention, 2026-09-15 20:09
+
+- Exact 2.0.23/5002363 Observe + pipeline telemetry is runtime-verified; buffering disabled. [Current findings](diagnostics/steamlink-hitches/OBSERVE-RESULTS-2026-09-15.md) record app-socket overflow, decoder starvation/recovery, and the unimplemented receive-buffer candidate for both supported bases.
+- Added reusable read-only host-console and UDP-counter collectors. No new compiler output, patched APK derivative, bundle or native payload was produced in this capture phase; 0 additional bytes reclaimed.
+- Retain `build/live-hitch-20260915/observe-telemetry-v2` as current unresolved diagnostic evidence: 2 unique traces (517,709,309 and 242,071,107 bytes), the installed verification APK (41,686,773 bytes), counters, logs, offline analysis and native maps. Raw evidence remains ignored because it includes private session data. Remove bulky copies only after the investigation/acceptance decision is recorded; preserve compact findings and reproduction sources.
+- All capture processes finished, remote traces were removed, and `adb-cleanup.json` records 0 ADB processes/listeners at 2026-09-15 18:09:49 UTC. The previously blocked review-test EXE/PDB remain deferred for the reason already recorded above.
+
+### Android XR and cross-PC follow-up, 2026-09-15
+
+- [Follow-up report](diagnostics/steamlink-hitches/XR-HOST-COMPARISON-2026-09-15.md) preserves exact 2.0.20/5001712 versus 2.0.22/5002322 and 2.0.23/5002363 findings, compositor continuity, route/counter snapshots, host evidence and unresolved causes. No patch or bundle changes in this phase.
+- Retain `build/live-hitch-20260915/xr-host-comparison` as current private diagnostic evidence: fresh Android/host snapshots and logs, native comparisons, and small query outputs against the existing traces. No new APK derivatives, compiler outputs or Perfetto traces were generated; 0 additional bytes reclaimed. Existing traces and exact input bases remain required.
+- Read-only device inspection finished and ADB was stopped. `xr-host-comparison/adb-cleanup.json` verifies 0 processes/listeners at 2026-09-15 18:23:46 UTC. Previously deferred cleanup remains documented above; no blocked deletion was retried.
+
+### Supplied paired-PC archives, 2026-09-15
+
+- Incorporated both user-supplied ZIPs and `Comparison Conclusion.txt` into the [current solution assessment](diagnostics/steamlink-hitches/XR-HOST-COMPARISON-2026-09-15.md). Found a session-scoped `asyncSend` override difference; retained UDP buffer increase as an independent experiment, not a proven fix.
+- ZIPs read directly without extraction or execution. Original archives/conclusion preserved unchanged. Retain compact inventories, hashes, settings timelines and exact-session recounts under `build/live-hitch-20260915/supplied-pc-archives`; no temporary decoded/APK/compiler outputs were generated and 0 bytes reclaimed.
+- No ADB process started, no device/settings/patch/bundle changes. Existing deferred cleanup is unchanged.
+
+### UDP receive-buffer experiment completion, 2026-09-15
+
+- Built the standalone, default-off UDP receive-buffer experiment for exact 2.0.22/5002322 and 2.0.23/5002363; recommended bundles remain unchanged. Runtime effectiveness is pending. Recorded the user's unsuccessful `asyncSend=true` test in [the tried ledger](diagnostics/steamlink-hitches/TRIED-EXPERIMENTS.md) and the explicitly requested future-chat memory note.
+- Validation passed: 118 Kotlin tests, 16 actual Morphe APK cases, and 4 catalog regression checks. [Canonical receipt](diagnostics/steamlink-hitches/udp-receive-buffer-validation.json) and [experiment record](diagnostics/steamlink-hitches/EXPERIMENT-2026-09-15-udp-receive-buffer.md) preserve native guards, exact inputs, hashes, limitations, and reproduction instructions.
+- Removed **27 allowlisted targets, 672,229,542 bytes** at 18:50:07 UTC: unsigned audit APKs, compiler output, duplicate staged MPP and generated catalog scratch. Verified all 11 protected files unchanged. Earlier per-case temporary copies were already removed by the build script and are excluded from this measured total.
+- Inventory covered 10 repositories and 150,470 files with 0 read errors; Git snapshots showed 0 repository-status differences across cleanup. Inventory, allowlist, cleanup result, test XML, case logs/receipts, and completion verification remain under `build/udp-receive-buffer/validation-20260915`.
+- Retained `patches/build/libs/patches-1.18.0-dev.3-udp-receive-buffer-local.mpp`, canonical sources/resources, pristine APKs, exact decoded bases, required tooling, and current unresolved diagnostic captures. Regenerate using `diagnostics/steamlink-hitches/Build-UdpExperiment.ps1`; scoped cleanup is reproducible with `Cleanup-UdpExperiment.ps1`.
+- No APK installation, ADB startup, or live host-setting change occurred. The previously blocked review-test EXE/PDB remain deferred unchanged; no blocked deletion was retried.
+
+### Original workspace cleanup verification record
+
 Cleanup verification checks path containment/reparse points, an explicit allowlist, preserved files and input dependencies, Git changes, and ignore rules. No APK installation, ADB command, headset test, SteamVR mutation, driver deployment, or GitHub publication is part of this cleanup.
 
 Results: all 59 targets absent; 0 missing or altered retained files (with archived manifests accounted for); 0 unexpected tracked deletions; Tools and CustomHeadsetOpenVrGxR Git status unchanged. The original Virtual Desktop APK hash still matches. All protected infrastructure directories remain. `git diff --check`, ignore-rule probes, and PowerShell syntax checks passed. The A/B input exists with the generator's pinned native-library hash, and its output directory is absent as required. Independent cavecrew review found no remaining issues. Full Gradle compilation/APK regeneration was not run for this cleanup.

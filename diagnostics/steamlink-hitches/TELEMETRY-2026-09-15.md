@@ -33,12 +33,12 @@ Archive: `patches/build/libs/patches-1.18.0-dev.1-decoder-pipeline-v2-local.mpp`
 SHA-256: `5a232e650c4485913c16fc56063b10b05e5c0e4554561d32a6d9b05a8ab3859f`.
 
 1. Apply the matching existing recommended bundle plus **Decoder input buffering (experimental)** separately.
-2. Initially choose **Buffered + pipeline telemetry** to investigate the same buffering behavior. **Observe + pipeline telemetry** is available for a subsequent stock-path comparison.
+2. For the next capture, choose **Observe + pipeline telemetry**. The user requested a stock-path diagnostic after v1 failed to solve the freezes. This uses the same patch entry to access telemetry but disables buffering. **Buffered + pipeline telemetry** remains available only for a deliberate later comparison of v1's hidden fault reasons.
 3. Plain **Buffered** and **Observe** retain the original v1 binaries. Defaults, older build adaptations, and bundle memberships remain unchanged.
 4. After installation and streaming, confirm a `v2 installed ... telemetry=1` log and `installed 18 data hooks`. Failure logs mean the hooks did not activate; do not infer results from the selected mode alone.
 5. Capture a bounded 90–120 s Perfetto trace with `capture_live.py`, keeping the same scene. Its existing `atrace_apps` entry enables this package. Require nonzero `GXR2` slices in the resulting trace before interpreting the added telemetry.
 
-This uses the [Android native tracing API](https://developer.android.com/ndk/reference/group/tracing), with tracing disabled unless selected and enabled by the capture. On Android 14 the app tracing allowlist does not require adding `profileable` to the manifest; no permission or manifest changes were added. Device activation and overhead still need measurement.
+This uses the [Android native tracing API](https://developer.android.com/ndk/reference/group/tracing), with tracing disabled unless selected and enabled by the capture. On Android 14 the app tracing allowlist does not require adding `profileable` to the manifest; no permission or manifest changes were added. Device activation is now verified below; comparative overhead remains unmeasured.
 
 ## What the telemetry records
 
@@ -83,3 +83,17 @@ Run `analyze_pipeline.py --self-test` for parser validation; use `--help` for th
 Rebuild helpers with `extensions/decoder-input-buffering/Build-Native.ps1 -CopyResources`; this writes only `_telemetry.so` resources. Update the 2 telemetry hash pins from validated output, then use `Build-DecoderExperiment.ps1`. Canonical payloads remain required inputs because release CI does not rebuild them.
 
 At initial publication the v2 APK had **not** been installed or tested on the headset by the agent. The user chose to install it using their existing workflow; activation and new capture results must be appended after verification.
+
+## Live Observe v2 results, 2026-09-15 20:00–20:09
+
+User installation is now verified on **2.0.23/5002363**, mode 2, exact configured helper hash, all 18 hooks active, buffering disabled. The first and follow-up traces contain 306,058 and 136,871 GXR2 events. They directly expose input reservations, reset recovery and **UDP receive-buffer overflow at the app socket**. The finer capture attributes 3,793 dropped packets to that socket, including 971 during an output-gap interval without a decoder-input timeout or flush.
+
+See [Observe results and exact next patch candidate](OBSERVE-RESULTS-2026-09-15.md) for timings, limitations, native addresses on both supported builds, and the 1→8 MiB receive-buffer experiment. No socket patch was applied during that capture. The subsequently user-authorized [UDP patch is now built and APK-validated](EXPERIMENT-2026-09-15-udp-receive-buffer.md), with headset testing pending. Buffered v1 remains tried and insufficient; ADB was stopped after capture.
+
+The [Android XR and cross-PC follow-up](XR-HOST-COMPARISON-2026-09-15.md) checks the compositor through all 19 measured output gaps, live Android routing/thermal state, actual 2.0.20 transport/decoder differences, and historical/current host evidence. XR presentation continues through those gaps. The legacy transport's 24 MiB request versus the newer transport's 1 MiB request is a version-specific lead; host timing and receiver headroom remain unresolved contributors.
+
+## Cleanup
+
+After recording all APK hashes, test results and reproduction sources, 63 generated targets were removed (2,794,626,624 bytes): audit APKs/decoded temporaries, compiled classes/resources, native CMake output and duplicate local archive copies. The published MPP, canonical payloads, exact bases/tools, current captures and compact evidence remain. See [workspace cleanup](../../WORKSPACE_CLEANUP.md).
+
+A separate review-test EXE/PDB remains because automatic approval review rejected its removal with only “blocked by policy.” That rejected action was not retried through another deletion mechanism. Another repository's `ThirdParty/json` submodule lost a pre-existing modified status during final verification; all deletion targets were inside this repository and that concurrent change was left alone.
