@@ -1,3 +1,9 @@
+## [1.18.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.2...v1.18.0-dev.3) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* telemetry patch ([21f6d68](https://github.com/AngelDark92/steamlink-patches/commit/21f6d6817d63bffbc2620cb5315ce9434ce9294e))
+
 ## [1.18.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.1...v1.18.0-dev.2) (2026-09-15)
 
 ### 🐛 Bug Fixes
