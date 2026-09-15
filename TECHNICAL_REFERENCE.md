@@ -55,7 +55,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.17.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.17.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;26 patches total
+> **[v1.18.0-dev.1](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.18.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;27 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;26 patches</summary>
 <br>
@@ -94,6 +94,22 @@ This section is generated from the patch catalog during releases.
 | [XR Device Config Baseline](#xr-device-config-baseline) | Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets. | 5001712, 5001740, 5002244, 5002313 |  |
 | [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. | 5001712, 5001740, 5002244, 5002313 |  |
 | [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. | 5001712, 5001740, 5002244, 5002313 |  |
+
+</details>
+
+<details open>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.0.22 (5002322) | 2.0.23 (5002363) |
+| :---: | :---: |
+| Experimental patches for Steam Link 2.0.22 build 5002322. | Experimental patches for Steam Link 2.0.23 build 5002363. |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Decoder input buffering (experimental)](#decoder-input-buffering-experimental) | For exact Steam Link 2.0.22/5002322 and 2.0.23/5002363. Buffered stages incomplete compressed frames in bounded memory, then uses Valve's synchronous codec acquisition and submission when a frame is complete. Observe records the stock input path. Experimental; headset validation required. | 5002322, 5002363 | • Decoder input mode |
 
 </details>
 

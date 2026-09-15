@@ -1,3 +1,15 @@
+## [1.18.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.17.0...v1.18.0-dev.1) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* build gradle ([42372a1](https://github.com/AngelDark92/steamlink-patches/commit/42372a12d2288d03470a8a18f74431111fbf78be))
+* build gradle fix ([c50825f](https://github.com/AngelDark92/steamlink-patches/commit/c50825f0c2d9efc365b11a69c81f958249ba91aa))
+* Complete Cleanup ([f420521](https://github.com/AngelDark92/steamlink-patches/commit/f420521e03af75152e69a5326d3f0682cd989922))
+
+### ✨ New Features
+
+* experimental buffering patch for 2.0.22 and 2.0.23 ([4449a8f](https://github.com/AngelDark92/steamlink-patches/commit/4449a8f92a9de11adc5dccaee69bac025f1bf9e6))
+
 ## [1.17.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.16.0...v1.17.0) (2026-09-15)
 
 ### 🐛 Bug Fixes
