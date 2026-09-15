@@ -52,6 +52,8 @@ Inspect trace-health errors before interpreting absent events. Android SurfaceFl
 - [September 15 live findings](REPORT-2026-09-15.md)
 - [Stock native cleanup issue and installed-bundle audit](native-leak-candidate.md)
 
-The captured installed 2.0.23/5002363 build matched the audited 6-patch bundle. A separate default-off decoder staging experiment now supports exact 5002322 and 5002363; existing bundle definitions and older adaptations remain unchanged. Its runtime outcome is pending.
+The follow-up installed 2.0.23/5002363 helper matched Buffered v1 byte-for-byte and was active. Freezes persisted. [Follow-up findings and pipeline telemetry](TELEMETRY-2026-09-15.md) records the failed improvement, the separate host crash, and the next capture. Existing bundle definitions and older adaptations remain unchanged.
+
+`analyze_pipeline.py` exports platform Codec2 frame IDs and optional `GXR2` native telemetry, including fault reasons, stage durations, and conservative reset boundaries. Run `python diagnostics/steamlink-hitches/analyze_pipeline.py --help` for its CLI or `--self-test` for parser checks. Missing GXR2 events mean telemetry was not observed; they do not prove a healthy pipeline.
 
 `stale_feedback_guard_model.py` is an offline model of a secondary host-side candidate. It verifies predicate boundaries and the exact documented DLL file; it performs no patching. Its checks deliberately include an unresolved reconnect counterexample, so passing them is not deployment approval.

@@ -1,6 +1,8 @@
 # Experiment: decoder-staging-v1
 
-Date: 2026-09-15. Status: **implemented; headset outcome pending**.
+Date: 2026-09-15. Status: **tried on headset; freezes persisted**.
+
+Follow-up: the user reported little improvement. The installed 5002363 helper exactly matched the Buffered v1 resource and its activation logs confirmed execution. A fresh 120 s trace still contained 361.5/365.8 ms decoded-output gaps; a 180 s capture showed 5 additional helper faults and 6 flushes. This is not a controlled stock-versus-v1 performance comparison, but it disproves treating v1 as a completed freeze fix. Its throttled logs lost fault reasons, so [pipeline telemetry v2](TELEMETRY-2026-09-15.md) adds observation rather than repeating the same proposed remedy. Original v1 binaries remain as selectable comparison baselines and for existing-build compatibility.
 
 Patch name: **Decoder input buffering (experimental)**. Exact targets: **2.0.22/5002322** and **2.0.23/5002363**. Default-off, with no dependencies and no membership in any recommended bundle. Select this patch separately alongside the corresponding existing bundle. Mode **Buffered** is the experiment; **Observe** retains the original input path and adds counters.
 

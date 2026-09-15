@@ -8,9 +8,9 @@ Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 Separate, default-off experiment for exact **2.0.22/5002322** and **2.0.23/5002363**. It has no dependencies and is absent from every recommended bundle. Select it separately alongside the matching bundle. **Buffered** stages incomplete compressed frames in bounded memory before synchronous codec submission; **Observe** adds counters to stock input handling.
 
 - APK mutations: scene `DT_NEEDED` string at file offset `0x69656` (5002322) or `0x69925` (5002363), `libmediandk.so` → `libgxr_dbuf.so`; adds `lib/arm64-v8a/libgxr_dbuf.so` with a build-specific helper and configured mode.
-- Runtime: 11 guarded vtable/GOT pointers cover input, lifecycle, packet acceptance and recovery. No executable instructions, output images, shaders or OpenXR layers change. Conflicts with other hooks of those pointers/functions fail activation; original media dependency remains available through the helper.
+- Runtime: plain modes retain the original v1 helper and its 11 guarded vtable/GOT pointers. Optional **Observe + pipeline telemetry** / **Buffered + pipeline telemetry** use a separate v2 resource and 18 guarded pointers, adding codec/image API timing and native fault-source tracing. No executable instructions, output images, shaders or OpenXR layers change. Conflicts fail activation; the original media dependency remains available.
 - Limits: 24 lazy 4 MiB staging allocations per codec, 96 MiB maximum; real input capacity checked before copying. The stock 20 ms complete-frame acquisition wait and real-error recovery remain.
-- [Exact layouts and hashes](diagnostics/steamlink-hitches/decoder-hook-layouts.json), [reasoning and pending runtime outcome](diagnostics/steamlink-hitches/EXPERIMENT-2026-09-15-decoder-staging-v1.md). This adds an 8th modern individual selection without changing the existing 6-patch bundles.
+- [Exact layouts and hashes](diagnostics/steamlink-hitches/decoder-hook-layouts.json), [v1 tried record](diagnostics/steamlink-hitches/EXPERIMENT-2026-09-15-decoder-staging-v1.md), [v2 diagnostic capture](diagnostics/steamlink-hitches/TELEMETRY-2026-09-15.md). V1 did not solve the reported freezes. This remains an 8th modern individual selection without changing the existing 6-patch bundles.
 
 ## Existing adaptations
 
