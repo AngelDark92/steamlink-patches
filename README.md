@@ -45,6 +45,8 @@ C:\Program Files (x86)\Steam\steamapps\content\app_250820\depot_250824\drivers\v
 
 After downloading through either route, copy the APK to your headset. If you already have another listed build, select that APK in Morphe instead.
 
+N.D.: Delete the depot folder every time you switch to a new depot or the .apk will remain the first one you have downloaded.
+
 ## 2. Select and apply the patches
 
 1. Open Morphe Manager and load this repository's patch source or downloaded `.mpp` bundle.
