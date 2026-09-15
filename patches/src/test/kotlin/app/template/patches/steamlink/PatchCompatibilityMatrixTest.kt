@@ -32,6 +32,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PatchCompatibilityMatrixTest {
+    
     @Test
     fun individual_patches_are_not_globally_recommended() {
         allIndividualPatches.forEach { patch ->
