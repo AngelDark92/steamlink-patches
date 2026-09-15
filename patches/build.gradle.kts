@@ -48,6 +48,12 @@ dependencies {
     testImplementation(kotlin("test-junit"))
 }
 
+// Morphe's D8 task unions compile and runtime classpaths, which resolve separately.
+// Follow runtime versions so that the union cannot contain 2 versions of a library.
+configurations.named("compileClasspath") {
+    shouldResolveConsistentlyWith(configurations.getByName("runtimeClasspath"))
+}
+
 val patchListGeneratorClasspath: Configuration =
     configurations.create("patchListGeneratorClasspath")
 
@@ -212,6 +218,8 @@ tasks {
         description = "Build patch with patch list"
 
         dependsOn(build)
+        // Validate Android DEX packaging before release preparation updates catalogs.
+        dependsOn("buildAndroid")
 
         classpath = sourceSets["main"].runtimeClasspath + patchListGeneratorClasspath
         mainClass.set("util.PatchListGeneratorKt")

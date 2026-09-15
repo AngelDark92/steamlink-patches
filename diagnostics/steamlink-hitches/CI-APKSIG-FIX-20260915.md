@@ -2,6 +2,10 @@
 
 Date: 2026-09-15. Reported release: `1.18.0-dev.1`.
 
+Follow-up: the compile fix below exposed a D8 conflict between apksig 8.7.3 and
+Morphe's runtime 9.1.1. The current fix aligns both classpaths and gates release
+preparation on DEX packaging; see [CI-D8-FIX-20260915.md](CI-D8-FIX-20260915.md).
+
 ## Cause and change
 
 `DecoderInputBufferingApkAudit.kt` imports `com.android.apksig.ApkVerifier`, but the Gradle compile classpath had no declared `apksig` dependency. The cached `morphe-desktop-1.13.1-all.jar` contains that API, masking the omission in the standalone local build. CI failed during `:patches:compileKotlin`, before catalog generation; the shell command and Gradle deprecation warnings were not the reported compilation failure.
