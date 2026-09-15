@@ -1,3 +1,9 @@
+## [1.18.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.4...v1.18.0-dev.5) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* triggered build ([de94b1d](https://github.com/AngelDark92/steamlink-patches/commit/de94b1dad0574ce39dc10ef912b6f0019303ce7b))
+
 ## [1.18.0-dev.4](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.3...v1.18.0-dev.4) (2026-09-15)
 
 ### 🐛 Bug Fixes
