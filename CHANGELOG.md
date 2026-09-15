@@ -1,3 +1,9 @@
+## [1.18.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.1...v1.18.0-dev.2) (2026-09-15)
+
+### 🐛 Bug Fixes
+
+* align Android packaging dependencies and improve verification steps ([119b0e1](https://github.com/AngelDark92/steamlink-patches/commit/119b0e12a005d34a7eabcb92582242fe8a0b0323))
+
 ## [1.18.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.17.0...v1.18.0-dev.1) (2026-09-15)
 
 ### 🐛 Bug Fixes
