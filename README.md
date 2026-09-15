@@ -24,13 +24,7 @@ This repository contains the patch source and downloadable `.mpp` patch bundles,
 3. Click the **Downgrade** button at the **bottom right** of the page.
 4. Choose the release channel if prompted, select version **2.0.23**, build **5002363**, and download its APK. Check both numbers before downloading.
 
-> **Screenshot placeholder 1:** DownQ installed in Chrome and the Steam Link Meta store page, with the bottom-right **Downgrade** button highlighted.
-
-<br><br><br><br>
-
-> **Screenshot placeholder 2:** DownQ version selection showing **2.0.23 / 5002363** and the APK download action.
-
-<br><br><br><br>
+<img width="1493" height="948" alt="image" src="https://github.com/user-attachments/assets/f3cbc1ec-7033-4931-a32b-a5cc3229a350" />
 
 **Firefox alternative:** [DownQ for Firefox](https://addons.mozilla.org/en-US/firefox/addon/downq-for-firefox/) is an **unofficial Firefox port**. Install that add-on and follow the Meta store steps above in Firefox. The Firefox download workflow has not been runtime-tested for this guide.
 
