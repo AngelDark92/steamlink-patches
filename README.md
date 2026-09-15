@@ -21,7 +21,7 @@ This repository contains the patch source and downloadable `.mpp` patch bundles,
 
 1. On your PC, download and install [DownQ from the Chrome Web Store](https://chromewebstore.google.com/detail/downq/clocmpojdjmikkaepgkmplgooejmnchb) in **Google Chrome**.
 2. Open [Steam Link on the Meta store](https://www.meta.com/experiences/steam-link/5841245619310585/) in Chrome and sign in to your Meta account.
-3. Click the **Downgrade** button at the **bottom right** of the page.
+3. Click the **Downgrade** button at the **bottom right** of the page. (you will have to login to oculus and meta to be able to download)
 4. Choose the release channel if prompted, select version **2.0.23**, build **5002363**, and download its APK. Check both numbers before downloading.
 
 <img width="1493" height="948" alt="image" src="https://github.com/user-attachments/assets/f3cbc1ec-7033-4931-a32b-a5cc3229a350" />
