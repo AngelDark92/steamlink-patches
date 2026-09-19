@@ -1,3 +1,9 @@
+## [1.18.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.6...v1.18.0-dev.7) (2026-09-19)
+
+### 🐛 Bug Fixes
+
+* Update README with detailed patch bundles and selection notes for Galaxy XR ([5200df8](https://github.com/AngelDark92/steamlink-patches/commit/5200df85d45474032ed259d24efe256e83a91de5))
+
 ## [1.18.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.5...v1.18.0-dev.6) (2026-09-19)
 
 ### ✨ New Features
