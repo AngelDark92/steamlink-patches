@@ -165,11 +165,24 @@ tasks.named("sourcesJar") {
 tasks {
     register<JavaExec>("auditOledDecodedCompatibility") {
         group = "verification"
-        description = "Read-only OLED option audit against hash-pinned decoded 5001712, 5002322 and 5002363 libraries"
+        description = "Read-only OLED option audit across all 7 exact color-supported bases (5001712, 5001740, 5002244, 5002313, 5002318, 5002322, 5002363); a missing decoded input reports BLOCKED"
         dependsOn(classes)
         classpath = sourceSets["main"].runtimeClasspath
         mainClass.set("util.OledDecodedCompatibilityAudit")
         args(rootProject.projectDir.absolutePath)
+    }
+
+    register<JavaExec>("auditSdr10ShaderAssemble") {
+        group = "verification"
+        description = "Assemble the complete opaque/masked video shaders (production common prefix + each base's actual native suffixes) for all 7 exact color-supported bases; a missing decoded input reports BLOCKED; writes .glsl files and a report to a fresh output directory"
+        dependsOn(classes)
+        classpath = sourceSets["main"].runtimeClasspath
+        mainClass.set("util.Sdr10ShaderAssembleAudit")
+        // The audit requires its output directory to be absent or empty, so give it a fresh one.
+        val assembleOutput = rootProject.layout.buildDirectory
+            .dir("sdr10-shader-assemble-${java.util.UUID.randomUUID()}")
+            .get().asFile
+        args(rootProject.projectDir.absolutePath, assembleOutput.absolutePath)
     }
 
     register<JavaExec>("auditDecodedSteamLinkPatches") {

@@ -1,6 +1,6 @@
 # Plan: VD-Like SDR10 Color Pipeline
 
-Date: 2026-09-19. Status: detailed planning handoff, NOT implementation and NOT runtime validation.
+Date: 2026-09-19. Status: detailed planning handoff. SteamLink-side implementation slices A–F completed and verified 2026-09-19 (see Section 10); host side (CustomHeadsetOpenVrGxR) not started; no runtime validation, installation or commit.
 
 ## Persistence and Authorization
 
@@ -344,3 +344,57 @@ Host root:
 ## 9. Current Planning Outcome
 
 Research completed and scope aligned; no implementation, build, installation, or live test performed while creating this plan. The recommended design deliberately reuses existing 10-bit request and APK sRGB8 controls, adds a reversible host neutral policy and precise evidence, and avoids unproven VD dithering assumptions. Seek and obey implementation authorization before modifying the host or APK.
+
+## 10. Implementation results — SteamLink side, recorded 2026-09-19
+
+User constraint for this effort: **SteamLink repository only** — no work in `CustomHeadsetOpenVrGxR`, no breaking other patches or the build, testable slices with the narrowest check after each edit. Slice letters follow the implementation handoff; A–D were completed in the prior session, E–F in the 2026-09-19 session. Nothing below is committed; no APK was installed and no device/runtime capture was authorized.
+
+### Completed items
+
+**Slices A–D — test coverage, diagnostics field, build wiring (prior session):**
+- `patches/src/test/kotlin/app/template/patches/steamlink/binary/VideoOutputPrecisionTest.kt` — added the missing `2.0.23/5002363` layout (Phase 1 item 4) and a new test proving OLED-patched bytes pass the high-resolution retired-hook guard in every option combination and both mutation orders (Phase 3 item 6).
+- `patches/src/main/kotlin/util/OledDecodedCompatibilityAudit.kt` — extended from 3 bases (5001712, 5002322, 5002363) to all 7, with explicit BLOCKED rows for missing decoded inputs (Phase 1 item 4).
+- `diagnostics/steamlink-colour/Check-SteamLinkColour.ps1` — goal-specific `Sdr10ToSrgb8` derived field (`EXPECTED_OUTPUT` / `NOT_BASELINE_ENDPOINT` / `UNKNOWN`) plus self-test coverage (Phase 4 item 2).
+- `patches/build.gradle.kts` — `auditOledDecodedCompatibility` description updated to all 7 bases; new `auditSdr10ShaderAssemble` JavaExec task (fresh output directory because the audit requires it absent/empty).
+
+**Slice E — complete shader assembly (Phase 3 item 4), 2026-09-19:**
+- New `patches/src/main/kotlin/util/Sdr10ShaderAssembleAudit.kt` — assembles the complete opaque/masked programs from the production `paddedVideoShader` prefix (neutral/sRGB8-highp, off/low/standard) plus each base's real native suffixes, located by unique content anchors and C-string boundaries; fail-closed checks on size, NUL boundary, interface, balance and alpha assignment.
+- New `diagnostics/steamlink-colour/Test-Sdr10ShaderAssemble.ps1` — cached-Kotlin runner (normal Gradle is blocked resolving `app.morphe.patches:1.3.3`).
+- New `diagnostics/steamlink-colour/glsl_validate.py` — fail-closed structural/semantic ESSL 3.00 checker, stdlib-only Python 3; 6 real bugs from the prior untested draft were found and fixed (incl. `pow` legal-form rules, constructor kind returns, `parse_block` consuming its `{`, read-only `in` variables).
+- Result: **6 PASS, 1 BLOCKED of 7 bases** (5001740: decoded input missing); 36 assembled `.glsl` files — 1,116 B opaque / 1,383 B masked on every base and dither mode — plus `report.txt` under `build/sdr10-shader-assemble-5337d033135547da8ec01f3ee0d0eac4/`; `glsl_validate.py`: **36 PASS, 0 FAIL**.
+
+**Slice F — documentation (Phase 6 item 1), 2026-09-19:** this section; `diagnostics/steamlink-colour/README.md` and `diagnostics/steamlink-colour/OLED-COMPATIBILITY-NATIVE.md` now link here and record the exact recipe, proof levels, all-base provenance and blocked rows; `WORKSPACE_CLEANUP.md` records the new artifacts and the `build/sdr10-shader-assemble-*` retention policy. No proprietary binaries were copied into any doc.
+
+### Verification evidence (all re-run 2026-09-19)
+
+| Gate | Command (Git Bash) | Result |
+|---|---|---|
+| Full Kotlin compile + JUnit | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-5002363/Compile-CachedAudit.ps1` | 126/126 tests passed |
+| OLED decoded audit | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-colour/Test-OledDecodedCompatibility.ps1` | 6 PASS + BLOCKED 5001740 |
+| Shader assembly | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-colour/Test-Sdr10ShaderAssemble.ps1` | 6 PASS, 1 BLOCKED of 7 bases; 36 `.glsl` + report |
+| GLSL structural check | `python diagnostics/steamlink-colour/glsl_validate.py <assemble-output-dir>` | 36 PASS, 0 FAIL of 36 files |
+| Colour diagnostic self-test | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-colour/Check-SteamLinkColour.ps1 -Mode SelfTest` | PASS: 21 offline checks |
+
+These are fallback routes around the blocked Morphe plugin resolution; they are not a real Morphe build, APK packaging or install proof.
+
+### Hashes (re-verified 2026-09-19)
+
+- Stock 1,087-byte fragment, byte-identical on all 6 available bases, NUL-terminated: SHA-256 `cbf2d90eb70b9769dd64e57da5d76dbc38ab7213dcf7b940c956813a1ddaa99a`.
+- Opaque suffix, 29 B, identical on all 6: SHA-256 `93158a53e85fde1af61ce449f16c91b3b4213c93101cb98da42e5cc5bdca3f4c`.
+- Mask suffix, 296 B, identical on all 6: SHA-256 `2bad22b297f2016866482551483c0ecd44f629ce4d9df1848eb55d6a03008623`.
+- Per-base `.so` sizes/hashes as in the Section 3 matrix; all 6 decoded inputs re-verified by the expanded audit in this run.
+
+### Blocked rows (explicit, not skipped)
+
+| Row | Exact prerequisite |
+|---|---|
+| 2.0.20/5001740 decoded audit + shader assembly | a decoded `lib/arm64-v8a/libvrlink_scene.so` of that exact base (expected 2,220,528 B, SHA-256 `5fbb76c06c9fc0e3e5c5825752aa17e040462c8551b69d3492265f620244f443`); static-analysis-only provenance until then; never a neighbor-derived fixture. |
+| GLSL driver compilation | glslangValidator/Vulkan SDK (absent on this machine); the structural checker is not a substitute. |
+| Phase 5 runtime matrix | explicit authorization for APK install, driver deployment, SteamVR restart and on-device capture. |
+
+### Not done / not authorized
+
+- Host-side (CustomHeadsetOpenVrGxR) baseline policy, GUI, tests: out of scope per user constraint.
+- Committing the uncommitted slices; APK install/deploy; SteamVR restart; device captures.
+
+Project docs: [README.md](README.md), [OLED-COMPATIBILITY-NATIVE.md](OLED-COMPATIBILITY-NATIVE.md).

@@ -1,11 +1,13 @@
 package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
+import app.template.patches.steamlink.androidxr.retiredNativeProjectionHook
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class VideoOutputPrecisionTest {
@@ -23,6 +25,7 @@ class VideoOutputPrecisionTest {
         Layout("2.0.22", "5002313", VIDEO_LIBRARY_SIZE_5002313, SWAPCHAIN_FORMAT_OFFSETS_5002313),
         Layout("2.0.22", "5002318", VIDEO_LIBRARY_SIZE_5002318, SWAPCHAIN_FORMAT_OFFSETS_5002318),
         Layout("2.0.22", "5002322", VIDEO_LIBRARY_SIZE_5002322, SWAPCHAIN_FORMAT_OFFSETS_5002322),
+        Layout("2.0.23", "5002363", VIDEO_LIBRARY_SIZE_5002363, SWAPCHAIN_FORMAT_OFFSETS_5002363),
     )
 
     @Test
@@ -288,6 +291,56 @@ class VideoOutputPrecisionTest {
             )
         }
     }
+
+    @Test
+    fun `oled patched bytes pass the high-resolution retired hook guard on every layout`() {
+        // The recommended bundles execute xrGalaxyXrHighResolutionPatch and oledCalibrationPatch
+        // together. Its only interaction with libvrlink_scene.so is this read-only guard, so the
+        // OLED mutation (shader + format sites) must never trip it, in any option combination.
+        val stockText = "ordinary guarded scene mutation".toByteArray()
+        assertNull(retiredNativeProjectionHook(stockText), "negative control: guard must accept ordinary bytes")
+        assertEquals(
+            "libgxr_ast_underside.so",
+            retiredNativeProjectionHook("prefix libgxr_ast_underside.so suffix".toByteArray()),
+            "negative control: guard must still reject retired hooks",
+        )
+        layouts.forEach { layout ->
+            isSupportedVideoLibrarySize(layout.size)
+            VideoOutputPrecision.entries.forEach { precision ->
+                VideoDitherMode.entries.forEach { dither ->
+                    val shader = paddedVideoShader(1.06f, 1.12f, precision, dither)
+                    assertNull(retiredNativeProjectionHook(shader), "${layout.versionCode}: emitted shader must not embed a retired hook name")
+                    val bytes = oledCompositionLibrary(layout, shader)
+                    assertEquals(0, findVideoShader(bytes), "${layout.versionCode}: shader locator on composed bytes")
+                    val withFormat = setProjectionSwapchainFormat(bytes, precision, layout.versionName, layout.versionCode)
+                    assertNull(retiredNativeProjectionHook(withFormat), "${layout.versionCode}: OLED-patched bytes must pass the high-resolution guard")
+                    // Order independence: the guard reads whatever the OLED patch wrote last.
+                    val withShaderOnPatched = oledCompositionLibrary(layout, shader)
+                        .let { setProjectionSwapchainFormat(it, precision, layout.versionName, layout.versionCode) }
+                    assertNull(retiredNativeProjectionHook(withShaderOnPatched), "${layout.versionCode}: guard after format mutation")
+                }
+            }
+        }
+    }
+
+    private fun oledCompositionLibrary(layout: Layout, shader: ByteArray): ByteArray =
+        ByteArray(layout.size).apply {
+            shader.copyInto(this, 0)
+            this[shader.size] = 0.toByte()
+        }.apply { layout.offsets.forEach { offset ->
+            byteArrayOf(
+                0xe1.toByte(), 0xa3.toByte(), 0x00, 0x91.toByte(),
+                0xe0.toByte(), 0x03, 0x14, 0xaa.toByte(),
+                0xe2.toByte(), 0x03, 0x1c, 0xaa.toByte(),
+                0xe8.toByte(), 0x22, 0x09, 0x9b.toByte(),
+            ).copyInto(this, offset - 16)
+            byteArrayOf(0x69, 0x88.toByte(), 0x91.toByte(), 0x52).copyInto(this, offset)
+            byteArrayOf(
+                0xe9.toByte(), 0x1b, 0x00, 0xf9.toByte(),
+                0x08, 0x21, 0x40, 0xb9.toByte(),
+                0xe8.toByte(), 0x3b, 0x00, 0xb9.toByte(),
+            ).copyInto(this, offset + 4)
+        }}
 
     private fun syntheticLibrary(
         size: Int = VIDEO_LIBRARY_SIZE_5002244,
