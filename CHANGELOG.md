@@ -1,3 +1,9 @@
+## [1.18.0-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.8...v1.18.0-dev.9) (2026-09-19)
+
+### 🐛 Bug Fixes
+
+* retired all experiments for the hitches as they were not working ([de50034](https://github.com/AngelDark92/steamlink-patches/commit/de5003402dbc984c2e067d9e14069c4d334a59f8))
+
 ## [1.18.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.7...v1.18.0-dev.8) (2026-09-19)
 
 ### 🐛 Bug Fixes
