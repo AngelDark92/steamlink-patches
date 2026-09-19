@@ -55,21 +55,61 @@ N.D.: Delete the depot folder every time you switch to a new depot or the .apk w
 4. Run patching, then install the resulting APK using Morphe Manager.
 5. Launch the patched Steam Link, complete its permission prompts, and connect to SteamVR on your PC. If the Battery usage page opens, select **Unrestricted** and return to Steam Link.
 
-| Exact version / build | Bundle to select |
-|---|---|
-| 2.0.20 / 5001712 | **Galaxy XR recommended set (2.0.20/5001712)** |
-| 2.0.20 / 5001740 | **Galaxy XR legacy foundation (through 2.0.22/5002244)** — analysis-only adaptation; pristine-APK patching and headset validation pending |
-| 2.0.22 / 5002244 | **Galaxy XR legacy foundation (through 2.0.22/5002244)** |
-| 2.0.22 / 5002318 | **Galaxy XR recommended set (2.0.22/5002318)** |
-| 2.0.22 / 5002322 | **Galaxy XR recommended set (2.0.22/5002322)** |
-| 2.0.23 / 5002363 | **Galaxy XR recommended set (2.0.23/5002363)** — APK/native checks passed; headset validation pending |
-
 Builds **2.0.22/5002296** and **2.0.22/5002313** have individually selectable patches but no automatic bundle; 5002296 is recognized only by the high-resolution patch. See the [full patch list](TECHNICAL_REFERENCE.md#full-patch-list) before selecting patches manually. Do not assume another build is compatible because it has the same version name.
+
+### Patches loaded by each bundle
+
+A bundle is a pure selector: selecting it loads exactly the patches listed below and performs no additional mutation of its own. Patch names match Morphe's patch list. A listed patch remains a no-op on a build where its own layout guard does not match (for example, the high-resolution fix is unavailable on 5001740).
+
+**Galaxy XR recommended set (2.0.20/5001712)** — 17 patches:
+
+1. Android XR native permission names
+2. Force HMD initialization gates
+3. Force lobby permission-state gate
+4. Force stream XR gates
+5. GXR face bridge (version 5002318 and below)
+6. Galaxy XR high-resolution 3-projection fix
+7. Microphone input preset
+8. OLED color calibration
+9. Unrestricted battery usage
+10. Visual Delay Fix
+11. XR Core Runtime
+12. XR Device Config Baseline
+13. XR Input Routing Config
+14. Startup splash and XR launch mode (before 5002322)
+15. Startup permission requests (before 5002322)
+16. XR Manifest Capability Pack
+17. Device identity
+
+**Galaxy XR legacy foundation (through 2.0.22/5002244)** — the same 17 patches as the 2.0.20/5001712 bundle above (for 2.0.20/5001740 and 2.0.22/5002244).
+
+**Galaxy XR recommended set (2.0.22/5002318)** — 9 patches:
+
+1. Galaxy XR high-resolution 3-projection fix
+2. GXR face bridge (version 5002318 and below)
+3. Microphone input preset
+4. Unrestricted battery usage
+5. Visual Delay Fix
+6. OLED color calibration
+7. Device identity
+8. Startup permission requests (before 5002322)
+9. Startup splash and XR launch mode (before 5002322)
+
+**Galaxy XR recommended set (2.0.22/5002322)** — 6 patches:
+
+1. Galaxy XR high-resolution 3-projection fix
+2. GXR tongue bridge (version 5002322 and above)
+3. Microphone input preset
+4. Unrestricted battery usage
+5. Visual Delay Fix
+6. OLED color calibration
+
+**Galaxy XR recommended set (2.0.23/5002363)** — the same 6 patches as the 2.0.22/5002322 bundle above.
 
 ### Patch selection notes
 
 - For either legacy bundle, keep **HMD identity** on **Recommended for this build**, or select **Meta Quest Pro**. If you previously saved Samsung, Stock, or Pico, change that setting to use the recommended identity.
-- The 5002322 and 5002363 bundles include high-resolution output, face tracking support, microphone tuning, OLED color calibration, unrestricted battery usage, and Visual Delay Fix. The 5002318 bundle also includes Device identity.
+- Each bundle's exact patch content is listed in **Patches loaded by each bundle** above. The 5002322 and 5002363 bundles load the same 6-patch set; the 5002318 bundle loads 9, using the GXR face bridge instead of the tongue bridge and adding Device identity plus the two startup adaptations; both legacy bundles load the same 17-patch set.
 - **FEC duplicate reservation guard (experimental)** is separate, default-off and outside bundles for exact **2.0.22/5002322** and **2.0.23/5002363**. It moves the existing duplicate checks ahead of packet-driven decoder allocation after recovery. Use stock UDP and this release's **Observe + pipeline telemetry** for the next trial; headset effectiveness remains pending. [Selection, reasoning and evidence](diagnostics/steamlink-hitches/EXPERIMENT-2026-09-15-fec-duplicate-reservation.md).
 - **UDP receive buffer (experimental)** remains separate, default-off and outside bundles for exact 2.0.22/5002322 and 2.0.23/5002363. **Its 2.0.23/5002363 live trial failed: freezes became worse and longer.** Do not select it as a remedy; retained for reproducibility. [Live result and rollback](diagnostics/steamlink-hitches/UDP-RESULTS-2026-09-15.md).
 - **Decoder input buffering (experimental)** is a separate, default-off patch for exact 5002322 and 5002363. Buffered v1 remains an unproven fix: whole-view freezes persisted with it active. The optional **Buffered + pipeline telemetry** and **Observe + pipeline telemetry** modes add frame-specific Perfetto diagnostics. Plain Buffered/Observe retain their original binaries; no bundle includes this patch. [Current evidence and telemetry instructions](diagnostics/steamlink-hitches/TELEMETRY-2026-09-15.md). Check the [tried-experiment ledger](diagnostics/steamlink-hitches/TRIED-EXPERIMENTS.md) before repeating a proposed fix.
