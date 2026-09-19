@@ -1,3 +1,5 @@
+import java.util.UUID
+
 group = "app.template"
 
 patches {
@@ -66,7 +68,7 @@ val extensionOutputDir = layout.buildDirectory.dir("generated/extension-resource
 val minimalExtensionOutputDir = layout.buildDirectory.dir("generated/minimal-extension-resources")
 
 // Assemble GxrSdlBridge + GalaxyXRPermissionActivity smali files into extension.mpe.
-val assembleExtension by tasks.registering(JavaExec::class) {
+val assembleExtension: TaskProvider<JavaExec> = tasks.register("assembleExtension", JavaExec::class) {
     group = "build"
     description = "Assemble extension smali files to extension.mpe (no Android SDK required)"
 
@@ -101,7 +103,7 @@ val assembleExtension by tasks.registering(JavaExec::class) {
 
 // Native-XR builds already have SDL/controller/hand routing. Their surviving permission/settings
 // patches need only new helper classes, never the legacy SDL class fragments from extension.mpe.
-val assembleMinimalExtension by tasks.registering(JavaExec::class) {
+val assembleMinimalExtension: TaskProvider<JavaExec> = tasks.register("assembleMinimalExtension", JavaExec::class) {
     group = "build"
     description = "Assemble the native-XR-safe permission/overlay helper extension"
 
@@ -131,7 +133,7 @@ val assembleMinimalExtension by tasks.registering(JavaExec::class) {
 }
 
 val batteryExtensionOutputDir = layout.buildDirectory.dir("generated/battery-extension-resources")
-val assembleBatteryExtension by tasks.registering(JavaExec::class) {
+val assembleBatteryExtension: TaskProvider<JavaExec> = tasks.register("assembleBatteryExtension", JavaExec::class) {
     group = "build"
     description = "Assemble battery-only settings helper without launcher or runtime permission changes"
     val source = file("src/main/resources/steamlink/androidxr/smali/com/valvesoftware/steamlink/GxrBatterySettings.smali")
@@ -180,7 +182,7 @@ tasks {
         mainClass.set("util.Sdr10ShaderAssembleAudit")
         // The audit requires its output directory to be absent or empty, so give it a fresh one.
         val assembleOutput = rootProject.layout.buildDirectory
-            .dir("sdr10-shader-assemble-${java.util.UUID.randomUUID()}")
+            .dir("sdr10-shader-assemble-${UUID.randomUUID()}")
             .get().asFile
         args(rootProject.projectDir.absolutePath, assembleOutput.absolutePath)
     }
