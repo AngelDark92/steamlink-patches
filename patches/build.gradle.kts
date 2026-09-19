@@ -42,9 +42,6 @@ dependencies {
     // Separate configuration so gson is available at runtime for the
     // generatePatchesList task but never bundled into the APK.
     compileOnly(libs.gson)
-    // DecoderInputBufferingApkAudit uses ApkVerifier. The standalone audit runner
-    // supplies it at runtime via Morphe Desktop; do not bundle it into the MPP.
-    compileOnly(libs.apksig)
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2")
     runtimeOnly("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.10.2")
     testImplementation(kotlin("test-junit"))

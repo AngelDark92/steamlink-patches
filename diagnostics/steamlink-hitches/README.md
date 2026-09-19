@@ -6,7 +6,7 @@ These tools capture an already-running USB-authorized Android device and analyze
 
 Current finding: [UDP 8 MiB trial failed; freezes worsened](UDP-RESULTS-2026-09-15.md). Before recommending another change, read the [tried-experiment ledger](TRIED-EXPERIMENTS.md), including the unsuccessful UDP increase, decoder staging, and `asyncSend=true` tests.
 
-Next trial: [FEC duplicate reservation guard implementation and selection](EXPERIMENT-2026-09-15-fec-duplicate-reservation.md), separate from bundles and used with stock UDP plus current Observe pipeline telemetry. Headset effectiveness remains pending. The [original proposal](RECOVERY-PATCH-PROPOSAL-2026-09-15.md) retains native reasoning, PC-side recovery findings and a separate legacy-transport candidate; those host/transport candidates are not included in this patch.
+**All three standalone experiments (decoder input buffering, FEC duplicate reservation guard, UDP receive buffer) were tested, did not solve the hitching, and were removed from source on 2026-09-19 — see the [tried-experiment ledger](TRIED-EXPERIMENTS.md) and the retired-experiments section of [AGENTS.md](../../AGENTS.md) before proposing any retry.** The [FEC experiment record](EXPERIMENT-2026-09-15-fec-duplicate-reservation.md) and [original proposal](RECOVERY-PATCH-PROPOSAL-2026-09-15.md) remain as evidence; the host throttle/retransmit-history and legacy-transport candidates they describe were never shipped and remain unproven.
 
 From the `steamlink-patches` directory, with the headset connected and streaming:
 
