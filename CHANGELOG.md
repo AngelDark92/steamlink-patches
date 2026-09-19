@@ -1,3 +1,9 @@
+## [1.18.0-dev.6](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.5...v1.18.0-dev.6) (2026-09-19)
+
+### ✨ New Features
+
+* Add USB streaming diagnostics and audit tools for Galaxy XR, selectable codec for OLED ([93ba7a7](https://github.com/AngelDark92/steamlink-patches/commit/93ba7a7b5381f03ec33595357abc829aca684e85))
+
 ## [1.18.0-dev.5](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.4...v1.18.0-dev.5) (2026-09-15)
 
 ### 🐛 Bug Fixes
