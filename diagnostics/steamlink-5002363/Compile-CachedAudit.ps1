@@ -25,8 +25,13 @@ $dependencies = @('gson.jar','jcommander.jar','junit4.jar','hamcrest-core.jar','
     ForEach-Object { (Resolve-Path (Join-Path $tools $_)).Path }
 $classpath = $dependencies -join ';'
 function Invoke-CheckedJava([string[]]$Arguments) {
-    & $java @Arguments
-    if ($LASTEXITCODE -ne 0) { throw "Java failed with exit code $LASTEXITCODE" }
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $java @Arguments 2>&1 | ForEach-Object { "$_" }
+        $exitCode = $LASTEXITCODE
+    } finally { $ErrorActionPreference = $previousPreference }
+    if ($exitCode -ne 0) { throw "Java failed with exit code $exitCode" }
 }
 function Compile-Kotlin([string]$SourceDirectory, [string]$Destination, [string[]]$ExtraArguments) {
     $arguments = @('-no-stdlib','-no-reflect','-Xcontext-parameters','-jvm-target','11','-classpath',"$classpath;$classes",'-d',$Destination) + $ExtraArguments

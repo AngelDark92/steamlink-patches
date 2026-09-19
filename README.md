@@ -79,6 +79,10 @@ Builds **2.0.22/5002296** and **2.0.22/5002313** have individually selectable pa
 - High-resolution output is unavailable on **5001740**. The high-resolution patch has headset validation on **5002322**; other supported builds have static validation, with further details in the [technical reference](TECHNICAL_REFERENCE.md#compatibility-and-implementation-notes).
 - **Appear on top (legacy)** and **Change package name** are optional and never recommended automatically. Do not add Appear on top to either modern bundle. Change package name allows a separate install alongside the original only on its compatible builds.
 
+## Optional: USB streaming setup
+
+For **2.0.23/5002363**, the [manual Galaxy XR USB setup guide](Install/USB-STREAMING.md) configures Android RNDIS and the Windows USB network adapter. **USB streaming worked with the existing APK during a short Wi-Fi-off test**, with measured USB traffic and user-confirmed image/head-tracking continuity. No automatic USB patch is provided; [Quest-equivalent NCM remains unimplemented](diagnostics/steamlink-usb/QUEST-PARITY-2026-09-16.md). Keep Wi-Fi on for initial discovery in the tested workflow. A cable connected only for ADB or file transfer is not a streaming link. Longer stability and starting entirely without Wi-Fi remain untested.
+
 ## Optional: face and tongue tracking
 
 Install **VRCFaceTracking** and the matching [Galaxy XR LinkFT module](https://github.com/compdoge/LinkFT) on your PC. In Steam Link, enable **OSC**, **eye sharing**, and **face sharing**, and set the output port to **9015**. Recommended older-build bundles include **GXR face bridge (version 5002318 and below)**; the 2.0.22/5002322 bundle instead includes the headset-tested **GXR tongue bridge (version 5002322 and above)**. The tongue patch enables exact 2.0.22/5002322 and 2.0.23/5002363, each with its independently verified native layout. Headset results from 5002322 do not establish runtime behavior on 5002363.
