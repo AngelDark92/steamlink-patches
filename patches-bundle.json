@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-09-19T15:32:52",
-  "description": "## [1.18.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.6...v1.18.0-dev.7) (2026-09-19)\n\n### 🐛 Bug Fixes\n\n* Update README with detailed patch bundles and selection notes for Galaxy XR ([5200df8](https://github.com/AngelDark92/steamlink-patches/commit/5200df85d45474032ed259d24efe256e83a91de5))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.18.0-dev.7/patches-1.18.0-dev.7.mpp",
+  "created_at": "2026-09-19T19:48:30",
+  "description": "## [1.18.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.7...v1.18.0-dev.8) (2026-09-19)\n\n### 🐛 Bug Fixes\n\n* gradle build ([765fdfa](https://github.com/AngelDark92/steamlink-patches/commit/765fdfab7f33492470aeb82b7056c55ac526abb3))\n\n### ✨ New Features\n\n* Add Sdr10ShaderAssembleAudit for shader assembly and validation ([58fc2dd](https://github.com/AngelDark92/steamlink-patches/commit/58fc2dd6d6532031bab064bd96228fdf2b182760))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.18.0-dev.8/patches-1.18.0-dev.8.mpp",
   "signature_download_url": "",
-  "version": "1.18.0-dev.7"
+  "version": "1.18.0-dev.8"
 }

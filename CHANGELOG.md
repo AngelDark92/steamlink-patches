@@ -1,3 +1,13 @@
+## [1.18.0-dev.8](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.7...v1.18.0-dev.8) (2026-09-19)
+
+### 🐛 Bug Fixes
+
+* gradle build ([765fdfa](https://github.com/AngelDark92/steamlink-patches/commit/765fdfab7f33492470aeb82b7056c55ac526abb3))
+
+### ✨ New Features
+
+* Add Sdr10ShaderAssembleAudit for shader assembly and validation ([58fc2dd](https://github.com/AngelDark92/steamlink-patches/commit/58fc2dd6d6532031bab064bd96228fdf2b182760))
+
 ## [1.18.0-dev.7](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.6...v1.18.0-dev.7) (2026-09-19)
 
 ### 🐛 Bug Fixes
