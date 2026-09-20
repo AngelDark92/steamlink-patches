@@ -1,3 +1,9 @@
+## [1.18.0-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.9...v1.18.0-dev.10) (2026-09-20)
+
+### ✨ New Features
+
+* Implement Fovea VD-Like Input Modes for OLED Color Calibration ([1797994](https://github.com/AngelDark92/steamlink-patches/commit/17979942d3fbd9a08ba4764a1e870dd882ac9daa))
+
 ## [1.18.0-dev.9](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.8...v1.18.0-dev.9) (2026-09-19)
 
 ### 🐛 Bug Fixes
