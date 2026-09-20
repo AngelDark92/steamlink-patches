@@ -1,3 +1,9 @@
+## [1.18.0-dev.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.10...v1.18.0-dev.11) (2026-09-20)
+
+### 🐛 Bug Fixes
+
+* cleanup for stale and non-obtainable versions ([22dd410](https://github.com/AngelDark92/steamlink-patches/commit/22dd4106159829b1c5e5922c087d3197e6d89f8f))
+
 ## [1.18.0-dev.10](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.9...v1.18.0-dev.10) (2026-09-20)
 
 ### ✨ New Features
