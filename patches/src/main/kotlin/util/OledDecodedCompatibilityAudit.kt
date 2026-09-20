@@ -7,7 +7,7 @@ import java.security.MessageDigest
 /** Read-only exercise of production OLED helpers on hash-pinned decoded libraries.
  * Does not rebuild an APK, run the Morphe DSL, or establish headset format support.
  *
- * Covers all 7 exact color-supported Steam Link bases. A base whose decoded input is
+ * Covers the 3 exact color-supported Steam Link bases. A base whose decoded input is
  * unavailable is reported as an explicit BLOCKED row (with its exact prerequisite),
  * never silently skipped or substituted with a neighbor-derived fixture.
  *
@@ -26,11 +26,7 @@ object OledDecodedCompatibilityAudit {
 
     private val bases = listOf(
         Base("2.0.20", "5001712", 2_221_072, "80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495", intArrayOf(0x10a9c4, 0x10aa34)),
-        Base("2.0.20", "5001740", 2_220_528, "5fbb76c06c9fc0e3e5c5825752aa17e040462c8551b69d3492265f620244f443", intArrayOf(0x10a854, 0x10a8c4)),
         Base("2.0.22", "5002244", 2_251_920, "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12", intArrayOf(0x10826c, 0x1082dc, 0x10834c)),
-        Base("2.0.22", "5002313", 2_276_872, "e4d3575a130dc013e4c8fe4fb965217028229f89b13ba821c01b492e457398bb", intArrayOf(0x10b2d4, 0x10b344, 0x10b3b4)),
-        Base("2.0.22", "5002318", 2_277_488, "3c8d1ce13fd61edff5ce65efe6eedcc8565c89b66bab371550986a5c75407e56", intArrayOf(0x10b430, 0x10b4a0, 0x10b510)),
-        Base("2.0.22", "5002322", 2_283_400, "e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f", intArrayOf(0x10ba78, 0x10bae8, 0x10bb58)),
         Base("2.0.23", "5002363", 2_292_008, "628821feab199d7712be8a51273eb9a21ec440a7c91aa6a768cc7307a4fe22f0", intArrayOf(0x10c840, 0x10c8b0, 0x10c920)),
     )
 

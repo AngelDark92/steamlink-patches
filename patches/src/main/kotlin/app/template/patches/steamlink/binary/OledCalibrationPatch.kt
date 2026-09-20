@@ -14,24 +14,12 @@ private val SHADER_EXTENSION =
 private val SHADER_VERSION = "#version 300 es\n".toByteArray(Charsets.US_ASCII)
 internal const val VIDEO_SHADER_SIZE = 1087
 internal const val VIDEO_LIBRARY_SIZE_5001712 = 2_221_072
-internal const val VIDEO_LIBRARY_SIZE_5001740 = 2_220_528
 internal const val VIDEO_LIBRARY_SIZE_5002244 = 2_251_920
-internal const val VIDEO_LIBRARY_SIZE_5002313 = 2_276_872
-internal const val VIDEO_LIBRARY_SIZE_5002318 = 2_277_488
-internal const val VIDEO_LIBRARY_SIZE_5002322 = 2_283_400
 internal const val VIDEO_LIBRARY_SIZE_5002363 = 2_292_008
 private const val VIDEO_LIBRARY_SHA256_5001712 =
     "80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495"
-private const val VIDEO_LIBRARY_SHA256_5001740 =
-    "5fbb76c06c9fc0e3e5c5825752aa17e040462c8551b69d3492265f620244f443"
 private const val VIDEO_LIBRARY_SHA256_5002244 =
     "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12"
-private const val VIDEO_LIBRARY_SHA256_5002313 =
-    "e4d3575a130dc013e4c8fe4fb965217028229f89b13ba821c01b492e457398bb"
-private const val VIDEO_LIBRARY_SHA256_5002318 =
-    "3c8d1ce13fd61edff5ce65efe6eedcc8565c89b66bab371550986a5c75407e56"
-private const val VIDEO_LIBRARY_SHA256_5002322 =
-    "e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f"
 private const val VIDEO_LIBRARY_SHA256_5002363 =
     "628821feab199d7712be8a51273eb9a21ec440a7c91aa6a768cc7307a4fe22f0"
 
@@ -51,11 +39,7 @@ private val SWAPCHAIN_CONTEXT_AFTER = byteArrayOf(
     0xe8.toByte(), 0x3b, 0x00, 0xb9.toByte(),
 )
 internal val SWAPCHAIN_FORMAT_OFFSETS_5001712 = intArrayOf(0x10a9c4, 0x10aa34)
-internal val SWAPCHAIN_FORMAT_OFFSETS_5001740 = intArrayOf(0x10a854, 0x10a8c4)
 internal val SWAPCHAIN_FORMAT_OFFSETS_5002244 = intArrayOf(0x10826c, 0x1082dc, 0x10834c)
-internal val SWAPCHAIN_FORMAT_OFFSETS_5002313 = intArrayOf(0x10b2d4, 0x10b344, 0x10b3b4)
-internal val SWAPCHAIN_FORMAT_OFFSETS_5002318 = intArrayOf(0x10b430, 0x10b4a0, 0x10b510)
-internal val SWAPCHAIN_FORMAT_OFFSETS_5002322 = intArrayOf(0x10ba78, 0x10bae8, 0x10bb58)
 internal val SWAPCHAIN_FORMAT_OFFSETS_5002363 = intArrayOf(0x10c840, 0x10c8b0, 0x10c920)
 
 private data class VideoLibraryLayout(
@@ -75,39 +59,11 @@ private val VIDEO_LIBRARY_LAYOUTS = listOf(
         SWAPCHAIN_FORMAT_OFFSETS_5001712,
     ),
     VideoLibraryLayout(
-        "2.0.20",
-        5001740,
-        VIDEO_LIBRARY_SIZE_5001740,
-        VIDEO_LIBRARY_SHA256_5001740,
-        SWAPCHAIN_FORMAT_OFFSETS_5001740,
-    ),
-    VideoLibraryLayout(
         "2.0.22",
         5002244,
         VIDEO_LIBRARY_SIZE_5002244,
         VIDEO_LIBRARY_SHA256_5002244,
         SWAPCHAIN_FORMAT_OFFSETS_5002244,
-    ),
-    VideoLibraryLayout(
-        "2.0.22",
-        5002313,
-        VIDEO_LIBRARY_SIZE_5002313,
-        VIDEO_LIBRARY_SHA256_5002313,
-        SWAPCHAIN_FORMAT_OFFSETS_5002313,
-    ),
-    VideoLibraryLayout(
-        "2.0.22",
-        5002318,
-        VIDEO_LIBRARY_SIZE_5002318,
-        VIDEO_LIBRARY_SHA256_5002318,
-        SWAPCHAIN_FORMAT_OFFSETS_5002318,
-    ),
-    VideoLibraryLayout(
-        "2.0.22",
-        5002322,
-        VIDEO_LIBRARY_SIZE_5002322,
-        VIDEO_LIBRARY_SHA256_5002322,
-        SWAPCHAIN_FORMAT_OFFSETS_5002322,
     ),
     VideoLibraryLayout(
         "2.0.23",
@@ -380,7 +336,7 @@ internal fun setProjectionSwapchainFormat(
 @Suppress("unused")
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
-    description = "A patch trying to emulate what VD does with the 10-bit info but only on the fovea and always outputs 8 bit. Steam Link builds 5001712, 5001740, 5002244, 5002313, 5002318, 5002322, and 5002363.",
+    description = "A patch trying to emulate what VD does with the 10-bit info but only on the fovea and always outputs 8 bit. Steam Link builds 5001712, 5002244, and 5002363.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())

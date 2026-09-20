@@ -5,7 +5,7 @@ No APK, bundle, catalog, host setting or device was changed by this audit.
 
 ## Findings
 
-- All 7 available decoded ARM64 scene libraries directly select `video/hevc`
+- All available decoded ARM64 scene libraries directly select `video/hevc`
   inside `_ZN12QSVLCodecNDK4InitEv`. Each has 2 literal references: decoder
   creation and the MediaFormat MIME setting. This is native code evidence,
   not an inference from bundled H.264/HEVC libraries.
@@ -33,17 +33,10 @@ Every Init function below is 1020 bytes and decoded completely.
 | --- | ---: | --- | --- | --- |
 | 2.0.20 / 5001712 | 2221072 | 0xfd2f8 | 0x97bc9 | 0xfd340, 0xfd364 |
 | 2.0.22 / 5002244 | 2251920 | 0xfa49c | 0x91b32 | 0xfa4e4, 0xfa508 |
-| 2.0.22 / 5002296 | 2265656 | 0xfb6f0 | 0x923e2 | 0xfb738, 0xfb75c |
-| 2.0.22 / 5002313 | 2276872 | 0xfc408 | 0x92c92 | 0xfc450, 0xfc474 |
-| 2.0.22 / 5002318 | 2277488 | 0xfc388 | 0x92c02 | 0xfc3d0, 0xfc3f4 |
-| 2.0.22 / 5002322 | 2283400 | 0xfc928 | 0x92d3a | 0xfc970, 0xfc994 |
 | 2.0.23 / 5002363 | 2292008 | 0xfd6f0 | 0x9324a | 0xfd738, 0xfd75c |
 
 Full input SHA-256 pins are retained in [Verify-StreamingAudit.ps1](Verify-StreamingAudit.ps1).
 The audit JSON also emits function SHA-256, file offsets, instructions and coverage.
-2.0.20/5001740 was not found among top-level decoded inputs or named fixtures;
-repository compatibility metadata already marks pristine-APK validation pending.
-It is not counted among verified inputs.
 
 ## 5001712 control-path trace
 
@@ -101,8 +94,7 @@ Decode the opaque connection contract and resolve relevant indirect peer-value
 consumers; do not substitute desktop streaming options. The next dependency
 needed is evidence of the host-side VR request consumer (protocol documentation
 or read-only native analysis), not permission to change host settings. Under the
-APK-only scope, a host-only control remains a blocker. Obtain exact 5001740 input
-before claiming all 8 bases.
+APK-only scope, a host-only control remains a blocker.
 
 Once supported, retain Auto/stock defaults, strict forced-codec failure, and
 validated increase/decrease bounds. Use a standalone `default=false` patch,

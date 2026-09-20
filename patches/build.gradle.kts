@@ -164,7 +164,7 @@ tasks.named("sourcesJar") {
 tasks {
     register<JavaExec>("auditOledDecodedCompatibility") {
         group = "verification"
-        description = "Read-only OLED option audit across all 7 exact color-supported bases (5001712, 5001740, 5002244, 5002313, 5002318, 5002322, 5002363); a missing decoded input reports BLOCKED"
+        description = "Read-only OLED option audit across the 3 exact color-supported bases (5001712, 5002244, 5002363); a missing decoded input reports BLOCKED"
         dependsOn(classes)
         classpath = sourceSets["main"].runtimeClasspath
         mainClass.set("util.OledDecodedCompatibilityAudit")
@@ -173,7 +173,7 @@ tasks {
 
     register<JavaExec>("auditSdr10ShaderAssemble") {
         group = "verification"
-        description = "Assemble the complete opaque/masked video shaders (production common prefix + each base's actual native suffixes) for all 7 exact color-supported bases; a missing decoded input reports BLOCKED; writes .glsl files and a report to a fresh output directory"
+        description = "Assemble the complete opaque/masked video shaders (production common prefix + each base's actual native suffixes) for the 3 exact color-supported bases; a missing decoded input reports BLOCKED; writes .glsl files and a report to a fresh output directory"
         dependsOn(classes)
         classpath = sourceSets["main"].runtimeClasspath
         mainClass.set("util.Sdr10ShaderAssembleAudit")
@@ -186,7 +186,7 @@ tasks {
 
     register<JavaExec>("auditDecodedSteamLinkPatches") {
         group = "verification"
-        description = "Audit public 5001712/5002363 patches, high resolution on 7 bases, Visual Delay on 6 bases, and 5 recommendation fixtures"
+        description = "Audit public 5001712/5002363 patches, high resolution on 3 bases, Visual Delay on 3 bases, and 3 recommendation fixtures"
 
         dependsOn(classes)
         classpath = sourceSets["main"].runtimeClasspath
