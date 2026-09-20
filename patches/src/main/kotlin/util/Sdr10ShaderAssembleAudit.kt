@@ -6,7 +6,8 @@ import java.security.MessageDigest
 
 /** Assembles the COMPLETE opaque and edge-mask video shaders that Valve's native code builds at
  * runtime, from the production common prefix (paddedVideoShader) and each base's actual native
- * suffix strings. Baseline recipe: neutral, srgb8-highp, dither off; comparison rows: low/standard.
+ * suffix strings. Baseline recipe: neutral, srgb8-highp, dither off; comparison rows: low/standard;
+ * fovea rows: the two Fovea VD-Like toggles (input 8-bit neutral, input 10-bit dithered).
  *
  * The suffixes are located by unique content anchors and C-string terminators, never by neighbor
  * offsets. Writes assembled .glsl files plus a report for a separate strict GLSL check.
@@ -130,16 +131,27 @@ object Sdr10ShaderAssembleAudit {
             require(opaqueSuffix.contains("color.a = 1.0;") && opaqueSuffix.trimEnd().endsWith('}')) { "${base.code}: opaque suffix shape" }
             require(maskSuffix.contains("uvmask") && maskSuffix.contains("color.a = pow(") && maskSuffix.trimEnd().endsWith('}')) { "${base.code}: mask suffix shape" }
             val rows = mutableListOf<String>()
-            for (dither in VideoDitherMode.entries) {
-                val common = paddedVideoShader(1f, 1f, VideoOutputPrecision.SRGB8_HIGHP, dither)
+            // Legacy dither rows (fovea gate off) plus the two Fovea VD-Like toggles (gate on):
+            // INPUT_8BIT is the fovea-gated neutral path (dither off), INPUT_10BIT the
+            // fovea-gated 10->8 dither. All share the same 8-declaration interface and open main().
+            val foveaCases = listOf(
+                "off" to (VideoDitherMode.OFF to false),
+                "low" to (VideoDitherMode.LOW to false),
+                "standard" to (VideoDitherMode.STANDARD to false),
+                "fovea-input-8bit" to (VideoDitherMode.OFF to true),
+                "fovea-input-10bit" to (VideoDitherMode.STANDARD to true),
+            )
+            for ((label, ditherGate) in foveaCases) {
+                val (dither, foveaGate) = ditherGate
+                val common = paddedVideoShader(1f, 1f, VideoOutputPrecision.SRGB8_HIGHP, dither, foveaGate)
                     .toString(Charsets.US_ASCII)
                 val opaque = common + opaqueSuffix
                 val mask = common + maskSuffix
-                checkAssembled(opaque, stockInterface, "${base.code}/${dither}/opaque")
-                checkAssembled(mask, stockInterface, "${base.code}/${dither}/masked")
-                File(output, "${base.code}-neutral-${dither.optionValue}.opaque.glsl").writeText(opaque)
-                File(output, "${base.code}-neutral-${dither.optionValue}.masked.glsl").writeText(mask)
-                rows += "${base.code}/${dither.optionValue}: opaque=${opaque.length}B masked=${mask.length}B"
+                checkAssembled(opaque, stockInterface, "${base.code}/${label}/opaque")
+                checkAssembled(mask, stockInterface, "${base.code}/${label}/masked")
+                File(output, "${base.code}-neutral-${label}.opaque.glsl").writeText(opaque)
+                File(output, "${base.code}-neutral-${label}.masked.glsl").writeText(mask)
+                rows += "${base.code}/${label}: opaque=${opaque.length}B masked=${mask.length}B"
             }
             passed++
             lines += "PASS ${base.version}/${base.code}: shader=0x${shaderPos.toString(16)}; opaqueSuffix=${opaqueSuffix.length}B; maskSuffix=${maskSuffix.length}B"

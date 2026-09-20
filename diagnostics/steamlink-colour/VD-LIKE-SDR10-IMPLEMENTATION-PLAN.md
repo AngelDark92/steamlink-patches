@@ -1,80 +1,47 @@
-# Plan: VD-Like SDR10 Color Pipeline
+# Plan: Fovea VD-Like SDR10 — two-toggle, fovea-only, always 8-bit out
 
-Date: 2026-09-19. Status: detailed planning handoff. SteamLink-side implementation slices A–F completed and verified 2026-09-19 (see Section 10); host side (CustomHeadsetOpenVrGxR) not started; no runtime validation, installation or commit.
+Date: 2026-09-20. Status: planning handoff — rewrite of the 2026-09-19 SDR10 baseline plan. Scope: SteamLink repository only. No implementation, build, APK install, driver deploy, SteamVR restart, or device work is authorized by saving this plan.
 
-## Persistence and Authorization
+## 0. Authorization and scope
 
-This is the real, detailed workspace Markdown handoff that a less-capable implementation agent can execute. Keep this plan self-contained because `build/vd-audit` is ignored and may not accompany a checkout. No product implementation is authorized merely by saving this plan. Do not install an APK/driver, restart SteamVR, change live settings, or run device reproductions without explicit authorization. This task is planning only.
+This is the real, self-contained planning handoff that a less-capable implementation agent can execute. Keep it self-contained because `build/` outputs are git-ignored and may not accompany a checkout. No product implementation is authorized merely by saving this plan. Do not install an APK/driver, restart SteamVR, change live settings, or run device reproductions without explicit authorization. This task is planning only.
 
-The following user decisions were explicitly collected:
-- Cover all 7 existing OLED color-supported exact Steam Link bases.
-- Leave 2.0.22/5002296 high-resolution-only; DO NOT add color compatibility to it.
-- Preserve every existing default and calibration control. New behavior is explicit opt-in and reversible.
-- Include a VD-like noise-free baseline plus optional measured APK-side dithering. Dithering must NOT be represented as proven VD behavior.
-- Target the actual sibling CustomHeadsetOpenVrGxR repository, not the older CustomHeadsetOpenVR or GalaxyXR-APK projects.
+Repository constraint: SteamLink repository only (per user constraint). No work in CustomHeadsetOpenVrGxR. The input bit depth (HEVC Main10 vs Main8) is host-negotiated and out of scope; the client toggles only declare the assumed input depth so the fovea processing matches.
 
-## 1. Goal and Non-Goals
+User decisions (explicit, collected):
+- Retire the current 10-bit output options and the standalone dithering option.
+- Replace them with two mutually-exclusive fovea toggles:
+  - "Fovea VD-Like Input 10 bit" — 10-bit input → VD-Like processing → 8-bit output.
+  - "Fovea VD-Like Input 8 bit" — 8-bit input → VD-Like processing → 8-bit output.
+- Both toggles are fovea-only (lighter on the SoC than VD's full-frame) and always output 8-bit.
+- Patch description (exact ask): "a patch trying to emulate what VD does with the 10-bit info but only on the fovea and always outputs 8 bit."
+- Plan (not implement) first; write it into the attached plan file.
 
-Goal: request genuinely negotiated HEVC Main10 SDR through the existing Valve pipeline; avoid unnecessary host quantization/color modifications; preserve decoder/import precision where supported; perform correct range/transfer interpretation; submit nonlinear RGB in the existing 8-bit sRGB projection targets; separately measure optional dither near that quantization boundary.
+## 1. Goal, non-goals, and the compliance gap this closes
 
-This is semantic alignment with VD's confirmed behavior, not reproduction of its proprietary implementation or a promise of identical visual quality. Do not copy VD GLSL bodies into shipped code.
+### Goal
+Emulate how VD handles 10-bit input — 10-bit in, 8-bit sRGB out — using a dithered 10→8 quantize at the final boundary (VD's confirmed behavior is 8-bit sRGB-out + BT.2020→709; the dithered quantize is this plan's chosen mechanism), but apply it only on the fovea (the high-acuity region) rather than full-frame, and always output 8-bit. The fovea path is NEUTRAL (no gamma/saturation, like VD's video pass) and the colour profile is a separate full-frame experimental control (Section 3.5). Expose it as two mutually-exclusive opt-in toggles that declare the assumed input depth (10-bit vs 8-bit). This is semantic alignment with VD's behavior, not a copy of its proprietary GLSL and not a promise of identical visual quality.
 
-Excluded: HDR/PQ/HLG signaling, tone mapping for ordinary SDR, compositor bypass, kernel/panel/DSC changes, forced RGB10/FP16 presentation, new streaming protocol/GXRP messages, new encoders, fake P010 declarations, controller/tracking changes, resolution/topology refactors, retirement reversals, global default changes, bitrate/preset tuning as a confounder, changes to 5002296.
+### Non-goals
+- No host-side (CustomHeadsetOpenVrGxR) changes; input bit depth is host-negotiated.
+- No HDR/PQ/HLG signaling, tone mapping for ordinary SDR, new encoders, protocol/GXRP changes, or fake P010 declarations.
+- No 10-bit/FP16 output formats (always 8-bit out).
+- No global default changes; new behavior is explicit opt-in and reversible.
+- No resolution/topology refactors, controller/tracking changes, or changes to 2.0.22/5002296 (high-resolution-only).
 
-Do not invent a `VideoOutputPrecision.VD_10BIT_EXPERIMENTAL` value. Input bit depth and output storage are separate. The desired output mode already exists: `srgb8-highp`.
+### The compliance gap (what the prior patch did NOT do, and this plan must close)
+The prior OLED patch (2026-09-19 plan, Section 10) was a static full-frame 8-bit sRGB baseline with dither off by default, no input-bit-depth detection, and no fovea gating. Against the "VD-method, fovea-only, 10-bit-gated" requirement it was non-compliant. This plan closes each gap:
 
-## 2. Verified Facts and Confidence
+| Requirement | Prior patch | This plan |
+|---|---|---|
+| VD-method (10→8 dithered quantize) | dither off by default; full-frame; standalone option | fovea-gated VD-Like 10→8 dither, active when a toggle is selected |
+| Fovea-only | full-frame | gated on the per-pixel foveal indicator (Section 3.2) |
+| 10-bit-gated | no input-bit-depth detection | two toggles declare the assumed input depth (10-bit / 8-bit) |
+| Always 8-bit out | sRGB8 default, but 10-bit/FP16 output options existed | 10-bit/FP16 output options retired; SRGB8 is the only output |
 
-### Virtual Desktop Reference
+## 2. Verified facts (carried forward + one correction)
 
-Supplied VD version 1.34.18.0 / 10683. The assembly store hash matched the prior audit:
-`2b879cfa184921586e5ee6e25c777f3c7c65ce45e51e1fbad3676ca3f5cb3505`.
-
-Local reference: `build/vd-audit/TEN-BIT-FINDINGS.md`.
-- MediaCodec -> PRIVATE AImageReader -> AHardwareBuffer/EGLImage -> GL texture -> shader -> ordinary OpenXR color swapchains.
-- The traced VR color swapchains use `GL_SRGB8_ALPHA8` (35907). Motion-vector FP16 is NOT color output.
-- The video shader treats sampled components as YUV and applies full/limited-range conversion.
-- `VideoPlayer.DrawVR` disables `GL_FRAMEBUFFER_SRGB_EXT` (36281/`0x8DB9`) around video draws, then restores it. This is consistent with writing already nonlinear video RGB without double encoding.
-- `ShouldUseGammaBoost` returns false unconditionally; the power-1.5 shader branch is dormant.
-- HDR-to-SDR processing is separately conditional on `IsHDR`, not HEVC bit depth.
-- No custom shader dither was found in the inspected path. `GL_DITHER` defaults true in GLES, but effective driver/runtime dithering was not measured.
-- Actual decoded low-bit preservation, sampler precision, runtime processing, and host encoder internals were not proven.
-
-### Steam Link APK
-
-`patches/src/main/kotlin/app/template/patches/steamlink/binary/OledCalibrationPatch.kt`:
-- `paddedVideoShader` already uses `highp float` AND `highp samplerExternalOES`.
-- Existing recipe: `profile=neutral`, `outputPrecision=srgb8-highp`, `dithering=off`, `use8BitOutputWhenDithering=false`.
-- Neutral sets gamma=1 and saturation=1, but RETAINS Valve's `_valve1_d2020d709` matrix. It is not an identity transform end to end. Never silently remove that matrix.
-- The sampled texture is treated as RGB by this shader, unlike VD's sampled YUV. Adding VD's YUV-to-RGB conversion risks double conversion.
-- The 1087-byte common fragment leaves `main()` OPEN. Valve appends opaque/masked alpha suffixes. Preserve byte length, NUL boundary, inputs/outputs, uniform locations 2..6, and suffix contracts.
-- `setProjectionSwapchainFormat` selects exact version/build layouts, checks size, per-site original/known format instructions and surrounding contexts, and writes into a copy. Source SHA-256 constants are present but the helper does NOT simply hash-enforce all accepted patched inputs. Do not claim otherwise.
-- Existing dither off/low/standard is in nonlinear code space, before EOTF for linear alternatives. Low is approximately 0.5 8-bit code peak-to-peak, Standard approximately 1 code peak-to-peak. These are full spans, not +/- amplitudes. Existing scales are 0.00196/0.00392; preserve until a numeric test establishes a reason to change them.
-- Existing `OledDecodedCompatibilityAudit` currently covers 5001712, 5002322, 5002363, NOT all 7 layouts.
-- Existing `VideoOutputPrecisionTest.layouts` covers 6 layouts and omits 5002363.
-
-Native evidence:
-- `diagnostics/steamlink-direct-surface/README.md` documents exact 5002322 `QSVLCodecNDK` -> PRIVATE reader -> hardware buffer -> `FlipFrame` -> EGLImage -> `SRGBCorrectionPass`. Java SteamLink `SurfaceTexture` is not the XR decoder owner.
-- `diagnostics/steamlink-colour/OLED-COMPATIBILITY-NATIVE.md` and `diagnostics/steamlink-5002363/native-targets.md` establish active shader/swapchain call paths for specific bases. They do not prove sampled color semantics or current headset GL state.
-- Historical September 6 captures report 10-bit host selection/P010 output; these are not new-session proof and do not establish all 7 clients.
-
-### GxR Host
-
-Root: `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR`.
-- It is a SteamVR driver/postprocessor around Valve vrlink, NOT a separate streaming host/client implementation.
-- `GalaxyXrConfig` already contains `vrlinkHeadsetProfile=true`, `profileSupports10bit=true`, `force10bit=false`. The active owner is `GalaxyXR.cpp::ApplyHeadsetProfileSetting`, which writes `supports10bit` in `vrlink_<actual model>`. `GalaxyXR_EarlyApplyVrlinkSettings` applies settings before the headset attaches.
-- `force10bit` is retained schema but NOT an active force path: `ApplyHeadsetProfileSetting` removes a legacy `driver_vrlink.force10bit=true` key. Do not reactivate it.
-- `FrameProcessor.cpp::MapLayerFormat` supports RGBA8/BGRA8 typed/sRGB variants and `R10G10B10A2`. Hardware sRGB and manual transfer paths differ intentionally. Scratch copies must remain in legal DXGI format families.
-- `vrlink_layer_ps.hlsl` includes color controls and host-side `InterleavedGradientNoise` before encoding. This is distinct from APK post-decode dithering.
-- `FrameProcessor::ProcessSceneLayer` constructs `NvencTapConfig`/`NvencPostPackConfig`. It currently sets `vuiFullRange=0` from requested `postPack.enable && postPack.limitedRange`.
-- `NvencPostPack.cpp::EnsureCache` accepts NV12 via R8/R8G8 and P010 via R16/R16G16 views. `kPsLuma`/`kPsChroma` nevertheless use 8-bit range constants. `Process` currently ignores its `nvencBufferFormat` argument and returns false for several failure/skip paths.
-- `NvencTapShims::EncodePicture` calls `Process` before encode and currently ignores its bool result. Thus requested range/VUI state is not proof of successful pixel conversion. Treat this as a risk to isolate in the new baseline, not justification for a broad encoder refactor.
-- `NvencTap::Guarded` snapshots/restores caller structures and retries pristine on failed overrides. `RecordLast` is called before attempted overrides complete; requested stats must not be labeled accepted runtime state without accounting for failure/pristine retry.
-- No new `encInputFormat` override is needed. NV12 bytes do not become P010 by changing a struct field. No new NVENC API session upgrade is needed just to request Main10; preserve current ABI gates.
-
-## 3. Exact APK Matrix
-
-All sizes, hashes, and existing format sites below come from the current production layout table. They are starting evidence, not a substitute for rechecking each decoded library and active caller.
+### 2.1 Exact 7-base matrix (unchanged from 2026-09-19)
 
 | Version/build | Size bytes | SHA-256 | Format sites |
 |---|---:|---|---|
@@ -86,315 +53,192 @@ All sizes, hashes, and existing format sites below come from the current product
 | 2.0.22/5002322 | 2283400 | `e61baf34dfc4749d92561bab5fee47891d271607a0ce44824ff61c3e6a450c3f` | `0x10ba78`, `0x10bae8`, `0x10bb58` |
 | 2.0.23/5002363 | 2292008 | `628821feab199d7712be8a51273eb9a21ec440a7c91aa6a768cc7307a4fe22f0` | `0x10c840`, `0x10c8b0`, `0x10c920` |
 
-Stock sRGB instruction: `69 88 91 52`. Known RGB10 alternative: `29 0b 90 52`. Known FP16: `49 03 91 52`. These change projection storage only.
+Stock sRGB instruction: `69 88 91 52`. Retired alternatives (kept only for reversibility): RGB10_A2 `29 0b 90 52`, FP16 `49 03 91 52`. These change projection storage only.
 
-Preserve native topology: 5001712/5001740 have 2 stock create-site families; other listed bases have 3. Preserve the current high-resolution adaptation layered on top; do not overwrite its session/layer handling. The fixed shader prefix is `0x9b4b8` for 5001712, `0x96ba5` for 5002322, `0x970a1` for 5002363; derive the others with `findVideoShader` and native reference tracing, not arithmetic offsets.
+### 2.2 Shader interface and the foveal-alpha mechanism (CORRECTED)
+- The patched region is the 1,087-byte common fragment, byte-identical on all 6 available bases (SHA-256 `cbf2d90eb70b9769dd64e57da5d76dbc38ab7213dcf7b940c956813a1ddaa99a`), NUL-terminated at +1,087, and it deliberately leaves main() OPEN so Valve appends a program suffix.
+- Interface (8 declarations): `in vec2 uvmask; in vec2 uv; out vec4 color;` plus uniforms at location 2 (`highp samplerExternalOES tex0`), 3 (`float fFadeAmount`), 4 (`vec3 UniReserved1`), 5 (`vec4 UniReserved2`), 6 (`vec4 UniDitherOffsets`).
+- CORRECTION to the earlier "alpha-proxy via the texture color.a" assumption: the foveal alpha is NOT the sampled texture's color.a. Valve overwrites color.a in the program suffix:
+  - Opaque suffix, 29 B, byte-identical on all 6 (`93158a53e85fde1af61ce449f16c91b3b4213c93101cb98da42e5cc5bdca3f4c`): `color.a = 1.0;` — fully opaque, no spatial foveal distinction.
+  - Masked suffix, 296 B, byte-identical on all 6 (`2bad22b297f2016866482551483c0ecd44f629ce4d9df1848eb55d6a03008623`): computes a per-pixel foveal alpha from the uvmask input:
+    ```glsl
+    vec2 placeInSection = fract(uvmask * vec2( 1.0, 4.0 ));
+    vec2 distCenter     = abs( placeInSection - 0.5 );
+    float powv = 10.0;
+    float edgecurve = 1.5;
+    color.a = pow( 1.05 - (pow( distCenter.y*2.0, powv ) + pow( distCenter.x*2.0, powv )) * 1.06, edgecurve );
+    ```
+  - Therefore the per-pixel foveal indicator available in the patched region is the uvmask-derived mask alpha, recomputed from the uvmask input — NOT texture(tex0,uv).a (which the suffix discards).
+- HARD BYTE BUDGET: the common block is fixed at 1,087 B in every decoded libvrlink_scene.so. The current template already occupies 995 B (dither off) to 999 B (dither low/standard), leaving only 88–92 B of room. The full masked-suffix formula above is 135 B and does NOT fit. The foveal gate must therefore be a compact approximation. Measured candidates that fit: linear length 70 B, linear xy 76 B, quadratic dot 78 B (e.g. `vec2 d=abs(fract(uvmask*vec2(1.,4.))-.5);float f=clamp(1.-dot(d,d)*4.,0.,1.);`), compact pow 87 B. Choosing the compact formula is a Slice-3 detail; the 1,087 B total is a hard stop condition.
+- The existing dither uses gl_FragCoord for its noise phase, is full-frame, and is guarded near 0/1 by smoothstep. Scales: LOW `.00196`, STANDARD `.00392` (sRGB8 code space). UniDitherOffsets phase wraps at 1024 on traced bases.
 
-5001740 has static-analysis-only provenance until pristine APK is available. 5001712 includes a documented analysis reconstruction. Re-inventory actual fixtures before stating pristine packaging coverage. Missing pristine/decoded inputs are explicit BLOCKED rows, not silently skipped PASS results.
+### 2.3 Current options (what exists to retire / keep) — OledCalibrationPatch.kt
+- Retire: VideoOutputPrecision.RGB10_A2_EXPERIMENTAL and VideoOutputPrecision.RGBA16F_EXPERIMENTAL (10-bit/FP16 output); the dithering stringOption (OFF/LOW/STANDARD); the use8BitOutputWhenDithering booleanOption; the outputPrecision option's 10-bit/FP16 values; resolveVideoOutputPrecision; VideoDitherMode (or reduce to OFF only).
+- Keep: profile (initial / final-balanced / neutral / custom), the gamma and saturation sliders, the SRGB8_HIGHP output path, setProjectionSwapchainFormat (now always SRGB8), findVideoShader, and the 7-base layout table.
 
-## 4. Recommended Design
+### 2.4 VD reference (verified facts only)
+Verified in this repo (IL / shader-IL / audit evidence):
+- VD's traced VR color swapchains use GL_SRGB8_ALPHA8 — 8-bit sRGB output, the same 8-bit-out target this plan uses.
+- A BT.2020→BT.709 matrix is present in VD's extracted shader IL; Valve's stock shader likewise retains the `_valve1_d2020d709` matrix (do not silently remove it).
+- `ShouldUseGammaBoost` returns false unconditionally (IL: `ldc.i4.0; ret`) — the power-1.5 gamma branch is dormant.
+- No explicit `GL_DITHER` is set by VD in the inspected IL; GLES defaults `GL_DITHER` to true, but effective driver/runtime dithering was NOT measured.
+NOT verified in this repo — do not state as fact: a `sws_dither`/`swscale` dither mechanism, a specific FFmpeg version, a named "Dither effect", or `R16G16B16A16` as a VD format (the source plan names only `R10G10B10A2`, in the host `MapLayerFormat`, not VD).
+Emulate target: take 10-bit input and emit 8-bit sRGB via a dithered 10→8 quantize, fovea-only — a design goal aligned to VD's confirmed 8-bit-out + BT.2020→709 handling, not a proven VD dither pipeline and not a copy of any VD GLSL body.
 
-### 4.1 Reuse the APK Behavior
+### 2.5 Build state (unchanged)
+- The local Morphe build is blocked on plugin app.morphe.patches:1.3.3 (GitHub Packages; needs GITHUB_TOKEN).
+- Fallback routes (NOT a real Morphe build or APK proof): Compile-CachedAudit.ps1, Test-OledDecodedCompatibility.ps1, Test-Sdr10ShaderAssemble.ps1, glsl_validate.py.
+- 6 of 7 bases have decoded inputs; 5001740 is BLOCKED (decoded libvrlink_scene.so missing) — an explicit BLOCKED row, never a silent PASS.
 
-Do NOT add a duplicate OLED patch or output-format enum. Ship a documented explicit patch recipe selecting the existing neutral + `srgb8-highp` + off configuration. Preserve the global OLED `default=false`, existing final-balanced profile default, bundle membership and per-version defaults. Selecting neutral explicitly is part of this opt-in workflow.
+### 2.6 Prior implementation work carried forward (2026-09-19, slices A–F)
+- VideoOutputPrecisionTest.kt — 7 layouts (5002363 added) + a retired-hook guard test across option combinations.
+- OledDecodedCompatibilityAudit.kt — extended to all 7 bases with explicit BLOCKED rows.
+- Check-SteamLinkColour.ps1 — goal-specific Sdr10ToSrgb8 derived field plus self-tests.
+- Sdr10ShaderAssembleAudit.kt + Test-Sdr10ShaderAssemble.ps1 + glsl_validate.py — assembles the complete opaque/masked programs from the production common prefix plus each base's real native suffixes (6 PASS, 1 BLOCKED; 36 GLSL structural PASS, 0 FAIL).
+- These remain valid infrastructure for this plan; the design (options + shader) is what changes.
 
-Only edit shader/GL behavior if Phase 1 proves a concrete mismatch. If the sampled external texture is already nonlinear RGB, retain the existing highp RGB shader path. If sRGB framebuffer conversion is already bypassed, do not add another state change. If a mismatch is proven, implement the smallest exact-build-gated fix at the owning render operation, with state restoration and regression tests. Never globally disable `GL_FRAMEBUFFER_SRGB` for UI/other rendering. Do not blindly remove Valve's matrix.
+### 2.7 YUV vs RGB boundary (host vs client) — no driver change needed
+- The headset shader samples RGB, not raw YUV: the decoded video texture is a `samplerExternalOES` (GL_OES_EGL_image_external), and the Android GL driver performs the YUV→RGB conversion internally. The shader then applies the `_valve1_d2020d709` BT.2020→sRGB matrix to the already-RGB result. This is already handled on the headset — NO host change is needed to "send YUV instead of RGB."
+- The host (CustomHeadsetOpenVrGxR) encodes HEVC (NVENC); the input to the encoder is NV12 or P010 (YUV) — `NvencPostPack.cpp` hard-fails on anything else ("packed texture is not NV12/P010"). The RGB→YUV conversion happens INSIDE vrlink (the SteamLink host library), not in the CustomHeadsetOpenVrGxR driver. The driver's `vrlink_layer_ps.hlsl` operates on RGB (sRGB-typed views) and writes back to the RGB layer. There is NO "send RGB vs YUV" toggle in the host pipeline.
+- The "10-bit" at the host is the HEVC Main10 (P010, YUV 10-bit) vs Main8 (NV12, YUV 8-bit) — the INPUT bit depth. It is controlled by the EXISTING host-side setting `supports10bit=true` (GUI toggle `profileSupports10bit` in CustomHeadsetOpenVrGxR, written to `vrlink_<model>.supports10bit` at GalaxyXR.cpp:288), which vrlink honors at connect to switch its encoder to 10-bit HEVC ("Using 10bit mode: 1"). This is a PREREQUISITE for the "10-bit" toggle to work (the host must actually send 10-bit), but it is an EXISTING setting (no new host-side code) and OUT OF SCOPE for this SteamLink-repo-only plan. The "8-bit" toggle needs no `supports10bit` (8-bit is the host default).
+- The "10-bit RGB" options (RGB10_A2_EXPERIMENTAL, RGBA16F_EXPERIMENTAL) are the PROJECTION SWAPCHAIN output formats (how the headset submits the final image), NOT "send YUV vs RGB" options. They are already retired in Slice 1 (always 8-bit out).
+- VD's shader does YUV→RGB explicitly only because VD uses a REGULAR texture (not `samplerExternalOES`), so its driver doesn't convert. That is a VD-specific detail, not a host requirement.
 
-### 4.2 Add 1 Reversible Host Baseline Policy
+## 3. Design
 
-Proposed persistent field: `GalaxyXrConfig::sdr10Baseline`, default false. GUI name: SDR 10-bit baseline. It requests a baseline; runtime status must separately say requested/observed/unknown/fallback, never imply proven panel depth.
+### 3.1 The two toggles (mutually exclusive; radio: off / 10-bit / 8-bit)
+- Fovea VD-Like Input 10 bit (default off): declare the decoded video texture as 10-bit (host negotiated Main10/P010). Apply fovea-gated VD-Like 10→8 dithered quantization. Output 8-bit sRGB.
+- Fovea VD-Like Input 8 bit (default off): declare the decoded video texture as already 8-bit (host sent Main8). Apply the fovea-gated neutral path (no 10→8 dither needed because the input is already 8-bit; the fovea gate still bounds any processing). Output 8-bit sRGB.
+- Both go through the same fovea-gated "VD-Like" path; the difference is the assumed input depth, which selects the dither scale (10-bit → full 10→8 dither; 8-bit → neutral/no dither). The exact scales are a Phase-1 numeric tuning item (measured banding), not a settled constant.
+- Mutual exclusion: at most one active at a time; selecting one deselects the other (and both deselect "off"). Enforce in the resolver, not just the UI.
+- Input depth is host-negotiated (out of scope for this SteamLink-repo-only plan): the toggles DECLARE the assumed input depth so the client's fovea processing matches; they do not force the host stream depth. A mismatch (toggle says 10-bit but the host sent 8-bit, or vice versa) is a measured result, not a forced conversion.
+- **Host-side prerequisite (EXISTING, no new code):** the "10-bit" toggle REQUIRES the host to actually send 10-bit. That is the EXISTING setting `supports10bit=true` (GUI `profileSupports10bit` in CustomHeadsetOpenVrGxR → `vrlink_<model>.supports10bit`, GalaxyXR.cpp:288), which vrlink honors at connect to switch its encoder to 10-bit HEVC (Main10/P010, "Using 10bit mode: 1"). Without it, vrlink sends 8-bit (Main8/NV12) and the "10-bit" toggle is a mismatch. The "8-bit" toggle needs no `supports10bit` (8-bit is the host default).
+- **REQUESTED vs ACCEPTED:** `supports10bit=true` is only a REQUEST the driver writes; vrlink confirms at connect (the toolkit's NvencTap is passive — it never sets depth). Verify the ACCEPTED depth via `driver_vrlink.txt` ("Using 10bit mode: 1") or the NvencTap log (`outBitDepth=10`, NvencTap.cpp:343) before trusting the "10-bit" path; no captured proof of that exists in the repo.
 
-The policy is an effective override, NOT a destructive preset migration. Stored user controls are left intact and resume when disabled. Do not bump existing `nvencSettingsVersion`/`streamFrameSchema` to overwrite preferences.
+### 3.2 Fovea gating mechanism (alpha-proxy via uvmask; Phase-1 validated; fallbacks)
+- Primary: recompute a compact per-pixel foveal weight in the common fragment from the uvmask input (the same fract(uvmask*vec2(1.,4.)) section geometry as the masked suffix) and scale the dither noise n by that weight. High weight = fovea (apply VD-Like); low weight = periphery (skip/reduce). This saves SoC ALU in the periphery versus VD's full-frame dither.
+- Why not the texture color.a: the suffix overwrites color.a (opaque→1.0, masked→uvmask curve), so the sampled texture alpha is not the foveal indicator and may be arbitrary. The uvmask-derived weight is the reliable per-pixel foveal signal in the patched region.
+- Why compact rather than the exact formula: the 1,087-byte block leaves only 88–92 B; the exact masked-suffix formula (135 B) does not fit. A compact monotonic falloff (e.g. the 78 B quadratic-dot form) is a faithful-enough foveal gate and fits. The exact curve is a Slice-3 tuning detail.
+- Phase-1 validation gate (NOT a settled fact):
+  1. Confirm at runtime which program (opaque vs masked) renders video. If only the opaque program is used (alpha≡1.0), there is no spatial foveal distinction and the gate degenerates to full-frame → use fallback (b).
+  2. Confirm the masked suffix formula and the uvmask section layout (4 vertical sections) are byte-identical on all 7 bases (6 available; 5001740 BLOCKED) and that the section centers correspond to the intended foveal region. If the 4-section layout does not match the fovea, re-derive the indicator or fall back.
+  3. Confirm the foveal weight is well-defined everywhere. The exact masked-suffix pow argument goes negative at section edges (→ NaN); the compact gate uses clamp/max so it is well-defined and in [0,1].
+- Fallbacks (if the primary is not validated):
+  - (a) foveal-geometry uniform — requires the PC to send foveal data it does not currently send (out of scope; last resort).
+  - (b) accept full-frame VD-Like but gate on input bit-depth (apply the dither only when the 10-bit toggle is selected). Loses the SoC savings but remains compliant with "VD-method + 10-bit-gated + 8-bit out".
 
-While enabled:
-- Effective headset profile enabled; `supports10bit` requested=true using existing model-aware settings writer and settings journal. `force10bit` remains retired.
-- Host video color controls effective-neutral: saturation 50, vibrance 0, contrast 50, gamma 2.2, RGB multipliers 1, brightness 1, optional color matrix disabled, black-floor `rangeMode`/`shadowLift`/`blackPoint` disabled.
-- Host `streamFrame.dither=false`. APK dither remains independent, selected at patch time.
-- Effective `postPack.enable=false` for this baseline, so no host YUV range remap or post-pack sharpening. This deliberately avoids relying on unverified P010 normalization and requested-only VUI coupling.
-- Effective `nvencVuiFullRange`/`nvencVuiMatrix`/`nvencVuiPrimaries`/`nvencVuiTransfer` all -1: retain Valve's ORIGINAL pixel/metadata pair and matching client interpretation. This is a conservative baseline, NOT proof stock metadata is standards-correct. Gate promotion on measured round-trip colors. Do not compensate by relabeling pixels.
-- Existing bitrate, rate-control, preset, split-frame, QP safety, transport, render resolution, atlas/foveation, tracking, distortion calibration, synchronization and timeout policies remain unchanged.
-- Blackout and stationary-dimming safety controls remain functional. Validation captures must mark frames affected by them invalid, not disable safety globally.
-- For neutral numeric comparison, FXAA and pre-encode CAS must be disabled in the controlled test fixture/recipe; they may remain user controls in normal mode. Preserve lens-distortion calibration; use flat test regions or a separate shader harness to avoid mixing geometry into color assertions.
-- Do not auto-enable a disabled `streamFrame` master, install a hook, or restart SteamVR via GUI merely by drawing the settings page. Show baseline inactive if required host processing is inactive. The headset profile request still follows explicit baseline opt-in through the existing startup writer.
-- Do not silently disable arbitrary per-device custom shaders; detect conflicts and show a not-baseline status. Test recipe requires those shaders off.
+### 3.3 Retirement scope and reversibility
+- Retire RGB10_A2_EXPERIMENTAL and RGBA16F_EXPERIMENTAL (10-bit/FP16 output); the standalone dithering option; use8BitOutputWhenDithering; and the outputPrecision option's 10-bit/FP16 values.
+- SRGB8 becomes the only output; the dither is no longer a standalone option — it is fovea-gated and driven by the two toggles.
+- Reversibility: keep the retired code paths reachable in a single resolver until the toggles are validated, so the old behavior can be restored if a toggle fails. Do not delete the RGB10_A2_INSTRUCTION / RGBA16F_INSTRUCTION constants until the retirement is proven reversible and the catalog is regenerated.
 
-Reuse a compact pure resolver so GalaxyXR startup and FrameProcessor per-frame policy cannot disagree. Proposed new header, only because 2 owners plus tests share it: `CustomHeadsetOpenVR/src/Config/SdrColorPolicy.h`. Return a small value object/flags, not a deep copy of distortion vectors every frame. If the existing owner offers an equivalent pure helper, use that instead. Resolve from the current immutable settings snapshot. Do not let one frame mix pre-toggle NVENC policy with post-toggle color constants.
+### 3.4 Always 8-bit out
+- setProjectionSwapchainFormat always writes SRGB8_INSTRUCTION (69 88 91 52) at every layout's format sites; the RGB10/FP16 replacement branches are retired.
+- The SRGB8_INSTRUCTION sites, per-base offsets, and context preconditions are unchanged; only the selection collapses to SRGB8.
 
-Add a status requirement: changes requiring startup/codec negotiation are PENDING_RESTART/RECONNECT, not hot-applied 10-bit. Switching profile during streaming does not prove Main10 took effect. No automated restart.
+### 3.5 NEUTRAL fovea path + decoupled colour profile (the "same as VD" requirement)
+This is the constraint that makes the fovea VD-Like "same as what VD does, but on the fovea layer."
+- VD's default video path is NEUTRAL (confirmed from the audit): the SpriteGammaEffect video shader applies only a neutral colorimetric conversion (YUV→RGB / full-limited range), with the gamma-boost branch DORMANT (ShouldUseGammaBoost returns false, gamma=1) and NO saturation. So "same as VD" = a NEUTRAL 10→8 pass, not a gamma/saturation-calibrated one.
+- Therefore the fovea VD-Like path is NEUTRAL: it applies the colorimetric conversion (the `_valve1_d2020d709` matrix) + the fovea-only dithered 10→8 quantize, but NO gamma/saturation. The fovea dither operates on the colorimetric value `c`, NOT the calibrated value `q` — this removes the current patch's coupling, where the dither `n` is added to the calibrated `q`.
+- The colour profile (gamma/saturation — the `profile` option) is a SEPARATE, independent, full-frame control for experimentation — "on the side." It is NOT part of the fovea VD-Like path. It keeps its existing full-frame behavior (affects the entire image, as it does now).
+- The two are MUTUALLY EXCLUSIVE, selected by the fovea VD-Like toggle state:
+  - A fovea VD-Like toggle is selected → NEUTRAL path: raw texel → matrix → fovea-only dithered 10→8 → 8-bit out. Colour profile BYPASSED (neutral).
+  - No fovea VD-Like toggle → colour profile path: the existing gamma/saturation full-frame calibration (experimental). No fovea dither.
+- Byte budget: the neutral fovea path is SHORTER than the current calibrated path (no gamma/saturation), so the fovea gate fits comfortably within the 1,087-byte block (more headroom than the 88–92 B measured for the calibrated template).
 
-### 4.3 Optional Post-Decode Dither
+## 4. Implementation plan (the important part) — slice-by-slice, narrowest check after each edit
 
-Reuse APK `VideoDitherMode` LOW/STANDARD. Compare only after noise-free baseline passes. Host dither stays off during this experiment. No new dither library or shader is needed initially.
+Standing rules (carry forward): one testable slice at a time; the first substantive edit is immediately followed by the narrowest relevant check; no bulk edits before validation; stop on any hash/size/caller mismatch; never move offsets by a neighbor delta; preserve the existing emitted shader bytes when all toggles are off (prove with golden/generated comparisons, not prose); no device work without authorization; mark unavailable rows BLOCKED, never silently omit; no new protocol/encoder/bitrate/force10bit to make a failing test pass.
 
-Validate that `UniDitherOffsets` updates for every supported native base and both opaque/masked shader programs, that the uniform remains at location 6, and that endpoints/alpha/fade remain intact. Existing native phase wraps at 1024 on traced bases; recheck all 7.
+### Slice 0 — Freeze evidence
+1. Record repo HEAD, dirty status, exact file hashes of OledCalibrationPatch.kt, the 7 decoded .so inputs, and the sdr10-shader-assemble-* build dir. Do not reset or commit existing work.
+2. Re-verify the 7-base matrix (Section 2.1) and the 6/1 available-BLOCKED split.
+3. Record the current template byte sizes (995 / 999 B) and the 88–92 B room (Section 2.2) as the byte-budget baseline.
+- Narrowest check: a read-only inventory (no edits).
+- Exit: provenance matrix complete with BLOCKED rows labeled; byte-budget baseline recorded.
 
-Do not describe app-side dither as final panel/compositor dithering. No guarantee of improvement: if the compositor/filtering suppresses it or visible grain/flicker worsens, leave it off and report that result.
+### Slice 1 — Retire 10-bit output + standalone dither options
+File: OledCalibrationPatch.kt.
+1. Remove RGB10_A2_EXPERIMENTAL and RGBA16F_EXPERIMENTAL from VideoOutputPrecision (keep SRGB8_HIGHP).
+2. Remove the dithering stringOption and the use8BitOutputWhenDithering booleanOption. Remove VideoDitherMode (or reduce to OFF only) and resolveVideoOutputPrecision.
+3. setProjectionSwapchainFormat: collapse the selection to always write SRGB8_INSTRUCTION; drop the RGB10/FP16 replacement branches (keep the RGB10_A2_INSTRUCTION / RGBA16F_INSTRUCTION constants temporarily for reversibility — see 3.3).
+4. paddedVideoShader: drop the dither / outputPrecision parameters; always emit the SRGB8 path with the fovea gate OFF (placeholder for Slice 3).
+- Narrowest check: the module compiles (:patches:compileKotlin, or the cached-compile fallback) and no surviving reference to a retired symbol.
+- Stop: if any test or other patch references a retired symbol — fix the reference before proceeding (no dangling symbols).
 
-### 4.4 P010 Post-Pack Follow-Up Is Gated, Not Mandatory Baseline Code
+### Slice 2 — Add the two fovea toggles + mutual exclusion
+File: OledCalibrationPatch.kt.
+1. Add two booleanOption declarations: foveaVdLike10Bit (title "Fovea VD-Like Input 10 bit", default false) and foveaVdLike8Bit (title "Fovea VD-Like Input 8 bit", default false), each with the Section 3.1 description and the host-negotiation caveat.
+2. Add a resolver resolveFoveaMode(a: Boolean, b: Boolean) returning OFF / INPUT_10BIT / INPUT_8BIT; if both are true, throw PatchException (mutual exclusion enforced server-side, not just UI).
+3. Wire the resolver into the execute block; select the dither / neutral path per FoveaMode.
+- Narrowest check: a new unit test proving (a) both-off → neutral sRGB8, (b) 10-bit → fovea 10→8 dither path, (c) 8-bit → fovea neutral path, (d) both-on → PatchException.
+- Stop: if the resolver allows both toggles active.
 
-Because baseline bypasses post-pack, repairing its legacy processing is NOT a prerequisite to shipping the baseline controls. Test the suspected normalization issue and record it. Only include a format-aware post-pack fix as a separately opt-in follow-up if the user later needs limited-range conversion or post-pack sharpening in the baseline. Do not expand scope to a global range-policy refactor automatically.
+### Slice 3 — Implement the NEUTRAL fovea-gated VD-Like dither in the shader
+File: OledCalibrationPatch.kt (paddedVideoShader / HIGHP_SHADER_TEMPLATE).
+1. Build the NEUTRAL fovea path (Section 3.5): raw texel → `_valve1_d2020d709` matrix → fovea-only dithered 10→8 quantize → 8-bit out. NO gamma/saturation. The fovea dither operates on the colorimetric value `c`, NOT the calibrated `q`.
+2. Add the compact foveal weight from uvmask (e.g. the 78 B quadratic-dot form `vec2 d=abs(fract(uvmask*vec2(1.,4.))-.5);float f=clamp(1.-dot(d,d)*4.,0.,1.);`) and scale the dither noise n by f and by the input-depth-appropriate scale per FoveaMode.
+3. Keep the colour profile path (gamma/saturation full-frame) as the separate experimental path (selected when no fovea VD-Like toggle is active); preserve its existing full-frame behavior.
+4. Keep main() OPEN, the 8-declaration interface, locations 2–6, the NUL boundary, and the color.rgb endpoint gate; do not add a closing brace (the suffix closes it).
+5. Verify the assembled size stays ≤ 1,087 B for the neutral fovea path AND the colour-profile path; if it exceeds, compact the formula further (do not truncate or relocate).
+- Narrowest check: extend Sdr10ShaderAssembleAudit to assemble the new fovea-gated common prefix plus each base's real opaque/masked suffixes for all 7 bases; glsl_validate.py must PASS all assembled files; the byte-size check must hold.
+- Stop: if the assembled size exceeds 1,087 B, the interface changes, or the alpha is no longer assigned.
 
-Required future numeric contract:
-- NV12 view normalization is byte/255.
-- P010 nominal 10-bit code `k` occupies the high 10 bits of a 16-bit word: `word=k*64`, lower 6 bits zero, `R16_UNORM sample=word/65535`.
-- Recover nominal `q=sample*65535/(64*1023)`, not just sample interpreted as code/1023. Quantize/repack to valid 10-bit codes only on the intended output write.
-- 8-bit limited Y endpoints 16,235; C 16,240 with neutral 128.
-- 10-bit limited Y 64,940; C 64,960 with neutral 512. Full-range maximum 1023. Use explicit code-domain endpoint/center mappings; do not rely on 0.5 as an exact code midpoint.
-- Test lower 6 bits after GPU writes, adjacent source codes, neutral chroma, clipping and tile boundaries.
-- Match `nvencBufferFormat`, actual DXGI desc, picture format, and accepted encoder depth; reject mismatches without reinterpreting bytes.
-- Pixels and accepted VUI are a session contract. On conversion failure, no mismatched frame may be silently encoded. In-place metadata retry is not safe if pixels were already converted. An implementation must prepare/validate resources before committing to conversion and define a tested rollback or clean-reconnect path; unsupported VUI reconfiguration must fail clearly. This requires a separate design gate if implemented.
+### Slice 4 — Update patch description + catalog sync
+1. Set the patch description to the user's exact text: "a patch trying to emulate what VD does with the 10-bit info but only on the fovea and always outputs 8 bit." (plus the 7-build list).
+2. Regenerate the catalogs (generatePatchesList for stable and experimental) so the retired options are gone and the two toggles are present; inspect the diff and preserve the other patches' entries.
+- Narrowest check: patches-list.json / -experimental.json / -all.json contain the two new toggle keys and no dithering / use8BitOutputWhenDithering / rgb10-a2-experimental / rgba16f-experimental keys; the other patches are unchanged.
+- Stop: if the catalog diff touches unrelated patches.
 
-## 5. Execution Phases and Dependencies
+### Slice 5 — Tests
+1. VideoOutputPrecisionTest.kt: update to the new option set (drop RGB10/FP16/dither assertions; add fovea-gate + toggle assertions); keep the 7-layout and retired-hook guard tests.
+2. PatchCompatibilityMatrixTest.kt: assert the two toggles' mutual exclusion, defaults (both off), and that the patch remains compatible with the 7 exact bases.
+3. OledDecodedCompatibilityAudit.kt: extend the option matrix to the new toggles (off / 10-bit / 8-bit) across all 7 bases, preserving the BLOCKED rows.
+4. Add a golden-byte test: the all-toggles-off emitted shader must be byte-identical to the pre-change srgb8-highp/off output (proves no regression when off).
+- Narrowest check: full :patches:test (or the cached-compile fallback) — all tests pass with no retired-symbol references.
+- Stop: on any failure or a golden-byte mismatch.
 
-### Phase 0: Persist and Freeze Evidence
+### Slice 6 — Docs + final gate
+1. Update diagnostics/steamlink-colour/README.md and OLED-COMPATIBILITY-NATIVE.md: the two toggles, the fovea-gate mechanism (uvmask-derived, compact, Phase-1 validated), the retirement, and the always-8-bit contract.
+2. Record the plan checklist with exact completed files, commands, hashes, and BLOCKED rows in Section 8 of this plan.
+3. Update WORKSPACE_CLEANUP.md if new artifacts are produced.
+- Narrowest check: Check-SteamLinkColour.ps1 -Mode SelfTest PASS; the docs link to this plan.
+- Stop: on self-test failure.
 
-1. Read parent/root `AGENTS.md`, specific repository instructions, `WORKSPACE_CLEANUP.md`. Required `galaxyxr-workspace` skill is present but currently a TODO scaffold; parent rules still govern. `morphe-patches` skill contains older compatibility examples; current `AGENTS.md` and Constants exact-pair rules win.
-2. Record each repo's HEAD, dirty status, exact file hashes for touched/inspected source and installed artifacts IF installation is later authorized. Do not reset or commit existing work.
-3. Inventory 7 source bases and pristine APK availability; write provenance matrix. Freeze the current host GPU/driver/SteamVR/vrlink versions only when actual capture is authorized; do not infer them from old logs.
-4. Record VD facts above in the tracked plan so ignored extracted files are optional supporting evidence. Do not commit proprietary extracted binaries or shader code.
+## 5. Risks and unknowns
+1. Alpha semantics at runtime (top risk): whether the opaque or the masked program renders video is not statically known. If opaque-only, the fovea gate degenerates to full-frame (fallback b). This is a Phase-1 validation item, not a settled fact.
+2. Section layout vs fovea: the masked suffix uses 4 vertical sections (uvmask*vec2(1.,4.)); whether the section centers correspond to the intended foveal region is unverified.
+3. Byte budget (hard stop): only 88–92 B of room; the foveal gate must be compact. A formula that would push the total past 1,087 B must be compacted, not truncated.
+4. Host-side Main10 negotiation is separate: the toggles declare the assumed input depth; they do not force the host stream depth. A mismatch is a measured result.
+5. SoC cost: fovea vs full-frame dither is small ALU (a few ops per pixel); the savings are real but modest. Do not claim a large performance win.
+6. Retirement reversibility: removing the 10-bit/FP16 output options and the standalone dither is a user-visible API change; keep it reversible until validated.
+7. 5001740 BLOCKED: no decoded input; the fovea gate cannot be validated on that base. Keep it an explicit BLOCKED row.
 
-Exit: roots unambiguous, source/provenance matrix complete with blocked rows clearly labeled.
-
-### Phase 1: Color Contract and Regression Tests
-
-This phase blocks any conditional shader or metadata mutation. Host and APK evidence work can run in parallel.
-
-APK tasks:
-1. Trace `QSVLCodecNDK::Init`, image callback, FrameServer, `QSVLRendererXR::FlipFrame`, EGL import, `SRGBCorrectionPass::RenderSpecificPrep`/`RenderSpecific`, and `SetupSwapchains` for each exact base. Reuse existing native audits/symbol-resolution tooling. Preserve PT_LOAD file/virtual mapping; no neighbor offsets.
-2. Record active texture target/sampler, buffer format request, EGL import attributes, actual color interpretation inferred from code, `glEnable`/`glDisable` state around draw, selected output attachment, uniform phase and both alpha suffixes.
-3. Establish whether external sampling already returns RGB and whether automatic sRGB output conversion is bypassed. If unavailable statically, mark runtime gate; do not guess from texture target alone.
-4. Add 5002363 to `VideoOutputPrecisionTest.layouts`. Extend existing `OledDecodedCompatibilityAudit` to all 7 with exact fixture provenance. If 5001740 fixture unavailable, leave a blocking report, never create a fake neighbor-derived fixture.
-5. Characterize baseline shader bytes before changes and test existing options/defaults/dependency closures.
-
-Host tasks:
-1. Unit-test pure policy default-off passthrough and opt-in effective values before wiring GUI. Verify stored config not modified and disabling restores exact prior preferences.
-2. Verify model-aware `supports10bit` startup route, including actual identity strings used by each APK configuration. No unconditional `xrvst2ue`-only assumption; the early fallback must be checked against the actual connected model and captured vrlink section.
-3. Add bounded observation of requested/accepted encoder settings and resource/picture DXGI/NVENC format pairing; do not add pixel-format overrides.
-4. Numerically characterize NV12/P010 post-pack range math separately. This is evidence for the bypass decision; do not fix unrelated legacy behavior in this phase.
-5. Derive a color contract table: stage, pixel domain, storage type, range, matrix, transfer, owner, proof level, test artifact. For unknown fields use UNKNOWN, not guessed BT.709/sRGB labels.
-
-Exit: default/off regression tests pass; evidence distinguishes requested settings, accepted settings, actual samples, and output storage; any transfer/matrix mismatch has an exact owner and reproducer.
-
-### Phase 2: Host Opt-In Baseline
-
-Depends on Phase 1 policy tests. Can proceed alongside APK audit expansion, but not runtime rollout.
-
-1. Add `sdr10Baseline=false` to `GalaxyXrConfig` in `Config.h`. Parse and serialize it in `ConfigLoader.cpp`; publish it wherever GUI default/config info expects Galaxy XR fields. Missing field means false; reject/ignore invalid types using existing parser convention. Do not alter existing migrations.
-2. Implement pure policy resolver in `SdrColorPolicy.h` or an existing suitable helper. Test every effective control listed in Section 4.2, including blackout/dimming preservation and untouched geometry/network settings.
-3. Wire effective profile booleans in `GalaxyXR.cpp::ApplyHeadsetProfileSetting`. Keep `GalaxyXR_EarlyApplyVrlinkSettings` and journaled writes; preserve cleanup of retired `force10bit`. Add requested-not-confirmed logging and pending-reconnect semantics.
-4. Wire effective color constants and `NvencTap`/`NvencPostPack` configuration in `FrameProcessor.cpp::ProcessSceneLayer`/`ProcessEye`. Baseline bypasses post-pack and manual VUI overrides, including their failure path. Host dither disabled only effectively. Use the same frame policy snapshot for both eyes and encode config.
-5. Verify frame processing fallback shader cannot silently claim all baseline controls executed. Neutral fallback may qualify only if it preserves the contract; log which shader was loaded and hash its source.
-6. Add 1 toggle using existing Angular Material patterns in `driver-settings.component.html`, logic in `GalaxySettingsBase` if needed. Preserve imported forms/default/save behavior. Disable or mark overridden color controls in baseline without overwriting their stored values. State requested/needs reconnect/observed/unknown distinctly. APK recipe remains a documented separate step, not an invented host-to-APK settings channel.
-7. Add field to `JsonFileDefines.ts`. Regenerate `driver-defaults.ts` via `Generate-DriverDefaults.ps1`; never hand-maintain duplicate defaults.
-8. Update host `Docs/StreamFrame.md` with exact APK recipe, baseline override list, rollback and limits.
-
-Exit: policy tests, config/default generation checks, GUI build and native staged build pass. Off-path behavior and saved preferences unchanged. No deployment.
-
-### Phase 3: APK Baseline and All-Base Verification
-
-Depends on Phase 1. Independent of host UI work until integration.
-
-1. Reuse `oledCalibrationPatch` with `profile=neutral`, `outputPrecision=srgb8-highp`, `dithering=off`, `use8BitOutputWhenDithering=false`. Leave custom sliders/legacy defaults as they are.
-2. If existing path meets measured contract: no production shader edit. A documented configuration plus coverage/diagnostics is a valid result.
-3. If proven double-transfer or matrix mismatch exists: stop before generic patching; record exact native owner, derive every base's preconditions, add only isolated opt-in behavior. Maintain legacy emitted shader bytes when opt-in is off. Do not repurpose reserved uniforms or add binary calls without traced ABI/state restore proof.
-4. Build complete opaque/masked shaders from production common prefix plus actual per-base suffixes and compile/link on a GLES-capable harness. A substring test is not shader compilation. Keep `main` open in the common block.
-5. Extend real-byte audit: all profiles x all 3 output precisions x all 3 dither modes, all transitions, checkbox true/false; exact-diff allowlist, shader size/NUL/interface, known format guards, idempotence, mismatched tuple/size/site/mixed-state rejection.
-6. Include existing recommended patch dependencies in composition tests so OLED updates cannot overwrite native high-resolution fixes. Unsupported build dependencies must return unchanged before file access.
-7. Keep generated catalogs synchronized if metadata/options actually change. Do not regenerate catalogs unnecessarily merely because tests change.
-8. Package only from pristine APKs using existing Morphe workflow. Compare selected patch options, resulting `.so` bytes and hashes inside final APK; do not trust a UI checkbox alone. Mark reconstructed-only rows unpackageable/unverified, not compatible by fiat.
-
-Exit: all available decoded rows have PASS/FAIL/BLOCKED, no implicit compatibility extension, whole-APK validation distinguished from native helper tests.
-
-### Phase 4: Diagnostics and Optional Dither
-
-Depends on baseline numeric contract and Phase 2/3.
-
-1. Extend `Check-SteamLinkColour.ps1` structured derived report rather than build an unrelated collector. Preserve Capture/Snapshot/Offline/SelfTest meanings and timeout/identity/session filters.
-2. Add a goal-specific `Sdr10ToSrgb8` field so 8-bit projection output can be reported as EXPECTED_OUTPUT rather than overall failure. Preserve the old storage-depth fact and never award panel-10bit PASS.
-3. Required evidence fields: exact APK pair/hash/options, host version/hash/GPU/driver/vrlink version, session identity/time, requested `supports10bit`, actual host negotiation marker, accepted encoder profile/depth, resource and picture formats, SPS bitdepth/colour metadata where captured, decoder output buffer evidence, sampled shader stages, draw-time sRGB and dither state, actual submitted projection formats.
-4. Keep proof levels explicit: capability/request/config/accepted allocation/actual sampled contents/submission/display are different. Missing logs produce UNKNOWN. Failed-override statistics must reflect pristine retry rather than attempted values.
-5. Reuse existing resolution trace telemetry for projection identity/format; do not install or resurrect Surface-video pixel-copy experiments. If new draw-time tracing is necessary, make it observation-only, exact-build guarded, rate-limited and separate from production behavior. A runtime layer cannot claim decoder low bits from `xrCreateSwapchain` alone.
-6. For bitstream inspection, capture a bounded authorized local test sequence via an existing supported debug/capture path, or add a default-off bounded hook only with an explicit follow-up decision. Use an established HEVC parser such as `ffprobe` for SPS/profile/range; do not hand-roll HEVC parsing. Never record general gameplay by default.
-7. Compare APK dither off/low/standard with identical host settings and stream. Do not combine with host dither. Persist measured noise, banding, color mean, endpoint and performance outcomes; keep off default.
-
-Exit: diagnostics report expected 8-bit endpoint separately from unknown sample precision; optional dither is reproducible and never mislabeled VD behavior.
-
-### Phase 5: Authorized Runtime Matrix and Acceptance
-
-Requires separate explicit permission for APK install, driver deployment, SteamVR restart/settings changes and on-device reproduction. No current permission implied.
-
-Use a fixed synthetic scene/gradient fixture, fixed bitrate/preset/tile width/refresh rate/network, same headset brightness, same application and negotiated dimensions. Disable test-confounding FXAA/CAS/host dither/custom color shaders in the test recipe only. Preserve safety controls and record their state. Exact decoded stream/packet sizes can vary; record actual negotiated values.
-
-For each of the 7 clients with pristine installable inputs:
-A. Current settings baseline (record, do not overwrite).
-B. Host SDR10 baseline + APK neutral/`srgb8-highp`/off.
-C. Same as B + APK low dither.
-D. Same as B + APK standard dither.
-E. Optional 8-bit encoded control only via verified existing profile negotiation; if vrlink ignores the request, mark control unavailable, never pretend it is 8-bit.
-
-Run fresh session captures, 3 repeated 30-second samples per configuration plus a >=10-minute stability run for any candidate to recommend. Test reconnect, resolution change, both eyes, foveal/peripheral transition, opaque and masked projection families, and session teardown. Do not interpret snapshots spanning multiple sessions as current proof.
-
-Acceptance:
-- Encoded HEVC SPS/profile shows Main10/10-bit when available; host negotiation alone is lower-grade evidence.
-- Actual decoder-buffer/output evidence is P010 or documented equivalent; capability/config strings alone do not pass decoded-content precision.
-- Low-bit test gradients survive to high-precision sample observation before final output quantization, to the extent the device exposes readback. If unavailable, mark precision-preservation unproven and do not claim end-to-end preservation.
-- All submitted video projection images for the baseline use `GL_SRGB8_ALPHA8`; unrelated UI/static quad allocations are excluded.
-- Neutral shader numeric oracle: expected transfer/matrix output within 1 8-bit RGB code for non-clipped controlled inputs (GPU harness), endpoints correct, monotonic grayscale, no NaN/Inf. Compression tests use measured error distributions, not exact-code equality.
-- Dither tests distinguish grain from meaningful reduction in contouring: near-zero mean noise in untapered regions, target absolute mean <0.05 8-bit code across fixed spatial/phase sample set, exact black/white preserved by the existing endpoint gate, documented maximum amplitude, alpha unchanged. Evaluate all 1024 phase values in CPU model and representative actual shader draws. Do not claim pure-white output if a separate calibrated matrix intentionally changes it; endpoint tests act on the pre-dither `q` value.
-- Baseline color mean/black floor must not shift materially versus the validated reference; a metadata mismatch blocks recommendation rather than being hidden by gamma/saturation changes.
-- No new invalid-param/reset/packet-too-big loop. Respect existing ~2 MiB transport hazard; collect max encoded IDR size and observed actual failures without claiming a universal protocol maximum solely from comments.
-- Performance comparison: at 90 Hz frame period is about 11.11 ms. No additional sustained missed-frame trend; predeclare a regression gate of >5% p95 added processing/encode time versus paired control or any reproducible new instability. Separate existing transport faults from changes. Reject or keep experimental a failing option.
-- No foveal seams, alpha loss, incorrect FOV, resolution reduction or controller/tracking regression attributable to this work.
-- Physical panel precision remains UNVERIFIED; visual comparison is not 1024-level panel proof.
-
-Exit: a dated per-base result table with static/native/APK/device/visual/performance columns, not a single undifferentiated PASS.
-
-### Phase 6: Documentation, Rollback and Cleanup
-
-1. Update this plan checklist with exact completed files, commands, hashes and blocked rows. Link from both project docs. No copied proprietary binaries.
-2. Disable `sdr10Baseline` to restore effective host settings; require normal reconnect/restart for encoder profile changes. Restore only owned SteamVR settings through existing journal. Preserve user changes made after activation.
-3. Restore prior APK/options from verified backup as needed; never auto-downgrade or install without authorization.
-4. Record 2026-09-19 plan and later actual test dates separately; do not backdate runtime results.
-5. Classify temporary harness builds/captures/staged artifacts, keep compact results and exact required inputs/tools, then remove only explicit allowlisted disposable outputs. Never remove `build` wholesale. Report cleanup amount and retained exceptions after experiments, not during planning.
-
-## 6. Critical Files: Full Paths
-
-### Steam Link, Expected Updates
-
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/diagnostics/steamlink-colour/VD-LIKE-SDR10-IMPLEMENTATION-PLAN.md`: this tracked handoff document.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/patches/src/test/kotlin/app/template/patches/steamlink/binary/VideoOutputPrecisionTest.kt`: 5002363 layout and numeric/structural tests.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/patches/src/main/kotlin/util/OledDecodedCompatibilityAudit.kt`: all 7 hash-pinned actual native fixtures, variant/transition verification.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/patches/build.gradle.kts`: update audit description/arguments if required by expanded fixture handling, not unrelated build changes.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/diagnostics/steamlink-colour/Check-SteamLinkColour.ps1`: goal-specific SDR10-to-sRGB8 derived status and self-tests.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/diagnostics/steamlink-colour/README.md`: exact opt-in recipe, proof levels, authorized capture instructions.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/diagnostics/steamlink-colour/OLED-COMPATIBILITY-NATIVE.md`: per-base evidence expansion and provenance.
-
-### Steam Link, Reuse or Conditional Changes Only
-
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/patches/src/main/kotlin/app/template/patches/steamlink/binary/OledCalibrationPatch.kt`: reuse `paddedVideoShader`/`findVideoShader`/`setProjectionSwapchainFormat`/`resolveVideoOutputPrecision`; production edits only for a demonstrated discrepancy.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/patches/src/main/kotlin/app/template/patches/shared/Constants.kt`: exact tuple compatibility, no changes expected.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/patches/src/test/kotlin/app/template/patches/steamlink/PatchCompatibilityMatrixTest.kt`: existing default/dependency regression checks, extend only if options change.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/diagnostics/steamlink-colour/Test-OledDecodedCompatibility.ps1`: fallback helper runner; has a source-extraction boundary to maintain if helper layout changes.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/extensions/resolution-trace-layer/src/android_surface_trigger_passthrough_layer.cpp`: reuse existing projection telemetry; do not alter layer topology for color work.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/steamlink-patches/WORKSPACE_CLEANUP.md`: final evidence/artifact record when experiments finish.
-
-### Host, Expected Updates
-
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Config/Config.h`: `GalaxyXrConfig::sdr10Baseline` false default.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Config/ConfigLoader.cpp`: parse/write/publish field without destructive migrations.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Config/SdrColorPolicy.h`: proposed NEW pure policy resolver, shared by startup/frame processing/tests.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Headsets/GalaxyXR.cpp`: `ApplyHeadsetProfileSetting` and `GalaxyXR_EarlyApplyVrlinkSettings` effective request, no `force10bit` revival.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Driver/FrameProcessor.cpp`: `ProcessSceneLayer`/`ProcessEye` effective baseline and consistent config snapshot; retain `MapLayerFormat`.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Driver/NvencTap.cpp` and `NvencTap.h`: bounded accepted-vs-requested telemetry in `Guarded`/`RegisterResource`/`EncodePicture`/`LockBitstream`; no input-format mutation.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetGUI/src/app/services/JsonFileDefines.ts`: config type.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetGUI/src/app/services/driver-defaults.ts`: GENERATED defaults only.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetGUI/src/app/pages/galaxy-settings/galaxy-settings.base.ts`: existing save/defaults/policy UI logic; no migration clobber.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetGUI/src/app/pages/driver-settings/driver-settings.component.html`: 1 baseline toggle and honest effective state using existing Material UI.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/tests/SdrColorPolicyTest.cpp`: proposed NEW standalone policy test, justified by absence of a color-policy test home.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/tools/Test-SdrColorPolicy.ps1`: proposed NEW runner following existing standalone MSVC test runner; no SteamVR/live config.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/Docs/StreamFrame.md`: paired APK recipe and rollback; link to this authoritative plan instead of duplicating it.
-
-### Host Reuse/Conditional
-
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Driver/NvencPostPack.cpp` and `NvencPostPack.h`: bypass in baseline; numeric characterization/future opt-in fix only after follow-up gate.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/DriverFiles/resources/shaders/d3d11/vrlink_layer_ps.hlsl`: actual color/dither shader, not a missing external resource. Avoid production shader edits if neutral constants suffice.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/CustomHeadsetOpenVR/src/Config/SteamVRSettingsJournal.h`: reuse owned-setting rollback.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/tools/Generate-DriverDefaults.ps1`: canonical native->GUI default generator.
-- `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/CustomHeadsetOpenVrGxR/tools/Build-Portable.ps1` and `tools/PORTABLE_BUILD.md`: local staged no-deploy build path.
-
-## 7. Focused Verification Commands
-
-Commands below are for the implementation phase, NOT commands executed while creating this plan. Run each in its stated repository, stop on nonzero exit, retain bounded logs. Tests that write scratch output are expected only after implementation authorization.
-
-Steam Link root:
+## 6. Verification commands (implementation phase, not planning)
+Run each in the SteamLink repo root; stop on nonzero exit; retain bounded logs. Fallback routes are NOT a real Morphe build or APK proof.
 1. `.\gradlew.bat :patches:test --tests app.template.patches.steamlink.binary.VideoOutputPrecisionTest`
 2. `.\gradlew.bat :patches:test --tests app.template.patches.steamlink.PatchCompatibilityMatrixTest`
 3. `.\gradlew.bat :patches:auditOledDecodedCompatibility`
-4. Fallback only if Gradle/plugin resolution blocks: `.\diagnostics\steamlink-colour\Test-OledDecodedCompatibility.ps1 -JavaHome <verified-JDK21-path>`. This uses a `PatchException` shim and extracted production helpers; it is NOT a real Morphe build or APK proof.
-5. `powershell -NoProfile -File .\diagnostics\steamlink-colour\Check-SteamLinkColour.ps1 -Mode SelfTest`
-6. `.\gradlew.bat build` required final repository gate; distinguish dependency failure from code failure.
-7. Use existing `generatePatchesList` task only if options/catalog metadata changed; inspect configured output channels and preserve tracked catalogs.
-8. Real Morphe packaging/signature validation for each available pristine APK follows existing project tooling, then inspect actual `.so` bytes/options. Do not invent nonexistent audit kinds such as `vd-10bit`. Never bypass missing pristine APK evidence with reconstruction.
+4. Fallback only if Gradle/plugin resolution blocks: `.\diagnostics\steamlink-colour\Test-OledDecodedCompatibility.ps1 -JavaHome <verified-JDK21-path>` (PatchException shim + extracted production helpers; NOT a real Morphe build or APK proof).
+5. `.\diagnostics\steamlink-colour\Test-Sdr10ShaderAssemble.ps1` (cached-Kotlin shader assembly), then `python diagnostics/steamlink-colour/glsl_validate.py <assemble-output-dir>`.
+6. `powershell -NoProfile -File .\diagnostics\steamlink-colour\Check-SteamLinkColour.ps1 -Mode SelfTest`.
+7. `.\gradlew.bat :patches:generatePatchesList -PreleaseChannel=stable` and `-PreleaseChannel=experimental` (only after options/catalog metadata changed); inspect the catalog diff and preserve tracked catalogs.
+8. `.\gradlew.bat build` — required final repository gate; distinguish dependency failure from code failure.
+9. Real Morphe packaging/signature validation for each available pristine APK follows existing project tooling, then inspect the actual .so bytes/options. Never bypass missing pristine-APK evidence with reconstruction; do not invent nonexistent audit kinds.
 
-Host root:
-1. `.\tools\Test-SdrColorPolicy.ps1` new runner only after implemented.
-2. `.\tools\Test-SteamVRSettingsJournal.ps1` existing standalone tests, no live settings IO.
-3. `.\tools\Generate-DriverDefaults.ps1 -Check` after regeneration when field is added.
-4. `.\tools\Test-VrlinkCapabilities.ps1` only if touching early profile/capability integration changes its contract; otherwise no reassurance-only ABI gate.
-5. In `CustomHeadsetGUI`: `npm run build:ng`; run focused policy/component tests using the repo's Karma/Jasmine configuration rather than inventing React tests.
-6. PowerShell 7: `.\tools\Build-Portable.ps1 -DriverOnly -OutputDirectory "$PWD/output/SDR10-Baseline-<unique-run>"`. This stages under output, no deploy. For final paired GUI package omit `-DriverOnly` or use the corresponding GUI build.
-7. Alternative with installed Visual Studio: `node build.js --vendor galaxyxr --no-gui` or full command for GUI, after classifying its deletion of existing output staging/default-driver directories. Portable fresh-output command is safer for dirty local work.
-8. Do not use the legacy CMake Linux packaging target as the Windows test/build recipe. Do not claim standalone tests are linked into driver; existing test runners compile their own executables.
+## 7. Handoff rules (carry forward, adjusted)
+- Work 1 testable slice at a time; the first substantive edit is immediately followed by the narrowest relevant check.
+- Start with Slice 0 (freeze evidence) and Slice 1 (retire options). Do not start by altering binary instructions.
+- Preserve all existing emitted shader bytes when all toggles are off; prove with golden/generated comparisons, not prose.
+- Stop if any exact native hash/size/caller differs; never move offsets by a constant delta from a neighboring build.
+- Stop if the assembled shader exceeds 1,087 B or changes the interface/suffix assumptions; do not truncate or relocate.
+- No claim that a toggle forces the host stream depth; input bit depth is host-negotiated.
+- No claim that fovea gating is proven until the opaque-vs-masked runtime question is answered (Phase 1).
+- No automatic force10bit, HDR flag, bitrate increase, driver API upgrade, or new protocol to make a failing test pass.
+- Never conflate static helper PASS, actual Morphe APK PASS, installed artifact verification, runtime acceptance, visual improvement, and physical panel precision.
+- If a required fixture/permission/tool is unavailable, mark that row BLOCKED with the exact prerequisite; do not silently omit it or promise completion.
 
-## 8. Handoff Rules for a Less-Capable Agent
+## 8. Current planning outcome and file target
+Research complete. The design was corrected (the foveal indicator is the uvmask-derived mask alpha, NOT the texture alpha) and constrained (the 88–92 B byte budget forces a compact foveal gate). No implementation, build, installation, or live test was performed while creating this plan. Seek and obey implementation authorization before modifying OledCalibrationPatch.kt, the tests, or the catalogs.
 
-- Work 1 testable slice at a time. First substantive edit must be immediately followed by the narrowest relevant check. No bulk host+APK changes before any validation.
-- Start with adding the missing 5002363 test layout and expanding audit input enumeration, or with the pure host policy test. Do not start by altering binary instructions.
-- Preserve all existing emitted shader bytes/defaults when opt-in is off. Prove this with golden/current generated comparisons, not prose.
-- Stop if any exact native hash/size/caller differs. Never move offsets by a constant delta from a neighboring build.
-- Stop if shader prefix cannot fit 1087 bytes or changes suffix/interface assumptions. Do not truncate or relocate arbitrarily.
-- Stop if color interpretation cannot be determined. No speculative YUV matrix, sRGB toggling, gamut conversion or VUI relabel.
-- No claim that P010 allocation proves meaningful low bits or that highp restores bits already lost.
-- No claim that disabled post-pack makes original vrlink metadata correct; that is a baseline to test with the stock decoder/matrix pair.
-- No automatic `force10bit` setting, HDR flag, bitrate increase, driver API upgrade, or new protocol to make a failing test pass.
-- No updates to live user settings merely for validation. Use temporary fixtures and existing mocks; ask before any device work.
-- Never conflate static helper PASS, actual Morphe APK PASS, installed artifact verification, runtime acceptance, visual improvement and physical panel precision.
-- If a required fixture/capture permission/tool is unavailable, mark that row BLOCKED with exact prerequisite. Do not silently omit it or promise completion.
-
-## 9. Current Planning Outcome
-
-Research completed and scope aligned; no implementation, build, installation, or live test performed while creating this plan. The recommended design deliberately reuses existing 10-bit request and APK sRGB8 controls, adds a reversible host neutral policy and precise evidence, and avoids unproven VD dithering assumptions. Seek and obey implementation authorization before modifying the host or APK.
-
-## 10. Implementation results — SteamLink side, recorded 2026-09-19
-
-User constraint for this effort: **SteamLink repository only** — no work in `CustomHeadsetOpenVrGxR`, no breaking other patches or the build, testable slices with the narrowest check after each edit. Slice letters follow the implementation handoff; A–D were completed in the prior session, E–F in the 2026-09-19 session. Nothing below is committed; no APK was installed and no device/runtime capture was authorized.
-
-### Completed items
-
-**Slices A–D — test coverage, diagnostics field, build wiring (prior session):**
-- `patches/src/test/kotlin/app/template/patches/steamlink/binary/VideoOutputPrecisionTest.kt` — added the missing `2.0.23/5002363` layout (Phase 1 item 4) and a new test proving OLED-patched bytes pass the high-resolution retired-hook guard in every option combination and both mutation orders (Phase 3 item 6).
-- `patches/src/main/kotlin/util/OledDecodedCompatibilityAudit.kt` — extended from 3 bases (5001712, 5002322, 5002363) to all 7, with explicit BLOCKED rows for missing decoded inputs (Phase 1 item 4).
-- `diagnostics/steamlink-colour/Check-SteamLinkColour.ps1` — goal-specific `Sdr10ToSrgb8` derived field (`EXPECTED_OUTPUT` / `NOT_BASELINE_ENDPOINT` / `UNKNOWN`) plus self-test coverage (Phase 4 item 2).
-- `patches/build.gradle.kts` — `auditOledDecodedCompatibility` description updated to all 7 bases; new `auditSdr10ShaderAssemble` JavaExec task (fresh output directory because the audit requires it absent/empty).
-
-**Slice E — complete shader assembly (Phase 3 item 4), 2026-09-19:**
-- New `patches/src/main/kotlin/util/Sdr10ShaderAssembleAudit.kt` — assembles the complete opaque/masked programs from the production `paddedVideoShader` prefix (neutral/sRGB8-highp, off/low/standard) plus each base's real native suffixes, located by unique content anchors and C-string boundaries; fail-closed checks on size, NUL boundary, interface, balance and alpha assignment.
-- New `diagnostics/steamlink-colour/Test-Sdr10ShaderAssemble.ps1` — cached-Kotlin runner (normal Gradle is blocked resolving `app.morphe.patches:1.3.3`).
-- New `diagnostics/steamlink-colour/glsl_validate.py` — fail-closed structural/semantic ESSL 3.00 checker, stdlib-only Python 3; 6 real bugs from the prior untested draft were found and fixed (incl. `pow` legal-form rules, constructor kind returns, `parse_block` consuming its `{`, read-only `in` variables).
-- Result: **6 PASS, 1 BLOCKED of 7 bases** (5001740: decoded input missing); 36 assembled `.glsl` files — 1,116 B opaque / 1,383 B masked on every base and dither mode — plus `report.txt` under `build/sdr10-shader-assemble-5337d033135547da8ec01f3ee0d0eac4/`; `glsl_validate.py`: **36 PASS, 0 FAIL**.
-
-**Slice F — documentation (Phase 6 item 1), 2026-09-19:** this section; `diagnostics/steamlink-colour/README.md` and `diagnostics/steamlink-colour/OLED-COMPATIBILITY-NATIVE.md` now link here and record the exact recipe, proof levels, all-base provenance and blocked rows; `WORKSPACE_CLEANUP.md` records the new artifacts and the `build/sdr10-shader-assemble-*` retention policy. No proprietary binaries were copied into any doc.
-
-### Verification evidence (all re-run 2026-09-19)
-
-| Gate | Command (Git Bash) | Result |
-|---|---|---|
-| Full Kotlin compile + JUnit | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-5002363/Compile-CachedAudit.ps1` | 126/126 tests passed |
-| OLED decoded audit | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-colour/Test-OledDecodedCompatibility.ps1` | 6 PASS + BLOCKED 5001740 |
-| Shader assembly | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-colour/Test-Sdr10ShaderAssemble.ps1` | 6 PASS, 1 BLOCKED of 7 bases; 36 `.glsl` + report |
-| GLSL structural check | `python diagnostics/steamlink-colour/glsl_validate.py <assemble-output-dir>` | 36 PASS, 0 FAIL of 36 files |
-| Colour diagnostic self-test | `powershell -NoProfile -ExecutionPolicy Bypass -File diagnostics/steamlink-colour/Check-SteamLinkColour.ps1 -Mode SelfTest` | PASS: 21 offline checks |
-
-These are fallback routes around the blocked Morphe plugin resolution; they are not a real Morphe build, APK packaging or install proof.
-
-### Hashes (re-verified 2026-09-19)
-
-- Stock 1,087-byte fragment, byte-identical on all 6 available bases, NUL-terminated: SHA-256 `cbf2d90eb70b9769dd64e57da5d76dbc38ab7213dcf7b940c956813a1ddaa99a`.
-- Opaque suffix, 29 B, identical on all 6: SHA-256 `93158a53e85fde1af61ce449f16c91b3b4213c93101cb98da42e5cc5bdca3f4c`.
-- Mask suffix, 296 B, identical on all 6: SHA-256 `2bad22b297f2016866482551483c0ecd44f629ce4d9df1848eb55d6a03008623`.
-- Per-base `.so` sizes/hashes as in the Section 3 matrix; all 6 decoded inputs re-verified by the expanded audit in this run.
-
-### Blocked rows (explicit, not skipped)
-
-| Row | Exact prerequisite |
-|---|---|
-| 2.0.20/5001740 decoded audit + shader assembly | a decoded `lib/arm64-v8a/libvrlink_scene.so` of that exact base (expected 2,220,528 B, SHA-256 `5fbb76c06c9fc0e3e5c5825752aa17e040462c8551b69d3492265f620244f443`); static-analysis-only provenance until then; never a neighbor-derived fixture. |
-| GLSL driver compilation | glslangValidator/Vulkan SDK (absent on this machine); the structural checker is not a substitute. |
-| Phase 5 runtime matrix | explicit authorization for APK install, driver deployment, SteamVR restart and on-device capture. |
-
-### Not done / not authorized
-
-- Host-side (CustomHeadsetOpenVrGxR) baseline policy, GUI, tests: out of scope per user constraint.
-- Committing the uncommitted slices; APK install/deploy; SteamVR restart; device captures.
-
-Project docs: [README.md](README.md), [OLED-COMPATIBILITY-NATIVE.md](OLED-COMPATIBILITY-NATIVE.md).
+File target note: this plan was written into the attached working copy. The tracked repo copy at diagnostics/steamlink-colour/VD-LIKE-SDR10-IMPLEMENTATION-PLAN.md still holds the 2026-09-19 baseline plan (Sections 1–10). Confirm whether to sync the repo copy to this rewrite before overwriting it; the two copies were identical before this edit.

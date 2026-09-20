@@ -10,6 +10,10 @@ import java.security.MessageDigest
  * Covers all 7 exact color-supported Steam Link bases. A base whose decoded input is
  * unavailable is reported as an explicit BLOCKED row (with its exact prerequisite),
  * never silently skipped or substituted with a neighbor-derived fixture.
+ *
+ * Also covers the Fovea VD-Like toggle states (off / input 8-bit / input 10-bit):
+ * the compact uvmask gate, the dithered 10->8 scale, and the pinned golden shader
+ * bytes at the default calibration (plan slices 5.3 and 5.4).
  */
 object OledDecodedCompatibilityAudit {
     private data class Base(
@@ -132,8 +136,74 @@ object OledDecodedCompatibilityAudit {
             }
             variants++
         }
+        // Fovea VD-Like toggle matrix (plan slice 5.3): all three toggle states always emit
+        // SRGB8. The compact uvmask gate is present only when a toggle is selected; OFF is
+        // the legacy calibrated path and must stay byte-identical to the pre-Fovea-VD-Like
+        // generator (pinned by the golden hashes below, plan slice 5.4).
+        val foveaModes = listOf(
+            FoveaMode.OFF to (VideoDitherMode.OFF to false),
+            FoveaMode.INPUT_8BIT to (VideoDitherMode.OFF to true),
+            FoveaMode.INPUT_10BIT to (VideoDitherMode.STANDARD to true),
+        )
+        fun applyFovea(
+            input: ByteArray,
+            profile: Pair<Float, Float>,
+            dither: VideoDitherMode,
+            gate: Boolean,
+        ): ByteArray {
+            val result = input.copyOf()
+            paddedVideoShader(profile.first, profile.second, VideoOutputPrecision.SRGB8_HIGHP, dither, gate)
+                .copyInto(result, findVideoShader(result))
+            return setProjectionSwapchainFormat(result, VideoOutputPrecision.SRGB8_HIGHP, base.version, base.code)
+        }
+        // Pinned 2026-09-20 from the pre-Fovea-VD-Like generator (both-fovea-toggles-off
+        // output) and its two fovea variants, at the default final-balanced calibration
+        // (gamma 1.20, saturation 1.45), padded to the 1087-byte block.
+        val foveaGoldens = mapOf(
+            FoveaMode.OFF to "a0117d0c0e78b251b979ec4e2094ae03f07eac1386c6971268d8d1543129681b",
+            FoveaMode.INPUT_8BIT to "c18f8cd748f4ab8b9310dbb3e764d63f3ccd7d521971d16767e84980c6fbcbc5",
+            FoveaMode.INPUT_10BIT to "f3f350a9f760d9af49c8fe116abf61bb2b60e774f7120b6fe83f28b40e89bce2",
+        )
+        var foveaCases = 0
+        for (foveaCase in foveaModes) {
+            val mode = foveaCase.first
+            val modeDither = foveaCase.second.first
+            val gate = foveaCase.second.second
+            for (profile in profiles) {
+                val output = applyFovea(stock, profile, modeDither, gate)
+                check(output.size == stock.size && findVideoShader(output) == shader)
+                check(output[shader + VIDEO_SHADER_SIZE] == 0.toByte())
+                val outputShader = output.copyOfRange(shader, shader + VIDEO_SHADER_SIZE).toString(Charsets.US_ASCII)
+                check(shaderInterface(outputShader) == stockInterface) { "Changed shader interface on ${base.code} ($mode)" }
+                check(gate == outputShader.contains("vec2 d=abs(fract(uvmask*vec2(1.,4.))-.5);")) { "Fovea gate presence wrong on ${base.code} ($mode)" }
+                check(gate == outputShader.contains("float f=clamp(1.-dot(d,d)*4.,0.,1.);")) { "Fovea weight wrong on ${base.code} ($mode)" }
+                check(gate == outputShader.contains("*DITHER_SCALE*DITHER_ENABLE*f;")) { "Noise not scaled by the fovea weight on ${base.code} ($mode)" }
+                check((modeDither != VideoDitherMode.OFF) == outputShader.contains("const float DITHER_ENABLE=1.;")) { "Dither enable wrong on ${base.code} ($mode)" }
+                check(!outputShader.contains('}') && outputShader.count { it == '{' } == 1) { "Common fragment must leave main open for Valve's alpha suffix ($mode)" }
+                check(stock.indices.all { index -> stock[index] == output[index] ||
+                    index in shader until shader + VIDEO_SHADER_SIZE || base.offsets.any { index in it until it + 4 } }) {
+                    "Out-of-scope byte changed on ${base.code} ($mode)"
+                }
+                check(applyFovea(output, profile, modeDither, gate).contentEquals(output)) { "Non-idempotent fovea mode on ${base.code} ($mode)" }
+                // Each fovea mode must reach the same bytes as patching stock directly.
+                for (nextCase in foveaModes) {
+                    val nextMode = nextCase.first
+                    val nextDither = nextCase.second.first
+                    val nextGate = nextCase.second.second
+                    check(applyFovea(output, profile, nextDither, nextGate)
+                        .contentEquals(applyFovea(stock, profile, nextDither, nextGate))) {
+                        "Fovea transition mismatch on ${base.code} ($mode -> $nextMode)"
+                    }
+                }
+                if (profile == (1.20f to 1.45f)) {
+                    val outShaderBytes = output.copyOfRange(shader, shader + VIDEO_SHADER_SIZE)
+                    check(outShaderBytes.sha256() == foveaGoldens[mode]) { "Golden shader bytes changed on ${base.code} ($mode)" }
+                }
+                foveaCases++
+            }
+        }
         check(library.readBytes().sha256() == base.hash) { "Source modified" }
-        println("PASS ${base.version}/${base.code}: $variants variants, $transitions transitions, $checkboxCases checkbox cases; exact diff, format instructions, NUL boundary, idempotence; source unchanged")
+        println("PASS ${base.version}/${base.code}: $variants variants, $transitions transitions, $checkboxCases checkbox cases, $foveaCases fovea toggle cases (golden-pinned); exact diff, format instructions, NUL boundary, idempotence; source unchanged")
         println("  sha256=${base.hash}; size=${stock.size}; shader=0x${shader.toString(16)}; formats=${base.offsets.joinToString { "0x${it.toString(16)}" }}")
     }
 

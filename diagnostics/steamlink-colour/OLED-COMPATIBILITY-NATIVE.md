@@ -91,3 +91,16 @@ Run the committed helper audit from the repository root:
 ```
 
 The final audit also compares each generated shader's inputs, outputs, and uniform names/types/locations with its decoded source (allowing the intentional precision qualifier changes). All 63 variants and 567 transitions passed on each base.
+
+## Fovea VD-Like toggle adaptation, 2026-09-20
+
+Per the [plan](VD-LIKE-SDR10-IMPLEMENTATION-PLAN.md), the retired 10-bit/FP16 output options and standalone dithering option are replaced by two mutually exclusive fovea toggles (`foveaVdLike10Bit`, `foveaVdLike8Bit`); `resolveFoveaMode` enforces mutual exclusion (both on → `PatchException`). Every mode writes the SRGB8_ALPHA8 swapchain instruction (`69 88 91 52`) at all guarded sites. The fovea gate is a compact uvmask-derived weight (the same 4-section geometry as the masked alpha suffix; 1.0 at a section centre, 0.0 at the edges) that scales the dithered 10→8 noise: INPUT_10BIT enables the STANDARD dither scale with the gate, INPUT_8BIT keeps the gate with dither off, and both off keeps the legacy calibrated path. The fovea path in this implementation keeps the calibrated template (the plan's attached Slice 3); the tracked-plan §3.5 "neutral fovea path" variant is a separate, user-decided option.
+
+Re-runs on this machine (fallback routes; not a Morphe APK build, install, or runtime proof):
+
+- `Test-OledDecodedCompatibility.ps1 -JavaHome F:/Runtimes/Java21`: **3 PASS (5001712, 5002244, 5002363), 4 BLOCKED** (5001740, 5002313, 5002318, 5002322 — no decoded input in this checkout). Each PASS: 63 variants, 567 transitions, 126 checkbox cases, plus 21 fovea toggle cases (off / input-8bit / input-10bit × 7 profile combinations) with gate-presence, dither-enable, exact-diff, idempotence and transition checks, and golden-pinned shader bytes at the default calibration (gamma 1.20, saturation 1.45, 1,087-byte block): off = SHA-256 `a0117d0c0e78b251b979ec4e2094ae03f07eac1386c6971268d8d1543129681b` (byte-identical to the pre-Fovea-VD-Like output), input-8bit = `c18f8cd748f4ab8b9310dbb3e764d63f3ccd7d521971d16767e84980c6fbcbc5`, input-10bit = `f3f350a9f760d9af49c8fe116abf61bb2b60e774f7120b6fe83f28b40e89bce2`.
+- `Test-Sdr10ShaderAssemble.ps1` + `glsl_validate.py`: 30 assembled `.glsl` files (3 bases × off/low/standard/fovea-input-8bit/fovea-input-10bit × opaque/masked), **30 PASS, 0 FAIL**; assembled size 1,116 B opaque / 1,383 B masked per base, under `build/sdr10-shader-assemble-5c90eb0212314fd597289f78540f9a2f/`.
+- `VideoOutputPrecisionTest` (21 tests, incl. the fovea resolver/gate/byte-budget tests and the golden-byte test) executed standalone through the cached-Kotlin + `kotlin.test` shim route: **21 PASS, 0 FAIL**. The Gradle `:patches:test` route remains blocked on `app.morphe.patches:1.3.3` (GitHub Packages, needs GITHUB_TOKEN; no token in this environment and no cached plugin).
+- Emitted shader content sizes at the default calibration: off = 995 B, fovea input-8bit = 1,076 B, fovea input-10bit = 1,080 B (all within the hard 1,087 B block).
+
+Not done (not authorized): GLSL driver compile, runtime negotiation and sampled contents, Morphe APK patching/install, and headset/panel verification. The 4 BLOCKED bases remain pending on pristine decoded inputs; they are never silent PASS rows.

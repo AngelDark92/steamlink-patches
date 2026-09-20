@@ -2,6 +2,7 @@ package app.template.patches.steamlink.binary
 
 import app.morphe.patcher.patch.PatchException
 import app.template.patches.steamlink.androidxr.retiredNativeProjectionHook
+import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -186,6 +187,67 @@ class VideoOutputPrecisionTest {
     }
 
     @Test
+    fun `fovea toggles are mutually exclusive and resolve to the fovea modes`() {
+        assertEquals(FoveaMode.OFF, resolveFoveaMode(false, false))
+        assertEquals(FoveaMode.INPUT_10BIT, resolveFoveaMode(true, false))
+        assertEquals(FoveaMode.INPUT_8BIT, resolveFoveaMode(false, true))
+        assertFailsWith<PatchException> { resolveFoveaMode(true, true) }
+    }
+
+    @Test
+    fun `fovea gate inserts the compact uvmask weight only when a toggle is selected`() {
+        val off = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.OFF).ascii()
+        val in10 = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.STANDARD, true).ascii()
+        val in8 = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.OFF, true).ascii()
+        // OFF: no fovea weight, dither disabled (byte-identical legacy calibrated path).
+        assertFalse(off.contains("float f=clamp"))
+        assertFalse(off.contains("vec2 d=abs(fract(uvmask"))
+        assertTrue(off.contains("const float DITHER_ENABLE=0.;"))
+        // 10-bit: fovea weight present, dither enabled, scaled by the fovea weight f.
+        assertTrue(in10.contains("vec2 d=abs(fract(uvmask*vec2(1.,4.))-.5);"))
+        assertTrue(in10.contains("float f=clamp(1.-dot(d,d)*4.,0.,1.);"))
+        assertTrue(in10.contains("const float DITHER_ENABLE=1.;"))
+        assertTrue(in10.contains("*DITHER_SCALE*DITHER_ENABLE*f;"))
+        // 8-bit: fovea weight present, dither disabled (neutral path).
+        assertTrue(in8.contains("float f=clamp(1.-dot(d,d)*4.,0.,1.);"))
+        assertTrue(in8.contains("const float DITHER_ENABLE=0.;"))
+        assertTrue(in8.contains("*DITHER_SCALE*DITHER_ENABLE*f;"))
+    }
+
+    @Test
+    fun `all toggles off emits the pre-change golden bytes`() {
+        // Golden pin (plan slice 5.4): with both fovea toggles off the emitted 1087-byte
+        // shader at the default final-balanced calibration (gamma 1.20, saturation 1.45)
+        // must remain byte-identical to the pre-Fovea-VD-Like srgb8-highp/dither-off
+        // output. The two fovea variants are pinned as well so the gate/dither bytes
+        // cannot drift silently.
+        val off = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.OFF)
+        assertEquals(VIDEO_SHADER_SIZE, off.size)
+        assertEquals("a0117d0c0e78b251b979ec4e2094ae03f07eac1386c6971268d8d1543129681b", sha256Hex(off))
+
+        val input8Bit = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.OFF, true)
+        assertEquals("c18f8cd748f4ab8b9310dbb3e764d63f3ccd7d521971d16767e84980c6fbcbc5", sha256Hex(input8Bit))
+
+        val input10Bit = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.STANDARD, true)
+        assertEquals("f3f350a9f760d9af49c8fe116abf61bb2b60e774f7120b6fe83f28b40e89bce2", sha256Hex(input10Bit))
+    }
+
+    @Test
+    fun `fovea variants stay within the 1087-byte block for every calibration`() {
+        listOf(
+            VideoDitherMode.OFF to false,
+            VideoDitherMode.STANDARD to true,
+            VideoDitherMode.OFF to true,
+        ).forEach { (dither, gate) ->
+            listOf(.50f to 0f, 1f to 1f, 1.06f to 1.12f, 2.50f to 3f).forEach { (gamma, saturation) ->
+                val shader = paddedVideoShader(gamma, saturation, VideoOutputPrecision.SRGB8_HIGHP, dither, gate)
+                assertEquals(VIDEO_SHADER_SIZE, shader.size)
+                assertFalse(shader.contains(0.toByte()))
+            }
+        }
+    }
+
+    @Test
     fun `swapchain format patch supports all verified layouts and is reversible`() {
         layouts.forEach { layout ->
             val srgb = syntheticLibrary(layout.size, layout.offsets)
@@ -366,6 +428,9 @@ class VideoOutputPrecisionTest {
     }
 
     private fun ByteArray.ascii() = toString(Charsets.US_ASCII)
+
+    private fun sha256Hex(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     private fun formatInstruction(precision: VideoOutputPrecision): ByteArray = when (precision) {
         VideoOutputPrecision.SRGB8_HIGHP -> byteArrayOf(0x69, 0x88.toByte(), 0x91.toByte(), 0x52)

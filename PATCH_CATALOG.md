@@ -486,12 +486,12 @@ The independently decoded 5001712 layout is 2,221,072 bytes with stock SHA-256 `
 | `profile` | `final-balanced` | neutral / initial / final-balanced / custom | Selects gamma+saturation pair; neutral uses `1.00` / `1.00` and retains the fixed matrix |
 | `gamma` | `1.20` | 0.50–2.50 | Custom-profile `vec3(GAMMA)` argument in `pow()` |
 | `saturation` | `1.45` | 0.00–3.00 | Custom-profile second argument in `mix()` |
-| `outputPrecision` | `srgb8-highp` | srgb8-highp / rgb10-a2-experimental / rgba16f-experimental | Selects shader transfer and every layout-specific projection swapchain format |
-| `dithering` | `off` | off / low / standard | Optional noise before the EOTF; off keeps prior behavior |
+| `foveaVdLike10Bit` | `false` | on / off | Declares 10-bit input (host Main10/P010); applies the fovea-gated VD-Like 10→8 dither (scale `0.00392`). Mutually exclusive with `foveaVdLike8Bit`. |
+| `foveaVdLike8Bit` | `false` | on / off | Declares 8-bit input (host Main8); applies the fovea-gated neutral path (no 10→8 dither). Mutually exclusive with `foveaVdLike10Bit`. |
 
-`srgb8-highp` is the default for OLED calibration in all 4 recommended bundles and when selected individually. RGB10 and FP16 remain explicit experimental choices. On 2026-09-09 the user reported less banding after switching the installed 2.0.20/5001712 patch from RGB10 linear to 8-bit sRGB; this observation motivates the shared default, not a claim of visual validation on every base. This changes projection output, not host encoding or decoder precision. Host negotiation alone does not expose the Android decoder buffer or compositor precision. `rgb10-a2-experimental` is fail-closed: the patch requires the exact guarded 2,221,072-byte 2.0.20/5001712, 2,220,528-byte 2.0.20/5001740, 2,251,920-byte 2.0.22/5002244, 2,276,872-byte 2.0.22/5002313, 2,277,488-byte 2.0.22/5002318, or 2,283,400-byte 2.0.22/5002322 library layout, the unique shader/NUL boundary, every layout-specific original/already-patched instruction context, and a uniform current swapchain state. The 5001712 stock library SHA-256 is `80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495`. Successful RGB10_A2 projection submission was observed on Galaxy XR with 2.0.20/5001712. Other builds and end-to-end Steam Link Main10/P010 preservation through the panel remain unverified; an unsupported format can prevent stream swapchain setup.
+The output is always 8-bit sRGB (`GL_SRGB8_ALPHA8`, `69 88 91 52`) at every guarded layout; the retired 10-bit/FP16 output and standalone dithering options are replaced by two mutually exclusive fovea toggles. The fovea gate is a compact per-pixel weight derived from `uvmask` (the same 4-section geometry as Valve's masked alpha suffix) that bounds the dithered 10→8 pass to the high-acuity region; the periphery is left untouched. Both toggles off keeps the legacy calibrated path byte-for-byte. The 5001712 stock library SHA-256 is `80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495`. The toggles declare the assumed input depth; they do not force the host stream depth (input bit depth is host-negotiated), and they do not change decoder precision or compositor/panel depth.
 
-`rgba16f-experimental` uses the same 6 exact guarded layouts and instruction preconditions. It preserves more linear storage precision for a comparison; it does not force the private compositor or display output to FP16. The patch does not establish runtime support: an unsupported format can fail stream setup. Repatch with RGB10 or sRGB8 to recover.
+The retired `rgb10-a2-experimental` and `rgba16f-experimental` output paths (and the `RGB10_A2_INSTRUCTION` / `RGBA16F_INSTRUCTION` constants) are retained internally for reversibility and the swapchain-format helper/tests, but are no longer exposed as options; the patch always writes the 8-bit sRGB instruction.
 
 Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation and swapchain submission remain runtime acceptance gates for each comparison mode. Dithering can reduce visible banding but does not restore uninterrupted 10-bit storage through an 8-bit downstream stage.
 
@@ -499,34 +499,33 @@ Static tests validate GLSL structure, fixed size, and binary placement but do no
 
 ### Controlled OLED comparison
 
-Dithering does **not** require 8-bit input or output. It adds noise to the sampled video after calibration, before output storage and (for linear formats) before sRGB-to-linear conversion. The noise strength is measured in sRGB8 code values for every output format; the shader does not first round the input to 8-bit. Decoder/import precision still depends on the actual stream and Android path; this option does not request 10-bit decoding.
+The fovea-gated VD-Like dither adds noise to the sampled video after calibration, scaled by a per-pixel foveal weight derived from `uvmask`. The noise strength is measured in sRGB8 code values (scale `0.00392` for the 10-bit toggle); the output is always 8-bit sRGB. Decoder/import precision still depends on the actual stream and Android path; the toggle does not request 10-bit decoding — it only declares the assumed input depth so the fovea processing matches.
 
-Set **Comparison dithering** to Low or Standard, and explicitly select RGB10 under **Video output precision** if comparing the checkbox states (the output default is now 8-bit sRGB). The **Use 8-bit output when dithering** checkbox then selects:
+Select **Fovea VD-Like Input 10 bit** (10-bit input → fovea-gated 10→8 dither) or **Fovea VD-Like Input 8 bit** (8-bit input → fovea-gated neutral path). The two are mutually exclusive (the resolver rejects both on). Both always hand 8-bit sRGB to the XR runtime:
 
-| Checkbox | Projection output handed to the XR runtime |
-|---|---|
-| Checked | Dithered 8-bit sRGB |
-| Unchecked (default) | Dithered selected precision: 8-bit sRGB by default, or RGB10/FP16 if selected |
+| Toggle | Fovea path | Projection output handed to the XR runtime |
+|---|---|---|
+| Fovea VD-Like Input 10 bit | fovea-gated 10→8 dither | Dithered 8-bit sRGB (bounded to the fovea) |
+| Fovea VD-Like Input 8 bit | fovea-gated neutral (no dither) | 8-bit sRGB (the fovea gate bounds the zero processing) |
+| Both off | legacy calibrated path (byte-for-byte) | 8-bit sRGB, no fovea gate |
 
-The checkbox has no effect when dithering is Off. Unchecked retains the output selector, so selecting sRGB8 there still produces 8-bit output. These settings control app projection storage, not the compositor's later quantization, dithering, or physical panel depth. App-side dither is not guaranteed to survive later processing or improve final banding.
+These settings control app projection storage, not the compositor's later quantization, dithering, or physical panel depth. App-side dither is not guaranteed to survive later processing or improve final banding.
 
-Decoded-library compatibility is checked separately for **2.0.20/5001712** and **2.0.22/5002322**: all 3 storage formats and 3 dither modes across 7 profile/slider combinations, with 567 transitions per base. The audit executes the production helpers against exact stock native hashes and verifies allowed byte ranges, every format instruction, shader NUL boundaries, idempotence, and unchanged source libraries. Native caller evidence and runtime limits are recorded in [OLED compatibility audit](diagnostics/steamlink-colour/OLED-COMPATIBILITY-NATIVE.md).
+Decoded-library compatibility is checked separately on the decoded bases **2.0.20/5001712**, **2.0.22/5002244**, and **2.0.23/5002363**: the calibrated path plus both fovea toggles across 7 profile/slider combinations, with 567 transitions per base. The audit executes the production helpers against exact stock native hashes and verifies allowed byte ranges, every format instruction, shader NUL boundaries, idempotence, and unchanged source libraries. Native caller evidence and runtime limits are recorded in [OLED compatibility audit](diagnostics/steamlink-colour/OLED-COMPATIBILITY-NATIVE.md).
 
 Repeat from the repository root with `./diagnostics/steamlink-colour/Test-OledDecodedCompatibility.ps1 -JavaHome <JDK-21-directory>`. This read-only check uses the cached Gradle Kotlin compiler and an exception shim, bypassing the Morphe DSL when its plugin is unavailable. The regular build task is `./gradlew.bat :patches:auditOledDecodedCompatibility -PreleaseChannel=experimental`. Neither check proves runtime FP16 acceptance or panel precision.
 
 Keep the same recommended patch set. In **OLED color calibration**, select **Neutral** for each variant, then change only the options below. Repatch a pristine original APK for every variant, using the same exact version/build and other patch options; do not layer variants over an already patched APK.
 
-| Run | `profile` | `outputPrecision` | `dithering` |
+| Run | `profile` | `foveaVdLike10Bit` | `foveaVdLike8Bit` |
 |---|---|---|---|
-| A: sRGB8 control | neutral | srgb8-highp | off |
-| B: RGB10 | neutral | rgb10-a2-experimental | off |
-| C: FP16, if supported | neutral | rgba16f-experimental | off |
-| D: low noise | neutral | Best working format from A–C | low |
-| E: standard noise | neutral | Same format as D | standard |
+| A: calibrated control | neutral | off | off |
+| B: fovea 10-bit (10→8 dither) | neutral | on | off |
+| C: fovea 8-bit (neutral) | neutral | off | on |
 
 Use the same dark-gradient scene, headset brightness, Steam Link bitrate/codec settings, and viewing position. Compare visible bands, near-black detail, black level, grain, and shimmer, both stationary and while moving your head. Record the actual submitted projection format with the colour diagnostic for each run: a selected option alone is not proof that the runtime accepted it. If C fails to stream, return to B or A. A smooth gradient alone does not prove panel bit depth.
 
-The defaults are **Final balanced + 8-bit sRGB + dithering Off**, with the checkbox unchecked. Saved Morphe selections can override defaults; explicitly select 8-bit sRGB when reusing a saved RGB10 configuration. Repatch from the pristine original APK. Dithering remains an independent opt-in.
+The defaults are the **Final balanced** profile with both fovea toggles off (the legacy calibrated path, 8-bit sRGB, no fovea gate). Saved Morphe selections can override defaults. Repatch from the pristine original APK. The fovea toggles remain explicit opt-ins.
 
 The standalone `videoDitherPatch`, its old `enable` option, and recommendation dependency remain removed. Dithering now belongs to OLED calibration. The unregistered internal helper `setDitherState` in `patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt` remains for historical state handling and tests; its presence does not apply a patch.
 

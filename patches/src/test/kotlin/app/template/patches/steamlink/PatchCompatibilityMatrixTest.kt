@@ -40,8 +40,8 @@ class PatchCompatibilityMatrixTest {
         recommendedBundles.forEach { patch ->
             assertTrue(patch.default, patch.name)
             assertTrue(oledCalibrationPatch in patch.dependencyClosure(), patch.name)
-            assertEquals("srgb8-highp", oledCalibrationPatch.options["outputPrecision"].default)
-            assertEquals("off", oledCalibrationPatch.options["dithering"].default)
+            assertEquals(false, oledCalibrationPatch.options["foveaVdLike10Bit"].default)
+            assertEquals(false, oledCalibrationPatch.options["foveaVdLike8Bit"].default)
         }
         assertEquals("Appear on top (legacy)", appearOnTopPatch.name)
         assertEquals("GXR face bridge (version 5002318 and below)", gxrFacebridgePatch.name)
@@ -116,8 +116,8 @@ class PatchCompatibilityMatrixTest {
         assertEquals("voice-recognition", microphoneInputPresetPatch.options["preset"].default)
         assertEquals(60, hmdOnlyPatch.options["offsetMs"].default)
         assertEquals("final-balanced", oledCalibrationPatch.options["profile"].default)
-        assertEquals("off", oledCalibrationPatch.options["dithering"].default)
-        assertEquals("srgb8-highp", oledCalibrationPatch.options["outputPrecision"].default)
+        assertEquals(false, oledCalibrationPatch.options["foveaVdLike10Bit"].default)
+        assertEquals(false, oledCalibrationPatch.options["foveaVdLike8Bit"].default)
         assertFalse(deviceIdentityPatch in galaxyXrRecommended5002322Patch.dependencyClosure())
         assertTrue(deviceIdentityPatch.supports("2.0.22", 5002322))
         assertFalse(deviceIdentityPatch.supports("2.0.20", 5002322))

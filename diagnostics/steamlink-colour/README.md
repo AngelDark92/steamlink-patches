@@ -48,28 +48,27 @@ Saved logs can also be analyzed. Offline results describe those logs, not your c
 3. Measure known low-bit test values at decoder output and after video shading, tied to the same frames and colour conversions. Verify the actual [OpenXR swapchain format](https://registry.khronos.org/OpenXR/specs/1.0/man/html/XrSwapchain.html). `highp` affects shader arithmetic; it cannot add storage bits to an 8-bit target.
 4. Obtain compositor/display-path evidence and, for physical-screen confirmation, controlled optical measurements. Dithering can make 8-bit output look smoother. A browser gradient, headset screenshot or screen recording cannot prove 1024 distinct panel levels.
 
-## SDR10 baseline (VD-like): explicit opt-in and proof levels
+## Fovea VD-Like SDR10: two-toggle, fovea-only, always 8-bit out
 
 Tracked plan: [VD-LIKE-SDR10-IMPLEMENTATION-PLAN.md](VD-LIKE-SDR10-IMPLEMENTATION-PLAN.md). Per-base native evidence: [OLED-COMPATIBILITY-NATIVE.md](OLED-COMPATIBILITY-NATIVE.md).
 
-The baseline is not a new format and not a new patch. It is the existing `oledCalibrationPatch` selected with explicit production options:
+The patch (`oledCalibrationPatch`) now exposes two mutually exclusive fovea toggles that replaced the retired 10-bit/FP16 output and standalone dithering options. Both always emit 8-bit sRGB (GL_SRGB8_ALPHA8) projection storage; the toggle only selects the assumed input depth.
 
-| Option | Value | Meaning |
+| Option | Default | Meaning |
 |---|---|---|
-| `profile` | `neutral` | gamma 1.00 / saturation 1.00; Valve's `_valve1_d2020d709` matrix is still applied, so this is not an identity transform end to end. |
-| `outputPrecision` | `srgb8-highp` | highp shader arithmetic; GL_SRGB8_ALPHA8 projection storage. |
-| `dithering` | `off` | noise-free baseline. `low`/`standard` are separate comparison rows and are never represented as proven VD behavior. |
-| `use8BitOutputWhenDithering` | `false` | explicit; ignored while `dithering=off`. |
+| `profile` | `final-balanced` | gamma/saturation calibration pair (full-frame, experimental). Valve's `_valve1_d2020d709` matrix is still applied, so this is not an identity transform end to end. |
+| `foveaVdLike10Bit` | `false` | Declares the decoded video texture as 10-bit (host Main10/P010) and applies a fovea-gated VD-Like 10→8 dithered quantize. |
+| `foveaVdLike8Bit` | `false` | Declares the decoded video texture as already 8-bit (host Main8) and applies the fovea-gated neutral path (no 10→8 dither). |
 
-Explicitly selecting `neutral` is part of this opt-in workflow. The patch's global default stays `false` and the existing `final-balanced` profile default is unchanged. The host-side (CustomHeadsetOpenVrGxR) baseline policy is a separate opt-in and is not part of this SteamLink-side work.
+The fovea gate is a compact per-pixel weight derived from `uvmask` (the same 4-section geometry as Valve's masked alpha suffix): 1.0 at a section centre (the fovea), 0.0 at the edges (periphery), so the dithered 10→8 pass is bounded to the high-acuity region and the periphery is left untouched. Both toggles off keeps the legacy calibrated path byte-for-byte (dither disabled, no fovea weight). Selecting both is rejected by the resolver (mutually exclusive). The toggles declare the assumed input depth; they do not force the host stream depth (input bit depth is host-negotiated). The host-side (CustomHeadsetOpenVrGxR) baseline policy is a separate opt-in and is not part of this SteamLink-side work.
 
 Proof levels are distinct and must not be conflated:
 
 | Level | Status on this machine |
 |---|---|
-| Static helper audit on hash-pinned decoded `.so` inputs | done — `Test-OledDecodedCompatibility.ps1`: 6 PASS, 5001740 BLOCKED |
-| Complete shader assembly (production prefix + each base's real suffixes) | done — `Test-Sdr10ShaderAssemble.ps1`: 36 `.glsl` files |
-| Structural/semantic ESSL 3.00 check of the assembled shaders | done — `glsl_validate.py` (fail-closed, stdlib-only Python): 36 PASS |
+| Static helper audit on hash-pinned decoded `.so` inputs | done — `Test-OledDecodedCompatibility.ps1`: 3 PASS (5001712, 5002244, 5002363), 4 BLOCKED (no decoded input in this checkout) |
+| Complete shader assembly (production prefix + each base's real suffixes, incl. both fovea toggles) | done — `Test-Sdr10ShaderAssemble.ps1`: 30 `.glsl` files |
+| Structural/semantic ESSL 3.00 check of the assembled shaders | done — `glsl_validate.py` (fail-closed, stdlib-only Python): 30 PASS, 0 FAIL |
 | GLSL driver compilation | NOT done — no glslangValidator/Vulkan SDK here; a structural check is not a driver compile |
 | Runtime negotiation, sampled contents, dither state | not authorized — Capture/Offline modes require explicit permission and live telemetry |
 | Physical panel precision | never measured by anything in this folder |

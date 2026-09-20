@@ -27,15 +27,12 @@ continues to resolve to Galaxy XR. Other supported targets outside the exact leg
 set likewise retain Galaxy XR as their automatic choice. Neither native bundle enables legacy
 conversion mutations, and 5002322 still excludes Device identity.
 
-The standalone Video dither patch remains removed. OLED calibration now offers `dithering`
-values `off` (default), `low`, and `standard`, plus `neutral` calibration (`1.00` gamma and
-`1.00` saturation) and optional `rgba16f-experimental` output. The defaults remain
-`final-balanced`, `srgb8-highp`, and `off`. FP16 uses the same 6 exact guarded OLED
-layouts; runtime support remains unverified and it can fail stream setup. Follow the
-[controlled comparison](PATCH_CATALOG.md#controlled-oled-comparison) to compare sRGB8, RGB10,
-and supported FP16 with dithering off, then low/standard, using the same scene and brightness
-and a pristine original APK for every variant. The historical unregistered helper remains
-`patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt`.
+The standalone Video dither patch remains removed. OLED calibration now exposes two mutually
+exclusive fovea toggles — `foveaVdLike10Bit` (10-bit input → fovea-gated 10→8 dither) and
+`foveaVdLike8Bit` (8-bit input → fovea-gated neutral path) — that replaced the retired 10-bit/FP16
+output and standalone dithering options; both always emit 8-bit sRGB. The default profile remains
+`final-balanced` with both toggles off (the legacy calibrated path). The historical unregistered
+helper remains `patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt`.
 
 Bundle membership does not broaden native guards: high-resolution adaptation is unavailable on
 5001740. Those

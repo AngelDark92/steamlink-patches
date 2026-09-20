@@ -151,6 +151,29 @@ internal fun resolveVideoOutputPrecision(
     if (use8BitOutputWhenDithering && dither != VideoDitherMode.OFF)
         VideoOutputPrecision.SRGB8_HIGHP else selected
 
+// Fovea VD-Like modes: two mutually exclusive input-depth declarations. The fovea gate is a
+// compact per-pixel weight derived from uvmask (the same 4-section geometry as Valve's
+// masked alpha suffix) that bounds the dithered 10->8 pass to the high-acuity region, so the
+// periphery is left untouched (lighter on the SoC than VD's full-frame dither). OFF keeps the
+// legacy calibrated path byte-for-byte (dither disabled, no fovea weight). INPUT_10BIT applies
+// the fovea-gated 10->8 dither; INPUT_8BIT keeps the gate but leaves the dither disabled
+// (neutral), since an already-8-bit input needs no 10->8 quantize. Both always emit 8-bit sRGB.
+internal enum class FoveaMode(val optionValue: String) {
+    OFF("off"),
+    INPUT_10BIT("input-10bit"),
+    INPUT_8BIT("input-8bit");
+}
+
+internal fun resolveFoveaMode(input10Bit: Boolean, input8Bit: Boolean): FoveaMode = when {
+    input10Bit && input8Bit -> throw PatchException(
+        "Fovea VD-Like Input 10 bit and Fovea VD-Like Input 8 bit are mutually exclusive; " +
+            "select at most one",
+    )
+    input10Bit -> FoveaMode.INPUT_10BIT
+    input8Bit -> FoveaMode.INPUT_8BIT
+    else -> FoveaMode.OFF
+}
+
 // Defaults remain noise-free. Optional comparison dither is applied in calibrated
 // sRGB code space before EOTF, independently of the projection storage precision.
 private val HIGHP_SHADER_TEMPLATE = """#version 300 es
@@ -184,11 +207,21 @@ n*=smoothstep(0.,DITHER_GUARD_VALUE,q)*smoothstep(0.,DITHER_GUARD_VALUE,1.-q);
 color.rgb=clamp(q+n,0.,1.)*fFadeAmount;
 """.trimStart('\n')
 
+// Compact foveal weight from uvmask, using the same 4-section geometry as Valve's masked
+// alpha suffix. 1.0 at a section centre (the fovea), 0.0 at the section edges (periphery).
+// Well-defined everywhere: d components are in [0, .5] so dot(d,d) is in [0, .5] and
+// clamp(1. - dot(d,d)*4., 0., 1.) stays in [0, 1]; unlike the exact masked-suffix pow curve it
+// never produces a negative argument (which would yield NaN at the section edges).
+private val FOVEA_WEIGHT_LINES =
+    "vec2 d=abs(fract(uvmask*vec2(1.,4.))-.5);\n" +
+    "float f=clamp(1.-dot(d,d)*4.,0.,1.);\n"
+
 internal fun paddedVideoShader(
     gamma: Float,
     saturation: Float,
     outputPrecision: VideoOutputPrecision,
     dither: VideoDitherMode = VideoDitherMode.OFF,
+    foveaGate: Boolean = false,
 ): ByteArray {
     val gammaValue = String.format(Locale.US, "%.2f", gamma)
     val saturationValue = String.format(Locale.US, "%.2f", saturation)
@@ -201,7 +234,7 @@ internal fun paddedVideoShader(
                 "mix(c/12.92,pow((c+.055)/1.055,vec3(2.4)),step(vec3(.04045),c))",
             )
     }
-    val template = if (dither == VideoDitherMode.OFF) HIGHP_SHADER_TEMPLATE else {
+    var template = if (dither == VideoDitherMode.OFF) HIGHP_SHADER_TEMPLATE else {
         val convertedQ = if (outputPrecision == VideoOutputPrecision.SRGB8_HIGHP) "q" else
             "mix(q/12.92,pow((q+.055)/1.055,vec3(2.4)),step(vec3(.04045),q))"
         HIGHP_SHADER_TEMPLATE
@@ -209,6 +242,18 @@ internal fun paddedVideoShader(
             .replace("vec3 q=OUTPUT_CONVERSION;", "vec3 q=c;")
             .replace("color.rgb=clamp(q+n,0.,1.)*fFadeAmount;",
                 "q=clamp(q+n,0.,1.);color.rgb=$convertedQ*fFadeAmount;")
+    }
+    if (foveaGate) {
+        // Bound the dithered 10->8 pass to the fovea: insert the compact uvmask-derived weight
+        // and scale the noise n by it. With dither OFF the weight multiplies zero, so the 8-bit
+        // neutral path stays byte-exact to the calibrated output apart from the (unused) gate.
+        val noiseAnchor = "vec3 n=(fract(UniDitherOffsets.a*.43+UniDitherOffsets.rgb+\n"
+        require(noiseAnchor in template) {
+            "Fovea gate anchor missing from the video shader template"
+        }
+        template = template
+            .replace(noiseAnchor, FOVEA_WEIGHT_LINES + noiseAnchor)
+            .replace("*DITHER_SCALE*DITHER_ENABLE;", "*DITHER_SCALE*DITHER_ENABLE*f;")
     }
     val src = template
         .replace("GAMMA_VALUE", gammaValue)
@@ -335,7 +380,7 @@ internal fun setProjectionSwapchainFormat(
 @Suppress("unused")
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
-    description = "Calibrates Galaxy XR OLED color and selects a guarded high-precision video output path for Steam Link builds 5001712, 5001740, 5002244, 5002313, 5002318, 5002322, and 5002363.",
+    description = "A patch trying to emulate what VD does with the 10-bit info but only on the fovea and always outputs 8 bit. Steam Link builds 5001712, 5001740, 5002244, 5002313, 5002318, 5002322, and 5002363.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
@@ -376,37 +421,19 @@ val oledCalibrationPatch = rawResourcePatch(
         required = true,
     )
 
-    val outputPrecision by stringOption(
-        key = "outputPrecision",
-        default = "srgb8-highp",
-        values = mapOf(
-            "8-bit sRGB highp output (recommended)" to "srgb8-highp",
-            "RGB10_A2 linear output (experimental)" to "rgb10-a2-experimental",
-            "FP16 linear output (experimental; runtime support required)" to "rgba16f-experimental",
-        ),
-        title = "Video output precision",
-        description = "8-bit sRGB is the default after a Galaxy XR comparison showed less banding than RGB10 linear. RGB10 can have coarser near-black steps despite its higher bit count. Linear formats include sRGB conversion. FP16 support and performance are unverified; unsupported formats may prevent streaming. These choices do not change decoder depth or force compositor/panel depth.",
-        required = true,
-    )
-
-    val dithering by stringOption(
-        key = "dithering",
-        default = "off",
-        values = mapOf(
-            "Off (default)" to "off",
-            "Low (0.5 sRGB8 code peak-to-peak)" to "low",
-            "Standard (1 sRGB8 code peak-to-peak)" to "standard",
-        ),
-        title = "Comparison dithering",
-        description = "Adds fine noise after calibration, before linear conversion, at any output precision. sRGB8 codes describe noise strength, not required input or output depth. Preserves exact black/white and fades noise near endpoints. This is app-side noise, not final compositor dithering.",
-        required = true,
-    )
-
-    val use8BitOutputWhenDithering by booleanOption(
-        key = "use8BitOutputWhenDithering",
+    val foveaVdLike10Bit by booleanOption(
+        key = "foveaVdLike10Bit",
         default = false,
-        title = "Use 8-bit output when dithering",
-        description = "With Low or Standard dithering: checked submits 8-bit sRGB projection output; unchecked keeps Video output precision (8-bit sRGB by default). Select RGB10 or FP16 and leave unchecked to dither at that output precision. Ignored when dithering is Off. Does not change decoder input depth or force compositor/panel depth.",
+        title = "Fovea VD-Like Input 10 bit",
+        description = "Declares the decoded video texture as 10-bit (host negotiated Main10/P010) and applies a fovea-gated VD-Like 10->8 dithered quantize, bounded to the high-acuity region so the periphery is left untouched. The output is always 8-bit sRGB. Mutually exclusive with Fovea VD-Like Input 8 bit (the resolver enforces this). The toggle declares the assumed input depth; it does not force the host stream depth, which is host-negotiated.",
+        required = true,
+    )
+
+    val foveaVdLike8Bit by booleanOption(
+        key = "foveaVdLike8Bit",
+        default = false,
+        title = "Fovea VD-Like Input 8 bit",
+        description = "Declares the decoded video texture as already 8-bit (host sent Main8) and applies the fovea-gated neutral path (no 10->8 dither is needed because the input is already 8-bit). The output is always 8-bit sRGB. Mutually exclusive with Fovea VD-Like Input 10 bit (the resolver enforces this). The toggle declares the assumed input depth; it does not force the host stream depth, which is host-negotiated.",
         required = true,
     )
 
@@ -434,14 +461,21 @@ val oledCalibrationPatch = rawResourcePatch(
             "custom" -> gamma.value!! to saturation.value!!
             else -> throw PatchException("Unknown OLED calibration profile: $profile")
         }
-        val dither = VideoDitherMode.fromOption(dithering)
-        val precision = resolveVideoOutputPrecision(
-            VideoOutputPrecision.fromOption(outputPrecision), dither,
-            use8BitOutputWhenDithering == true,
-        )
+        // The two fovea toggles are mutually exclusive; the resolver enforces that server-side,
+        // not just in the UI. Both always emit 8-bit sRGB projection storage; the toggle only
+        // selects the assumed input depth, which chooses the fovea-gated dither scale (10-bit ->
+        // fovea-gated dither, 8-bit -> fovea-gated neutral). OFF (both off) keeps the legacy
+        // calibrated path byte-for-byte (dither disabled, no fovea weight).
+        val foveaMode = resolveFoveaMode(foveaVdLike10Bit == true, foveaVdLike8Bit == true)
+        val (dither, foveaGate) = when (foveaMode) {
+            FoveaMode.OFF -> VideoDitherMode.OFF to false
+            FoveaMode.INPUT_10BIT -> VideoDitherMode.STANDARD to true
+            FoveaMode.INPUT_8BIT -> VideoDitherMode.OFF to true
+        }
+        val precision = VideoOutputPrecision.SRGB8_HIGHP
         val shaderPatched = bytes.copyOf().apply {
             paddedVideoShader(selectedGamma, selectedSaturation, precision,
-                dither).copyInto(this, shaderPos)
+                dither, foveaGate).copyInto(this, shaderPos)
         }
         file.writeBytes(
             setProjectionSwapchainFormat(
