@@ -204,3 +204,70 @@ java -jar Tools/apk-tools/apktool.jar d VirtualDesktop/split_data.apk -o Virtual
 Cleanup verification checks path containment/reparse points, an explicit allowlist, preserved files and input dependencies, Git changes, and ignore rules. No APK installation, ADB command, headset test, SteamVR mutation, driver deployment, or GitHub publication is part of this cleanup.
 
 Results: all 59 targets absent; 0 missing or altered retained files (with archived manifests accounted for); 0 unexpected tracked deletions; Tools and CustomHeadsetOpenVrGxR Git status unchanged. The original Virtual Desktop APK hash still matches. All protected infrastructure directories remain. `git diff --check`, ignore-rule probes, and PowerShell syntax checks passed. The A/B input exists with the generator's pinned native-library hash, and its output directory is absent as required. Independent cavecrew review found no remaining issues. Full Gradle compilation/APK regeneration was not run for this cleanup.
+### Separate foveal blue-noise validation cleanup, 2026-09-22
+
+- The separate default-off experiment supports exact **2.0.20/5001712**,
+  **2.0.22/5002244**, **2.0.23/5002363**. Existing OLED/VD-like behavior is preserved;
+  descriptions were corrected after the independent Virtual Desktop comparison.
+- Retain canonical `patches/src/main/cpp/blue_noise/` source, original tile/header and
+  tests; `patches/src/main/resources/steamlink/blue-noise/libgxd.so`; current catalogs;
+  and compact `diagnostics/steamlink-blue-noise-ditering/` receipts. Release CI does not
+  rebuild the required native resource. Reproduction commands are in that folder's README.
+- Passed: 109 Kotlin/JUnit tests, 13 native mock-GL/EGL groups, 3 decoded-base audits,
+  12 Morphe fixture packaging cases, local bundle/D8/catalogs and bounded syntax checks.
+  `diagnostics/steamlink-blue-noise-ditering/VALIDATION.md` records the strict stock-GLSL
+  dialect, reconstruction, Gradle-plugin and runtime limitations.
+- **Cleanup deferred by automatic approval review:** both containment-checked recursive
+  removal and inspected non-recursive file/empty-directory removal were rejected with
+  the reason **blocked by policy**. Neither deletion command ran. **0 bytes reclaimed;
+  5,838 temporary files / 4,191,411,166 bytes remain** across 11 task-created build
+  directories and 12 superseded raw fixture receipts. `morphe-validation.json` is the
+  current authoritative fixture receipt; older `morphe-500*.txt` receipts await removal.
+- Explicit targets, sizes, root inventory and nested repository inventory are in
+  `diagnostics/steamlink-blue-noise-ditering/cleanup.json`. Individual file paths and
+  inspected metadata are in `build/blue-noise-cleanup-manifest.json`. No reparse points
+  were found. Complete cleanup only against this reviewed list when tool execution is
+  allowed or the user removes it; do not infer additional targets or delete root `build/`.
+- All 10 protected file hashes/sizes remain unchanged: exact native inputs, fixture APKs,
+  VD assembly store, canonical helper/tile, and the retained official compiler
+  `build/tooling/bin/glslang.exe` needed for reproducible syntax checks. SDKs, cached tools,
+  unrelated captures and all other build children remain untouched.
+
+### 2026-09-22 — Installed VD Streamer HEVC10/AV110 follow-up
+
+- Read-only audit of Windows Streamer **1.34.22.0**, compared with the earlier
+  Android **1.34.18.0/10683** and 3 exact Steam Link bases. No additional production
+  patch or installed application change; no runtime banding result claimed.
+- Retained compact source hashes, selected IL/native disassembly and reproduction
+  scripts in `diagnostics/steamlink-vd-streamer/`. The 76 shader disassemblies in
+  `build/vd-streamer-shaders/` total **260,760 bytes** and remain active evidence for
+  the reports; regenerate with its `disassemble_shaders.py` against the pinned
+  installation. No copied DLL/APK, decoded derivative or compiler output created.
+- Removed **0 bytes**. Earlier deferred validation-output cleanup remains deferred
+  for the recorded automatic-review block; no alternate deletion route attempted.
+  All 50 protected blue-noise files and all 7 installed audit inputs rechecked
+  unchanged in `preservation-validation.json`.
+
+### 2026-09-22 — Existing VD-like OLED options revised after HEVC10 PCVR trace
+
+- Retained evidence: `diagnostics/steamlink-vd-hevc10/` records the supplied VD
+  1.34.18.0/10683 path, installed SteamVR 2.17.10 beta/build 25330290 shader override
+  gate, exact Steam Link 2.0.20/5001712, 2.0.22/5002244 and 2.0.23/5002363 native
+  guards, 115 passing tests, 6 successful Morphe fixture cases, D8/catalog checks,
+  shader syntax limitations and unchanged blue-noise hashes.
+- The existing 2 OLED options now bypass added gamma/saturation/noise only in the
+  masked foveal program, retain Valve decoder correction/fade/alpha and sRGB8 output,
+  and use identical processing for either declared input depth. No runtime banding
+  fix, pristine APK installation, or exact VD encoder/import reproduction is claimed.
+- **Cleanup deferred:** the earlier automatic approval review rejected recursive and
+  individually inspected deletion with **blocked by policy**. No alternate deletion
+  route was attempted. New temporary outputs total **1,173,911,723 bytes / 1,072 files**
+  in `build/vd-sdr-kotlin`, `vd-sdr-morphe`, `vd-sdr-glsl`, `vd-sdr-glsl-check`,
+  `vd-sdr-package`, `vd-sdr-blue-regression`, and `vd-sdr-fovea-helper-test-investigator`.
+  The exact directory inventory is in `diagnostics/steamlink-vd-hevc10/cleanup.json`;
+  0 bytes reclaimed. These targets are separate from the prior blue-noise allowlist.
+- Preserve all 50 blue-noise source/resource/test/diagnostic files unchanged, all
+  exact decoded bases/fixture APKs, VD source/extracted audit evidence, SDKs, cached
+  compilers, GLSL/R8 tools, and unrelated build children. Reproduction commands are
+  in the new diagnostic README. Remove only the listed generated outputs once
+  deletion is permitted, after preserving the compact receipts.

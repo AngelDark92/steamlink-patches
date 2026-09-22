@@ -107,13 +107,9 @@ internal fun resolveVideoOutputPrecision(
     if (use8BitOutputWhenDithering && dither != VideoDitherMode.OFF)
         VideoOutputPrecision.SRGB8_HIGHP else selected
 
-// Fovea VD-Like modes: two mutually exclusive input-depth declarations. The fovea gate is a
-// compact per-pixel weight derived from uvmask (the same 4-section geometry as Valve's
-// masked alpha suffix) that bounds the dithered 10->8 pass to the high-acuity region, so the
-// periphery is left untouched (lighter on the SoC than VD's full-frame dither). OFF keeps the
-// legacy calibrated path byte-for-byte (dither disabled, no fovea weight). INPUT_10BIT applies
-// the fovea-gated 10->8 dither; INPUT_8BIT keeps the gate but leaves the dither disabled
-// (neutral), since an already-8-bit input needs no 10->8 quantize. Both always emit 8-bit sRGB.
+// Existing option keys are retained. Both input declarations now select the same
+// VD-informed SDR foveal processing; input precision is negotiated by the host.
+// OFF and paddedVideoShader remain unchanged for existing calibration/blue-noise use.
 internal enum class FoveaMode(val optionValue: String) {
     OFF("off"),
     INPUT_10BIT("input-10bit"),
@@ -200,7 +196,7 @@ internal fun paddedVideoShader(
                 "q=clamp(q+n,0.,1.);color.rgb=$convertedQ*fFadeAmount;")
     }
     if (foveaGate) {
-        // Bound the dithered 10->8 pass to the fovea: insert the compact uvmask-derived weight
+        // Legacy pixel weight in both layers: insert the compact uvmask-derived weight
         // and scale the noise n by it. With dither OFF the weight multiplies zero, so the 8-bit
         // neutral path stays byte-exact to the calibrated output apart from the (unused) gate.
         val noiseAnchor = "vec3 n=(fract(UniDitherOffsets.a*.43+UniDitherOffsets.rgb+\n"
@@ -336,7 +332,7 @@ internal fun setProjectionSwapchainFormat(
 @Suppress("unused")
 val oledCalibrationPatch = rawResourcePatch(
     name = "OLED color calibration",
-    description = "A patch trying to emulate what VD does with the 10-bit info but only on the fovea and always outputs 8 bit. Steam Link builds 5001712, 5002244, and 5002363.",
+    description = "OLED calibration with optional VD-informed SDR foveal processing for 8-bit or 10-bit input, always with 8-bit sRGB output. The VD options remove added gamma/saturation and arithmetic noise from the foveal shader while retaining Valve's decoder colour correction. Exact builds 5001712, 5002244, and 5002363; decoder precision and banding improvement require runtime verification.",
     default = false,
 ) {
     compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
@@ -351,7 +347,7 @@ val oledCalibrationPatch = rawResourcePatch(
             "Custom gamma and saturation" to "custom",
         ),
         title = "Calibration profile",
-        description = "Selects the gamma and saturation pair used in the 1087-byte video shader.",
+        description = "Selects gamma and saturation for both layers when the VD options are off, or for the base layer when a VD foveal option is on.",
         required = true,
     )
 
@@ -381,7 +377,7 @@ val oledCalibrationPatch = rawResourcePatch(
         key = "foveaVdLike10Bit",
         default = false,
         title = "Fovea VD-Like Input 10 bit",
-        description = "Declares the decoded video texture as 10-bit (host negotiated Main10/P010) and applies a fovea-gated VD-Like 10->8 dithered quantize, bounded to the high-acuity region so the periphery is left untouched. The output is always 8-bit sRGB. Mutually exclusive with Fovea VD-Like Input 8 bit (the resolver enforces this). The toggle declares the assumed input depth; it does not force the host stream depth, which is host-negotiated.",
+        description = "VD-informed SDR processing for declared 10-bit input: use highp sampling, retain Valve's decoder colour correction, bypass added gamma/saturation on the foveal layer, and add no shader noise. Output is 8-bit sRGB. Does not negotiate host depth or reproduce VD's raw-YUV decoder import. Mutually exclusive with the 8-bit option and separate blue-noise patch.",
         required = true,
     )
 
@@ -389,7 +385,7 @@ val oledCalibrationPatch = rawResourcePatch(
         key = "foveaVdLike8Bit",
         default = false,
         title = "Fovea VD-Like Input 8 bit",
-        description = "Declares the decoded video texture as already 8-bit (host sent Main8) and applies the fovea-gated neutral path (no 10->8 dither is needed because the input is already 8-bit). The output is always 8-bit sRGB. Mutually exclusive with Fovea VD-Like Input 10 bit (the resolver enforces this). The toggle declares the assumed input depth; it does not force the host stream depth, which is host-negotiated.",
+        description = "Uses the same VD-informed SDR foveal processing for declared 8-bit input, retaining Valve's decoder colour correction with no added gamma/saturation or shader noise. Output is 8-bit sRGB. Cannot recover precision already lost in the source. Mutually exclusive with the 10-bit option and separate blue-noise patch; does not negotiate host depth.",
         required = true,
     )
 
@@ -417,28 +413,19 @@ val oledCalibrationPatch = rawResourcePatch(
             "custom" -> gamma.value!! to saturation.value!!
             else -> throw PatchException("Unknown OLED calibration profile: $profile")
         }
-        // The two fovea toggles are mutually exclusive; the resolver enforces that server-side,
-        // not just in the UI. Both always emit 8-bit sRGB projection storage; the toggle only
-        // selects the assumed input depth, which chooses the fovea-gated dither scale (10-bit ->
-        // fovea-gated dither, 8-bit -> fovea-gated neutral). OFF (both off) keeps the legacy
-        // calibrated path byte-for-byte (dither disabled, no fovea weight).
+        // VD uses the same SDR colour path for both codec depths. Keep the calibrated
+        // base program byte-identical, and change only the separately assembled foveal
+        // suffix. The former common-prefix uvmask weight was not layer isolation.
         val foveaMode = resolveFoveaMode(foveaVdLike10Bit == true, foveaVdLike8Bit == true)
-        val (dither, foveaGate) = when (foveaMode) {
-            FoveaMode.OFF -> VideoDitherMode.OFF to false
-            FoveaMode.INPUT_10BIT -> VideoDitherMode.STANDARD to true
-            FoveaMode.INPUT_8BIT -> VideoDitherMode.OFF to true
-        }
         val precision = VideoOutputPrecision.SRGB8_HIGHP
         val shaderPatched = bytes.copyOf().apply {
-            paddedVideoShader(selectedGamma, selectedSaturation, precision,
-                dither, foveaGate).copyInto(this, shaderPos)
+            paddedVideoShader(selectedGamma, selectedSaturation, precision).copyInto(this, shaderPos)
         }
         file.writeBytes(
-            setProjectionSwapchainFormat(
-                shaderPatched,
-                precision,
-                packageMetadata.versionName,
-                packageMetadata.versionCode,
+            applyVdSdrFovea(
+                setProjectionSwapchainFormat(shaderPatched, precision,
+                    packageMetadata.versionName, packageMetadata.versionCode),
+                packageMetadata.versionName, packageMetadata.versionCode, foveaMode,
             ),
         )
     }

@@ -191,11 +191,11 @@ class VideoOutputPrecisionTest {
     }
 
     @Test
-    fun `fovea gate inserts the compact uvmask weight only when a toggle is selected`() {
+    fun `legacy shader generator retains old uvmask gate for historical comparisons`() {
         val off = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.OFF).ascii()
         val in10 = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.STANDARD, true).ascii()
         val in8 = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.OFF, true).ascii()
-        // OFF: no fovea weight, dither disabled (byte-identical legacy calibrated path).
+        // Production OFF keeps these bytes. Historical gated variants below are no longer selected by the UI.
         assertFalse(off.contains("float f=clamp"))
         assertFalse(off.contains("vec2 d=abs(fract(uvmask"))
         assertTrue(off.contains("const float DITHER_ENABLE=0.;"))
@@ -216,7 +216,7 @@ class VideoOutputPrecisionTest {
         // shader at the default final-balanced calibration (gamma 1.20, saturation 1.45)
         // must remain byte-identical to the pre-Fovea-VD-Like srgb8-highp/dither-off
         // output. The two fovea variants are pinned as well so the gate/dither bytes
-        // cannot drift silently.
+        // cannot drift silently. Current VD options use applyVdSdrFovea instead.
         val off = paddedVideoShader(1.20f, 1.45f, VideoOutputPrecision.SRGB8_HIGHP, VideoDitherMode.OFF)
         assertEquals(VIDEO_SHADER_SIZE, off.size)
         assertEquals("a0117d0c0e78b251b979ec4e2094ae03f07eac1386c6971268d8d1543129681b", sha256Hex(off))
@@ -229,7 +229,7 @@ class VideoOutputPrecisionTest {
     }
 
     @Test
-    fun `fovea variants stay within the 1087-byte block for every calibration`() {
+    fun `historical gated variants stay within the 1087-byte block for every calibration`() {
         listOf(
             VideoDitherMode.OFF to false,
             VideoDitherMode.STANDARD to true,

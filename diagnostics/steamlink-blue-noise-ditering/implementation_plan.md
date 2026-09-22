@@ -1,3 +1,20 @@
+# Implemented scope update — 2026-09-22
+
+The implementation is now the separate, **default-off** Morphe patch **Foveal blue-noise dithering (experimental)**. The current contract is documented in [README.md](README.md); the original plan below is retained as historical design evidence.
+
+- **Foveal layer only**, for both eyes. This supersedes every historical instruction below to modify both base and foveal layers. Exact complete masked-shader hashes and each base's verified foveal draw return address jointly gate the effect; the base draw is excluded.
+- **8-bit and 10-bit declared inputs use the same final 8-bit sRGB quantizer.** The input option does not force host negotiation or decoder precision. High-precision video sampling/arithmetic precedes quantization after colour processing and fade; the original alpha/mask is preserved.
+- Exact pairs: **2.0.20/5001712**, **2.0.22/5002244**, and **2.0.23/5002363**. The 5001712 decoded input remains an analysis reconstruction. Per-base layout/native-path evidence is in [native-layouts.json](native-layouts.json) and [NATIVE-INTEGRATION-EVIDENCE.md](NATIVE-INTEGRATION-EVIDENCE.md).
+- Existing OLED behavior stays intact. Optional OLED calibration is accepted only with both older VD-like fovea toggles off; either enabled toggle is rejected rather than stacked. The new patch is independent of OLED and outside recommended bundles.
+- Unknown remote/host shader replacements remain unchanged, including after reconnect or reload. Live shader coverage is still an acceptance gap. The disable property `debug.steamlink.blue_noise=0` is checked on shader submission, so it requires an app restart or shader reload.
+- The canonical native implementation is under `patches/src/main/cpp/blue_noise/`, with the packaged helper under `patches/src/main/resources/steamlink/blue-noise/`. It uses narrow guarded scene-import/lookup-string routing, not the historical proposed Application/ByteHook bootstrap.
+- The [Virtual Desktop verification](virtualdesktop-verification.md) does not find this blue-noise operation in the inspected VD streaming shaders. Neither the new quantizer nor the legacy arithmetic dither is a verified copy of VD dithering.
+- Current evidence includes 13 passing host native contract groups, deterministic arithmetic/spatial checks, and production-helper checks against 3 exact decoded inputs. These are separate from actual GPU/headset results. The cached Kotlin compiler route bypasses the unresolved Gradle plugin; any Morphe fixture packaging results belong in their own final validation receipt.
+
+See the README for reproduction commands, optional-calibration rules, numerical limits, and remaining runtime checks. The unchanged historical text below must not override this implemented scope.
+
+---
+
 # Steam Link VR 2.0.20: headset-side output dithering plan
 
 ## Scope and result

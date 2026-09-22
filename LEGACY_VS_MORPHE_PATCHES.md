@@ -27,12 +27,17 @@ continues to resolve to Galaxy XR. Other supported targets outside the exact leg
 set likewise retain Galaxy XR as their automatic choice. Neither native bundle enables legacy
 conversion mutations, and 5002322 still excludes Device identity.
 
-The standalone Video dither patch remains removed. OLED calibration now exposes two mutually
-exclusive fovea toggles — `foveaVdLike10Bit` (10-bit input → fovea-gated 10→8 dither) and
-`foveaVdLike8Bit` (8-bit input → fovea-gated neutral path) — that replaced the retired 10-bit/FP16
-output and standalone dithering options; both always emit 8-bit sRGB. The default profile remains
-`final-balanced` with both toggles off (the legacy calibrated path). The historical unregistered
-helper remains `patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt`.
+A separate default-off **Foveal blue-noise dithering (experimental)** patch was added on 2026-09-22. It does not replace the historical/VD-like controls below. The [decoded VD comparison](diagnostics/steamlink-blue-noise-ditering/virtualdesktop-verification.md) corrects the earlier fovea-isolation and VD-equivalence claims.
+
+The standalone Video dither patch remains removed. OLED calibration retains the 2 mutually
+exclusive keys `foveaVdLike10Bit` and `foveaVdLike8Bit`. Their current implementation uses the
+same highp SDR foveal processing for either declared input depth: retain Valve decoder color
+correction, bypass added gamma/saturation and arithmetic noise, and output 8-bit sRGB.
+The base calibration and default `final-balanced` profile with both toggles off stay unchanged.
+See the [current HEVC 10-bit audit](diagnostics/steamlink-vd-hevc10/README.md); historical
+`uvmask` weighting and depth-dependent dithering below do not describe the current controls.
+The historical unregistered helper remains
+`patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt`.
 
 Bundle membership does not broaden native guards: high-resolution adaptation is unavailable on
 5001740. Those

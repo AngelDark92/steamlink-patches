@@ -29,7 +29,7 @@ $helpers = $helpers -replace '(?m)^import app\.template\.patches\.shared\.Consta
 [IO.File]::WriteAllText((Join-Path $work 'PatchException.kt'), 'package app.morphe.patcher.patch; class PatchException(message: String) : RuntimeException(message)')
 $classpath = ((Get-ChildItem -LiteralPath $compilerLib -Filter '*.jar').FullName -join ';')
 $jar = Join-Path $work 'audit.jar'
-& $java -cp "$compilerLib/*" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-reflect -classpath $classpath -d $jar (Join-Path $work 'OledHelpers.kt') (Join-Path $work 'PatchException.kt') (Join-Path $repo 'patches/src/main/kotlin/util/Sdr10ShaderAssembleAudit.kt')
+& $java -cp "$compilerLib/*" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -no-stdlib -no-reflect -classpath $classpath -d $jar (Join-Path $work 'OledHelpers.kt') (Join-Path $work 'PatchException.kt') (Join-Path $repo 'patches/src/main/kotlin/app/template/patches/steamlink/binary/VdSdrFoveaPatchHelper.kt') (Join-Path $repo 'patches/src/main/kotlin/util/Sdr10ShaderAssembleAudit.kt')
 if ($LASTEXITCODE -ne 0) { throw 'Sdr10 shader assembly compilation failed.' }
 & $java -Xmx1g -cp "$compilerLib/*;$jar" util.Sdr10ShaderAssembleAudit $repo $output | Tee-Object -FilePath (Join-Path $work 'result.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Sdr10 shader assembly audit failed.' }

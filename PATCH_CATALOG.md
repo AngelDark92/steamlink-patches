@@ -458,82 +458,62 @@ The independently decoded 5001712 layout is 2,221,072 bytes with stock SHA-256 `
 
 ---
 
-### OLED Color Calibration / Output Precision (`oledCalibrationPatch`)
-**Default: disabled individually; selected by all 4 recommendation bundles and directly compatible with 5002322**
-> Swapchain-format editing is guarded by exact version/build metadata and size for ARM64 versionCodes 5001712, 5001740, 5002244, 5002313, 5002318, and 5002322. Dithering is an option in this OLED patch; the standalone Video dither patch remains removed.
+### OLED Color Calibration (`oledCalibrationPatch`)
 
-| Artifact | Edit |
-|---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` GLSL block (1087 bytes at `#version 300 es` before `GL_OES_EGL_image_external_essl3`) | Full replace with calibrated `highp` shader and explicit `highp samplerExternalOES` |
-| GLSL `pow(clamp(c,0,1), vec3(GAMMA))` | `gamma` option value (float) |
-| GLSL `mix(vec3(luma), c, SATURATION)` | `saturation` option value (float) |
-| GLSL D2020-approximating 3×3 color matrix | Fixed: `_valve1_d2020d709` (not user-configurable) |
-| GLSL dither | Optional zero-centred per-channel noise using `UniDitherOffsets.rgb`: low scale `0.00196`, standard scale `0.00392`, applied to calibrated sRGB code values before any linear conversion |
-| GLSL endpoint protection | Enabled noise ramps down within `0.0157` of each code-value endpoint, preserving exact black/white at this shader stage |
-| GLSL `DITHER_ENABLE` | `0.` for default `off`; `1.` for `low` or `standard`. Off preserves the previous shader behavior |
-| Two 5001712 instructions at `0x10a9c4`, `0x10aa34` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
-| Two 5001740 instructions at `0x10a854`, `0x10a8c4` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
-| Three 5002244 instructions at `0x10826c`, `0x1082dc`, `0x10834c` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
-| Three 5002313 instructions at `0x10b2d4`, `0x10b344`, `0x10b3b4` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
-| Three 5002318 instructions at `0x10b430`, `0x10b4a0`, `0x10b510` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
-| Three 5002322 instructions at `0x10ba78`, `0x10bae8`, `0x10bb58` | `GL_SRGB8_ALPHA8` (`69 88 91 52`) or experimental `GL_RGB10_A2` (`29 0B 90 52`) |
-| Optional FP16 instructions at the same guarded sites | `GL_RGBA16F` (`49 03 91 52`); runtime support remains unverified |
-| RGB10_A2 / RGBA16F shader output | Explicit sRGB EOTF converts calibrated code values to the linear OpenXR swapchain |
+Default off individually; selected by the existing recommendation bundles. Exact current
+native adaptations are **2.0.20/5001712**, **2.0.22/5002244**, and **2.0.23/5002363**.
+The existing option keys and defaults are retained. Both depth options now select the
+same **VD-informed SDR foveal processing**, based on VD's HEVC 10-bit PCVR path.
 
-**Options:**
-| Key | Default | Range | Target in binary |
-|---|---|---|---|
-| `profile` | `final-balanced` | neutral / initial / final-balanced / custom | Selects gamma+saturation pair; neutral uses `1.00` / `1.00` and retains the fixed matrix |
-| `gamma` | `1.20` | 0.50–2.50 | Custom-profile `vec3(GAMMA)` argument in `pow()` |
-| `saturation` | `1.45` | 0.00–3.00 | Custom-profile second argument in `mix()` |
-| `foveaVdLike10Bit` | `false` | on / off | Declares 10-bit input (host Main10/P010); applies the fovea-gated VD-Like 10→8 dither (scale `0.00392`). Mutually exclusive with `foveaVdLike8Bit`. |
-| `foveaVdLike8Bit` | `false` | on / off | Declares 8-bit input (host Main8); applies the fovea-gated neutral path (no 10→8 dither). Mutually exclusive with `foveaVdLike10Bit`. |
-
-The output is always 8-bit sRGB (`GL_SRGB8_ALPHA8`, `69 88 91 52`) at every guarded layout; the retired 10-bit/FP16 output and standalone dithering options are replaced by two mutually exclusive fovea toggles. The fovea gate is a compact per-pixel weight derived from `uvmask` (the same 4-section geometry as Valve's masked alpha suffix) that bounds the dithered 10→8 pass to the high-acuity region; the periphery is left untouched. Both toggles off keeps the legacy calibrated path byte-for-byte. The 5001712 stock library SHA-256 is `80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495`. The toggles declare the assumed input depth; they do not force the host stream depth (input bit depth is host-negotiated), and they do not change decoder precision or compositor/panel depth.
-
-The retired `rgb10-a2-experimental` and `rgba16f-experimental` output paths (and the `RGB10_A2_INSTRUCTION` / `RGBA16F_INSTRUCTION` constants) are retained internally for reversibility and the swapchain-format helper/tests, but are no longer exposed as options; the patch always writes the 8-bit sRGB instruction.
-
-Static tests validate GLSL structure, fixed size, and binary placement but do not compile the shader with the Galaxy XR GLES driver. Successful on-headset shader compilation and swapchain submission remain runtime acceptance gates for each comparison mode. Dithering can reduce visible banding but does not restore uninterrupted 10-bit storage through an 8-bit downstream stage.
-
----
-
-### Controlled OLED comparison
-
-The fovea-gated VD-Like dither adds noise to the sampled video after calibration, scaled by a per-pixel foveal weight derived from `uvmask`. The noise strength is measured in sRGB8 code values (scale `0.00392` for the 10-bit toggle); the output is always 8-bit sRGB. Decoder/import precision still depends on the actual stream and Android path; the toggle does not request 10-bit decoding — it only declares the assumed input depth so the fovea processing matches.
-
-Select **Fovea VD-Like Input 10 bit** (10-bit input → fovea-gated 10→8 dither) or **Fovea VD-Like Input 8 bit** (8-bit input → fovea-gated neutral path). The two are mutually exclusive (the resolver rejects both on). Both always hand 8-bit sRGB to the XR runtime:
-
-| Toggle | Fovea path | Projection output handed to the XR runtime |
+| Option | Default | Behavior |
 |---|---|---|
-| Fovea VD-Like Input 10 bit | fovea-gated 10→8 dither | Dithered 8-bit sRGB (bounded to the fovea) |
-| Fovea VD-Like Input 8 bit | fovea-gated neutral (no dither) | 8-bit sRGB (the fovea gate bounds the zero processing) |
-| Both off | legacy calibrated path (byte-for-byte) | 8-bit sRGB, no fovea gate |
+| `profile` | `final-balanced` | Gamma 1.20, saturation 1.45; applies to the base layer, and also the fovea when both VD options are off |
+| `gamma` | `1.20` | Custom-profile range 0.50–2.50 |
+| `saturation` | `1.45` | Custom-profile range 0.00–3.00 |
+| `foveaVdLike10Bit` | `false` | Declares 10-bit input; highp foveal sampling with Valve color correction, no added gamma/saturation or shader noise |
+| `foveaVdLike8Bit` | `false` | Same foveal processing for declared 8-bit input; cannot recover lost input precision |
 
-These settings control app projection storage, not the compositor's later quantization, dithering, or physical panel depth. App-side dither is not guaranteed to survive later processing or improve final banding.
+The 2 depth options are mutually exclusive and do not negotiate the host codec.
+Output remains `GL_SRGB8_ALPHA8`. The calibrated common prefix/base program is
+unchanged; only the separately assembled masked suffix receives the SDR override.
+Both off restores the original suffix. The original alpha expression and fade survive.
+Historical RGB10/FP16/noise helpers remain internal for audits, not selectable output modes.
+Leave these options off when selecting the separate blue-noise patch.
 
-Decoded-library compatibility is checked separately on the decoded bases **2.0.20/5001712**, **2.0.22/5002244**, and **2.0.23/5002363**: the calibrated path plus both fovea toggles across 7 profile/slider combinations, with 567 transitions per base. The audit executes the production helpers against exact stock native hashes and verifies allowed byte ranges, every format instruction, shader NUL boundaries, idempotence, and unchanged source libraries. Native caller evidence and runtime limits are recorded in [OLED compatibility audit](diagnostics/steamlink-colour/OLED-COMPATIBILITY-NATIVE.md).
+**HEVC 10-bit investigation, 2026-09-22:** VD's traced PCVR path uses SDR YUV→RGB
+conversion for both codec depths, with no depth-specific shader-noise branch. Steam Link
+has a different decoder/import path and explicitly requests BT.2020 color metadata;
+Valve's existing conversion matrix is retained rather than treating it as VD's HDR
+matrix. This is a client SDR comparison, not a reproduction of VD's encoder, raw-YUV
+import, or a demonstrated banding fix. See [the investigation and validation](diagnostics/steamlink-vd-hevc10/README.md).
 
-Repeat from the repository root with `./diagnostics/steamlink-colour/Test-OledDecodedCompatibility.ps1 -JavaHome <JDK-21-directory>`. This read-only check uses the cached Gradle Kotlin compiler and an exception shim, bypassing the Morphe DSL when its plugin is unavailable. The regular build task is `./gradlew.bat :patches:auditOledDecodedCompatibility -PreleaseChannel=experimental`. Neither check proves runtime FP16 acceptance or panel precision.
+The inspected installed SteamVR host only pushes optional shader overrides when
+`watchForShaderChanges` is enabled and a complete nonempty override pair exists;
+that setting is disabled and the override files are absent in the inspected configuration.
+Custom host replacements can still bypass the embedded shader modification.
 
-Keep the same recommended patch set. In **OLED color calibration**, select **Neutral** for each variant, then change only the options below. Repatch a pristine original APK for every variant, using the same exact version/build and other patch options; do not layer variants over an already patched APK.
+### Foveal blue-noise dithering (`fovealBlueNoisePatch`, experimental)
 
-| Run | `profile` | `foveaVdLike10Bit` | `foveaVdLike8Bit` |
-|---|---|---|---|
-| A: calibrated control | neutral | off | off |
-| B: fovea 10-bit (10→8 dither) | neutral | on | off |
-| C: fovea 8-bit (neutral) | neutral | off | on |
+**Separate patch; default off; excluded from recommendation bundles and the stable catalog.**
+Exact bases: **2.0.20/5001712**, **2.0.22/5002244**, **2.0.23/5002363**.
 
-Use the same dark-gradient scene, headset brightness, Steam Link bitrate/codec settings, and viewing position. Compare visible bands, near-black detail, black level, grain, and shimmer, both stationary and while moving your head. Record the actual submitted projection format with the colour diagnostic for each run: a selected option alone is not proof that the runtime accepted it. If C fails to stream, return to B or A. A smooth gradient alone does not prove panel bit depth.
+| Option | Default | Behavior |
+|---|---|---|
+| `inputDepth` | `10-bit` | Choose `8-bit` or `10-bit`; both use the same final 8-bit sRGB quantizer without changing decoder or host settings |
 
-The defaults are the **Final balanced** profile with both fovea toggles off (the legacy calibrated path, 8-bit sRGB, no fovea gate). Saved Morphe selections can override defaults. Repatch from the pristine original APK. The fovea toggles remain explicit opt-ins.
+A static, original 128×128 R8 blue-noise tile selects neighboring 8-bit output codes
+**after** colour processing and fade. The original alpha is preserved. The helper
+recognizes exact full masked-shader hashes and additionally checks the exact native
+foveal draw call and the 8-bit sRGB framebuffer/write state. The base draw is excluded.
+Recognized reloads are rewritten; unknown host replacements pass through unchanged.
+Compile/link/resource failures restore the original shader/program.
 
-The standalone `videoDitherPatch`, its old `enable` option, and recommendation dependency remain removed. Dithering now belongs to OLED calibration. The unregistered internal helper `setDitherState` in `patches/src/main/kotlin/app/template/patches/steamlink/binary/VideoDither.kt` remains for historical state handling and tests; its presence does not apply a patch.
+It works independently of OLED calibration. To combine them, leave **both existing
+VD-like toggles off**; the blue-noise finalizer validates and hashes the final calibrated
+prefix. Other/previously dithered prefixes are rejected to avoid stacking dithers.
+This is an independent blue-noise implementation, not a copy of VD's algorithm.
 
-Historical byte-state reference only, not binary-editing instructions: the stock shader toggled
-its `//` prefix against 2 spaces; the old calibrated shader toggled `*.00000` against `*.00292`.
-The highp shader uses the separate `DITHER_ENABLE` multiplier so the output-specific scale is
-never lost. Existing archived APKs may still contain enabled dithering; removing the selectable
-patch does not rewrite those artifacts.
+See the [implementation, reproducible checks and remaining runtime gaps](diagnostics/steamlink-blue-noise-ditering/README.md).
 
 ---
 
@@ -590,7 +570,7 @@ and its 6-patch recommendation is unchanged.
 
 | APK artifact | Patches that write to it |
 |---|---|
-| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `gxrModernTongueBridgePatch` (5002322-only 24 B), `oledCalibrationPatch` (1087-byte GLSL block plus 2 or 3 guarded swapchain instructions) |
+| `lib/arm64-v8a/libvrlink_scene.so` | `disablePermissionPromptNativePatch` (layout-specific 8 B), native permission/gate patches, `hmdOnlyPatch` (hook + cave + velocity), `controllerVelocityPatch` (controller cadence instructions in `QSVLClient::OnTopOfFrame`), `gxrModernTongueBridgePatch` (5002322-only 24 B), `oledCalibrationPatch` (1087-byte GLSL block plus guarded swapchain instructions), `fovealBlueNoisePatch` (11 exact dependency/import/loader strings and sRGB8 instructions; finalizes after optional calibration) |
 | `assets/config/hmd_config.json` | `xrDeviceConfigBaselinePatch` (baseline), `deviceIdentityPatch` (profile override — intentional) |
 | `AndroidManifest.xml` | `xrManifestCapabilityPackPatch`, `xrLauncherBootstrapPatch`, `xrStartupPermissionsPatch`, shared face-tracking declaration used by `gxrFacebridgePatch` and `gxrModernTongueBridgePatch`, `unrestrictedBatteryUsagePatch`, `appearOnTopPatch`, `xrGalaxyXrHighResolutionPatch`, `changePackageNamePatch` |
 | `SteamLink.onCreate` (5002322) | `nativeBatterySettingsPatch`: battery-only settings hook; earlier builds use the guarded transparent bootstrap |
@@ -599,4 +579,5 @@ and its 6-patch recommendation is unchanged.
 
 `oledCalibrationPatch` is the only active shader-block writer. The retained unregistered
 `VideoDither.kt` helper recognizes stock, legacy-calibrated, and highp states for tests; there is no
-active dither dependency or separately selected shader mutation.
+active legacy dither dependency. The separate `fovealBlueNoisePatch` leaves the embedded
+shader block unchanged and installs its guarded native runtime rewriter as `libgxd.so`.
