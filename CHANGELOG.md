@@ -1,3 +1,9 @@
+## [1.18.0-dev.12](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.11...v1.18.0-dev.12) (2026-09-22)
+
+### ✨ New Features
+
+* implemented 4 more patches, dithering VD-Like and Blue Noise Dithering for both 10-bit and 8-bit inputs as experiment ([bd84126](https://github.com/AngelDark92/steamlink-patches/commit/bd841266f5f1c76b19c9b72730750bd0da93c5b6))
+
 ## [1.18.0-dev.11](https://github.com/AngelDark92/steamlink-patches/compare/v1.18.0-dev.10...v1.18.0-dev.11) (2026-09-20)
 
 ### 🐛 Bug Fixes
