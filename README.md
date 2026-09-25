@@ -57,6 +57,14 @@ N.D.: Delete the depot folder every time you switch to a new depot or the .apk w
 
 See the [full patch list](TECHNICAL_REFERENCE.md#full-patch-list) before selecting patches manually. Do not assume another build is compatible because it has the same version name.
 
+Optional blue-noise dithering has 2 separate experimental patches:
+**Foveal blue-noise dithering (experimental)** affects only the foveal layer;
+**Background blue-noise dithering (experimental)** affects only the background/base
+layer. Select either or both. Each accepts declared 8-bit or 10-bit input and uses
+8-bit sRGB output. Both are off by default and are not included in recommended
+bundles. If also selecting OLED color calibration, leave both VD-like toggles off.
+Headset quality remains unverified; see the [layer options and validation](diagnostics/steamlink-background-blue-noise/README.md).
+
 ### Patches loaded by each bundle
 
 A bundle is a pure selector: selecting it loads exactly the patches listed below and performs no additional mutation of its own. Patch names match Morphe's patch list. A listed patch remains a no-op on a build where its own layout guard does not match.
