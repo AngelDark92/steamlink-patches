@@ -1,3 +1,19 @@
+## [1.22.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.21.1-dev.1...v1.22.0-dev.1) (2026-10-03)
+
+### 🐛 Bug Fixes
+
+* **ci:** declare Gson and gate release builds ([29664df](https://github.com/AngelDark92/steamlink-patches/commit/29664dfd94f9b86d89458f90a1ec29761982ec26))
+
+### ✨ New Features
+
+* Introduce patch categories for better organization and filtering ([9c63254](https://github.com/AngelDark92/steamlink-patches/commit/9c63254039e9078489764acac040241751c99194))
+
+## [1.21.1-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.21.0...v1.21.1-dev.1) (2026-10-01)
+
+### 🐛 Bug Fixes
+
+* Enhance CI testing and documentation for foveal canvas patches ([9597eec](https://github.com/AngelDark92/steamlink-patches/commit/9597eec564dd67080f181faae8754054633b4ad0))
+
 ## [1.21.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.20.0...v1.21.0) (2026-09-28)
 
 ### ✨ New Features

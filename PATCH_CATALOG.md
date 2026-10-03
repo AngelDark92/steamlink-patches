@@ -3,6 +3,22 @@
 Reference for conflict detection when importing external patches.
 Each entry lists the exact APK artifact and value(s) a patch writes or modifies.
 
+## Current patch categories
+
+All 29 selectable patches use 7 categories in Morphe Manager 1.30.0 or newer.
+Categories organize the list; exact-build guards, bundle dependencies and defaults remain authoritative.
+The retired entries below are historical records and are not selectable.
+
+| Category | Count | Current patches |
+|---|---:|---|
+| Recommended sets | 5 | [Galaxy XR recommended sets for 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968 and 2.0.23/5002363; legacy foundation through 2.0.22/5002244](#recommendation-bundles) |
+| Image quality | 2 | [Galaxy XR high-resolution 3-projection fix](#galaxy-xr-high-resolution-3-projection-fix-xrgalaxyxrhighresolutionpatch); [OLED color calibration](#oled-color-calibration-oledcalibrationpatch) |
+| Tracking & audio | 6 | [Visual Delay Fix](#visual-delay-fix-hmdonlypatch); [Controller velocity fix](#controller-velocity-fix-controllervelocitypatch); [GXR face bridge (version 5002318 and below)](#gxr-face-bridge-version-5002318-and-below-gxrfacebridgepatch); [GXR tongue bridge (version 5002322 and above)](#gxr-tongue-bridge-version-5002322-and-above-gxrmoderntonguebridgepatch); [XR Input Routing Config](#xr-input-routing-config-xrinputroutingconfigpatch); [Microphone input preset](#microphone-input-preset-microphoneinputpresetpatch) |
+| Startup & permissions | 4 | [Startup permission requests (before 5002322)](#startup-permission-requests-before-5002322-xrstartuppermissionspatch); [Startup splash and XR launch mode (before 5002322)](#startup-splash-and-xr-launch-mode-before-5002322-xrlauncherbootstrappatch); [Unrestricted battery usage](#unrestricted-battery-usage-unrestrictedbatteryusagepatch); [Appear on top (legacy)](#appear-on-top-legacy-appearontoppatch) |
+| App & device identity | 2 | [Change package name](#change-package-name-changepackagenamepatch); [Device identity](#device-identity-deviceidentitypatch) |
+| Advanced XR compatibility | 7 | [XR Core Runtime](#xr-core-runtime-xrcoreruntimepatch); [XR Device Config Baseline](#xr-device-config-baseline-xrdeviceconfigbaselinepatch); [XR Manifest Capability Pack](#xr-manifest-capability-pack-xrmanifestcapabilitypackpatch); [Android XR native permission names; Force HMD initialization gates; Force lobby permission-state gate; Force stream XR gates](#native-xr-compatibility-gates) |
+| Experiments | 3 | [Background blue-noise dithering](#background-blue-noise-dithering-backgroundbluenoisepatch-experimental); [Foveal blue-noise dithering](#foveal-blue-noise-dithering-fovealbluenoisepatch-experimental); [Full-FOV foveal canvas](diagnostics/steamlink-foveal-canvas/README.md) (all experimental) |
+
 ## FEC duplicate reservation guard (experimental) — RETIRED 2026-09-19 (tested, did not work; removed from source)
 
 **Status: tested on the headset and did not resolve the hitching problem; removed from `patches/src/main` on 2026-09-19. Do not re-add or re-derive this patch for the hitch regression.**
@@ -40,7 +56,7 @@ The new 5001812 and 5001968 adaptations each expose the same **22 individual pat
 
 Native addresses were independently adapted for both new bases. The [exact-base validation record](diagnostics/steamlink-legacy-1812-1968/README.md) covers local static/native checks and pristine-source Morphe validation; headset validation remains pending and publication is not claimed. The 5001712 reference is an analysis reconstruction, so its regression checks do not establish pristine-source APK patching.
 
-Startup permissions and splash/XR launch-mode edits are separate patches explicitly selected by the 4 legacy bundles. The 5002363 bundle preserves native startup and permission handling apart from the selected battery-settings hook. Manager 1.22 or newer with compatibility checks enabled is required for exact build-code filtering; Expert mode may still display incompatible patches.
+Startup permissions and splash/XR launch-mode edits are separate patches explicitly selected by the 4 legacy bundles. The 5002363 bundle preserves native startup and permission handling apart from the selected battery-settings hook. Manager 1.30.0 or newer with compatibility checks enabled is required for exact build-code filtering; Expert mode may still display incompatible patches.
 
 ### Steam Link 2.0.23 / 5002363
 
