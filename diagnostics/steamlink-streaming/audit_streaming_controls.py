@@ -18,7 +18,7 @@ def main():
     parser.add_argument("--callers", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
-    sys.path.insert(0, str(args.python_tools or root / "build/oled-native-audit/python"))
+    sys.path.insert(0, str(args.python_tools or root / "../builds/steamlink-patches/build/oled-native-audit/python"))
     from capstone import Cs, CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN
     from elftools.elf.elffile import ELFFile
 

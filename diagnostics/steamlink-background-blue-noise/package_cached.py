@@ -8,8 +8,12 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 root = Path(__file__).resolve().parents[2]
-compiled = root / 'build/background-blue-noise-kotlin'
-stage = root / 'build/background-blue-noise-package'
+import sys
+sys.pycache_prefix = str((root / '../builds/steamlink-patches/build/python-cache').resolve())
+sys.path.insert(0, str(root / 'tools'))
+from build_paths import relocate_classpath
+compiled = root / '../builds/steamlink-patches/build/background-blue-noise-kotlin'
+stage = root / '../builds/steamlink-patches/build/background-blue-noise-package'
 report = Path(__file__).resolve().parent
 for p in (compiled / 'test-results').glob('TEST-*.xml'):
     suite = ET.parse(p).getroot()
@@ -47,11 +51,11 @@ def write_archive():
         for name, data in entries.items():
             z.writestr(name, data)
 write_archive()
-cp = (compiled / 'runtime-classpath.txt').read_text().strip()
+cp = relocate_classpath((compiled / 'runtime-classpath.txt').read_text().strip(), root)
 dependencies = [p for p in cp.split(';') if p.lower().endswith('.jar')]
 dex = stage / 'dex.zip'
-command = ['F:/Runtimes/Java21/bin/java.exe', '-cp', str(root / 'build/ci-d8-validation-20260915/r8-9.1.31.jar'),
-           str(root / 'build/ci-d8-validation-20260915/D8Parity.java'), str(archive), str(dex),
+command = ['F:/Runtimes/Java21/bin/java.exe', '-cp', str(root / '../builds/steamlink-patches/build/ci-d8-validation-20260915/r8-9.1.31.jar'),
+           str(root / '../builds/steamlink-patches/build/ci-d8-validation-20260915/D8Parity.java'), str(archive), str(dex),
            str(root / '.android-sdk/platforms/android-33/android.jar'), *dependencies]
 run = subprocess.run(command, capture_output=True, text=True)
 (report / 'd8-validation.txt').write_text(f'D8 Release/API26 exit code: {run.returncode}\n' + run.stdout + run.stderr)

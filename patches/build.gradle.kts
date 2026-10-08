@@ -3,11 +3,12 @@ import java.util.UUID
 group = "app.template"
 
 // Verify-Build.ps1 owns this fresh workspace and cleans it after preserving results.
-// Leave the root build directory unchanged: it also holds required APK fixtures/tools.
+// Retained fixture/tool inputs live separately from Gradle's cleanable output.
 val verificationWorkDirectory = providers.gradleProperty("verificationWorkDirectory")
     .orNull?.let { rootProject.file(it) }
 verificationWorkDirectory?.let { layout.buildDirectory.set(it.resolve("patches")) }
 val auditOutputDirectory = verificationWorkDirectory ?: rootProject.layout.buildDirectory.get().asFile
+val retainedBuildDirectory = rootProject.file("../builds/steamlink-patches/build")
 
 patches {
     // Disable the Morphe extension project integration.
@@ -198,7 +199,7 @@ tasks {
         classpath = sourceSets["main"].runtimeClasspath
         mainClass.set("util.DecodedSteamLinkPatchAudit")
         val auditArgs = mutableListOf(
-            rootProject.layout.buildDirectory.dir("decoded-fixture-apks").get().asFile.absolutePath,
+            retainedBuildDirectory.resolve("decoded-fixture-apks").absolutePath,
             auditOutputDirectory.resolve("decoded-patch-audit").absolutePath,
         )
         project.findProperty("decodedAuditKind")?.toString()?.let { kind ->
@@ -250,6 +251,7 @@ tasks {
 
         classpath = sourceSets["main"].runtimeClasspath + patchListGeneratorClasspath
         mainClass.set("util.PatchListGeneratorKt")
+        systemProperty("morphe.patchArchiveDirectory", layout.buildDirectory.dir("libs").get().asFile.absolutePath)
 
         val releaseChannel = project.findProperty("releaseChannel")?.toString()?.trim()
         if (!releaseChannel.isNullOrEmpty()) {

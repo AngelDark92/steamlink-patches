@@ -6,15 +6,17 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
 if (!$NdkDirectory) { $NdkDirectory = Join-Path $repo '.android-sdk/ndk/27.2.12479018' }
-if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'build/decoder-buffering/native' }
-$cmake = Join-Path $repo 'build/tooling/cmake/data/bin/cmake.exe'
-$ninja = Join-Path $repo 'build/tooling/bin/ninja.exe'
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $steamlinkBuildRoot 'build/decoder-buffering/native' }
+$cmake = Join-Path $steamlinkBuildRoot 'build/tooling/cmake/data/bin/cmake.exe'
+$ninja = Join-Path $steamlinkBuildRoot 'build/tooling/bin/ninja.exe'
 $toolchain = Join-Path $NdkDirectory 'build/cmake/android.toolchain.cmake'
 foreach ($required in @($cmake, $ninja, $toolchain)) {
     if (!(Test-Path -LiteralPath $required)) { throw "Missing build prerequisite: $required" }
 }
-& $cmake -S $PSScriptRoot -B $OutputDirectory -G Ninja `
+# Relocated CMake caches contain absolute paths; configure them afresh.
+& $cmake --fresh -S $PSScriptRoot -B $OutputDirectory -G Ninja `
     "-DCMAKE_MAKE_PROGRAM=$ninja" "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
     -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 -DANDROID_STL=c++_static `
     -DCMAKE_BUILD_TYPE=Release

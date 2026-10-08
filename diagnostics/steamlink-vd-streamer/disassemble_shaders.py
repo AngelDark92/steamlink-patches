@@ -16,7 +16,7 @@ expected = {
     Path(item['path']): item
     for item in json.loads((root / 'diagnostics/steamlink-vd-streamer/installed-inputs.json').read_text())['files']
 }
-out = root / 'build/vd-streamer-shaders'
+out = root / '../builds/steamlink-patches/build/vd-streamer-shaders'
 out.mkdir(parents=True, exist_ok=True)
 api = C.WinDLL('C:/Windows/System32/d3dcompiler_47.dll')
 api.D3DDisassemble.argtypes = [C.c_void_p, C.c_size_t, C.c_uint, C.c_char_p, C.POINTER(C.c_void_p)]

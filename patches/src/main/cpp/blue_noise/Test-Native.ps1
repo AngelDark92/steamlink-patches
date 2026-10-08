@@ -5,13 +5,19 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../../../..')).Path
-if (-not $Compiler) { $Compiler = Join-Path $repo 'build/tooling/zig/ziglang/zig.exe' }
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
+if (-not $Compiler) { $Compiler = Join-Path $steamlinkBuildRoot 'build/tooling/zig/ziglang/zig.exe' }
 if (-not $AndroidNdk) { $AndroidNdk = Join-Path $repo '.android-sdk/ndk/27.2.12479018' }
 if (-not (Test-Path -LiteralPath $Compiler -PathType Leaf)) { throw "Missing host compiler: $Compiler" }
 $headers = Join-Path $AndroidNdk 'toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include'
-$output = Join-Path $repo 'build/blue-noise-native-tests'
+$output = Join-Path $steamlinkBuildRoot 'build/blue-noise-native-tests'
 $include = Join-Path $output 'include'
 New-Item -ItemType Directory -Force -Path $include | Out-Null
+$savedZigLocalCache = $env:ZIG_LOCAL_CACHE_DIR
+$savedZigGlobalCache = $env:ZIG_GLOBAL_CACHE_DIR
+$env:ZIG_LOCAL_CACHE_DIR = Join-Path $output 'zig-cache'
+$env:ZIG_GLOBAL_CACHE_DIR = Join-Path $steamlinkBuildRoot 'build/tooling/zig-global-cache'
+try {
 # Stage only platform-neutral Khronos headers; Android libc headers are not host headers.
 foreach ($folder in @('EGL', 'GLES2', 'GLES3', 'KHR')) {
     Copy-Item -LiteralPath (Join-Path $headers $folder) -Destination $include -Recurse -Force
@@ -24,3 +30,7 @@ $executable = Join-Path $output 'blue-noise-native-tests.exe'
 if ($LASTEXITCODE -ne 0) { throw "Native test compilation failed ($LASTEXITCODE)." }
 & $executable
 if ($LASTEXITCODE -ne 0) { throw "Native contract tests failed ($LASTEXITCODE)." }
+} finally {
+    $env:ZIG_LOCAL_CACHE_DIR = $savedZigLocalCache
+    $env:ZIG_GLOBAL_CACHE_DIR = $savedZigGlobalCache
+}

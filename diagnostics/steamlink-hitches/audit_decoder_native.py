@@ -14,7 +14,7 @@ parser.add_argument('--apk-root', type=Path)
 parser.add_argument('--output', required=True, type=Path)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(args.python_tools or root / 'build/oled-native-audit/python'))
+sys.path.insert(0, str(args.python_tools or root / '../builds/steamlink-patches/build/oled-native-audit/python'))
 from elftools.elf.elffile import ELFFile
 
 layouts = json.loads((Path(__file__).parent / 'decoder-hook-layouts.json').read_text())

@@ -38,7 +38,7 @@ for key, value in fields.items():
         line = " " + line[70:]
     lines.append(line)
 manifest = ("\r\n".join(lines) + "\r\n\r\n").encode("ascii")
-output = root / f"patches/build/libs/patches-{version}-5002363-local.mpp"
+output = root / f"../builds/steamlink-patches/gradle/patches/libs/patches-{version}-5002363-local.mpp"
 assert not output.exists(), f"Refusing to overwrite {output}"
 output.parent.mkdir(parents=True, exist_ok=True)
 entries = {"META-INF/MANIFEST.MF": manifest}

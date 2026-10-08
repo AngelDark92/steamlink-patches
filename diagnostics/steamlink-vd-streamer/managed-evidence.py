@@ -10,7 +10,7 @@ from pathlib import Path
 import struct
 import sys
 
-sys.path.insert(0, "build/vd-audit/tools")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "../builds/steamlink-patches/build/vd-audit/tools"))
 import dnfile
 from dncil.cil.body import CilMethodBody
 from dncil.cil.body.reader import CilMethodBodyReaderBytes

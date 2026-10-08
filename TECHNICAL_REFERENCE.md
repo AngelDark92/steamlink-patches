@@ -64,7 +64,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.27.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.27.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;35 patches total
+> **[v1.28.0-dev.3](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.28.0-dev.3)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;35 patches total
 <details open>
 <summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;26 patches</summary>
 <br>
@@ -171,20 +171,27 @@ On Windows, verify JVM tests and build the Android bundle with automatic cleanup
 ```
 
 Each run uses a fresh workspace. Bundles remain under
-`build/verification/<run>/artifacts/patches/libs`, alongside retained test reports,
+`../builds/steamlink-patches/build/verification/<run>/artifacts/patches/libs`, alongside retained test reports,
 the Gradle log and a cleanup receipt. Compiler files and decoded audit derivatives
 are removed after Gradle exits, including on failure. Pass `-KeepBuildOutputs` to
 retain intermediates. Exact fixtures, tools, caches and existing outputs are
 preserved. See [verification and disk cleanup](diagnostics/build-verification/README.md).
 
-Direct Gradle commands remain available and keep their usual output locations;
+Direct Gradle commands use the external output folders described below;
 they do not perform the wrapper's automatic cleanup:
 
 ```
 ./gradlew buildAndroid
 ```
 
-Output: `patches/build/libs/patches-*.mpp`
+Output: `../builds/steamlink-patches/gradle/patches/libs/patches-*.mpp`
+
+All generated output and project Gradle/Kotlin state live beneath
+`../builds/steamlink-patches/`. Retained audit fixtures/tools/evidence use its
+`build/` directory; Gradle uses separate `gradle/root` and `gradle/patches`
+directories so `clean` preserves those inputs. Native CMake output uses
+`extensions/<name>/build-*` under the same external root. See the
+[2026-10-08 relocation record](diagnostics/build-layout/README.md).
 
 No Android SDK is required. The extension DEX is assembled from smali sources directly by the build.
 

@@ -3,7 +3,8 @@
 Runs Gradle verification in a fresh directory and removes its intermediate files.
 .DESCRIPTION
 Final libraries, reports, test results, gradle.log and summary.json remain under
-build/verification/<run>. Existing build folders, fixtures and caches are untouched.
+../builds/steamlink-patches/build/verification/<run>. Existing fixtures and caches
+are untouched. Use -BuildRoot to choose a different directory outside the project.
 Use -KeepBuildOutputs to retain intermediate files for investigation.
 .EXAMPLE
 .\Verify-Build.ps1 -Tasks ':patches:test',':patches:buildAndroid' -GradleArguments '--offline'
@@ -12,10 +13,17 @@ Use -KeepBuildOutputs to retain intermediate files for investigation.
 param(
     [string[]]$Tasks = @(':patches:test', ':patches:buildAndroid'),
     [string[]]$GradleArguments = @(),
+    [string]$BuildRoot,
     [switch]$KeepBuildOutputs
 )
 $ErrorActionPreference = 'Stop'
 $repo = [IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\', '/')
+if (!$BuildRoot) { $BuildRoot = Join-Path (Split-Path -Parent $repo) 'builds/steamlink-patches' }
+$buildRootFull = [IO.Path]::GetFullPath($BuildRoot).TrimEnd('\', '/')
+if ($buildRootFull.Equals($repo, [StringComparison]::OrdinalIgnoreCase) -or
+    $buildRootFull.StartsWith($repo + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "BuildRoot must be outside the project: $buildRootFull"
+}
 $protectedNames = @('.git', '.github', '.codex', '.agents')
 
 function Assert-SafePath([string]$Path, [string]$Boundary) {
@@ -78,7 +86,7 @@ foreach ($argument in $GradleArguments) {
 }
 $gradlew = Join-Path $repo 'gradlew.bat'
 if (!(Test-Path -LiteralPath $gradlew -PathType Leaf)) { throw "Gradle wrapper missing: $gradlew" }
-$run = Assert-SafePath (Join-Path $repo ('build/verification/' + [guid]::NewGuid().ToString('N'))) $repo
+$run = Assert-SafePath (Join-Path $buildRootFull ('build/verification/' + [guid]::NewGuid().ToString('N'))) $buildRootFull
 if (Test-Path -LiteralPath $run) { throw "Verification directory already exists: $run" }
 $null = New-Item -ItemType Directory -Path $run
 $scratch = Assert-SafePath (Join-Path $run 'scratch') $run

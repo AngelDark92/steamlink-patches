@@ -7,7 +7,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "build/oled-native-audit/python"))
+sys.path.insert(0, str(ROOT / "../builds/steamlink-patches/build/oled-native-audit/python"))
 from elftools.elf.elffile import ELFFile
 from capstone import Cs, CS_ARCH_ARM64, CS_MODE_ARM
 
@@ -22,7 +22,7 @@ FUNCTIONS = [
     "_ZN28XRQAcquireSwapchainImageRAIIC1ERK12XRQSwapchain",
     "_ZN28XRQAcquireSwapchainImageRAIID1Ev",
 ]
-out = ROOT / "build/surface-video-audit"
+out = ROOT / "../builds/steamlink-patches/build/surface-video-audit"
 out.mkdir(exist_ok=True)
 results = []
 for version, code, size, digest, *addresses in BASES:

@@ -11,10 +11,10 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[2]
-assembled = root / 'build/vd-sdr-glsl'
-output = root / 'build/vd-sdr-glsl-check'
+assembled = root / '../builds/steamlink-patches/build/vd-sdr-glsl'
+output = root / '../builds/steamlink-patches/build/vd-sdr-glsl-check'
 output.mkdir(parents=True, exist_ok=True)
-compiler = root / 'build/tooling/bin/glslang.exe'
+compiler = root / '../builds/steamlink-patches/build/tooling/bin/glslang.exe'
 report = {'boundary': __doc__.strip(), 'cases': []}
 bases = [('2.0.20', '5001712'), ('2.0.22', '5002244'), ('2.0.23', '5002363')]
 

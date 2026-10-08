@@ -12,7 +12,7 @@ $compiler = Get-ChildItem -LiteralPath (Join-Path $GradleUserHome 'wrapper/dists
     Sort-Object FullName | Select-Object -Last 1
 if (-not $compiler) { throw 'No cached Gradle Kotlin compiler found. Run Gradle once to download its distribution.' }
 $compilerLib = $compiler.DirectoryName
-$output = Join-Path $repo ('build/oled-decoded-audit/' + [guid]::NewGuid().ToString('N'))
+$output = Join-Path $repo ('../builds/steamlink-patches/build/oled-decoded-audit/' + [guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $output
 $source = [IO.File]::ReadAllText((Join-Path $repo 'patches/src/main/kotlin/app/template/patches/steamlink/binary/OledCalibrationPatch.kt'))
 $marker = '@Suppress("unused")'

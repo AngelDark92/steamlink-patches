@@ -2,8 +2,9 @@
 param([string]$NdkDirectory, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../../../../..')).Path
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
 if (!$NdkDirectory) { $NdkDirectory = Join-Path $repo '.android-sdk/ndk/27.2.12479018' }
-if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'build/blue-noise-native' }
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $steamlinkBuildRoot 'build/blue-noise-native' }
 $bin = Join-Path $NdkDirectory 'toolchains/llvm/prebuilt/windows-x86_64/bin'
 $null = New-Item -ItemType Directory -Force -Path $OutputDirectory
 $library = Join-Path $OutputDirectory 'libgxd.so'

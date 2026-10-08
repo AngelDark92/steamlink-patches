@@ -62,11 +62,11 @@ def require(condition: bool, message: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", type=Path, default=DEFAULT_BASE)
-    parser.add_argument("--output", type=Path, default=ROOT / "build/direct-surface-native-audit")
+    parser.add_argument("--output", type=Path, default=ROOT / "../builds/steamlink-patches/build/direct-surface-native-audit")
     args = parser.parse_args()
     base = args.base.resolve()
     output = args.output.resolve()
-    require(output.is_relative_to(ROOT / "build"), "Output must remain below repository build/")
+    require(output.is_relative_to((ROOT / "../builds/steamlink-patches/build").resolve()), "Output must remain below external builds/steamlink-patches/build/")
     source = base / "lib/arm64-v8a/libvrlink_scene.so"
     data = source.read_bytes()
     digest = hashlib.sha256(data).hexdigest()
@@ -79,7 +79,7 @@ def main() -> None:
         require(match is not None and match.group(1) == value, f"Unexpected {field}")
 
     # Existing local audit dependencies; ordinary installed packages also work.
-    dependency_dir = ROOT / "build/oled-native-audit/python"
+    dependency_dir = ROOT / "../builds/steamlink-patches/build/oled-native-audit/python"
     if dependency_dir.is_dir():
         sys.path.insert(0, str(dependency_dir))
     from elftools.elf.elffile import ELFFile

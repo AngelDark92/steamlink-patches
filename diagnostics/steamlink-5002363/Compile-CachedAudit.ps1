@@ -7,8 +7,9 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-if (!$ToolDirectory) { $ToolDirectory = Join-Path $repo 'build/startup-boundary-tools' }
-if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo ('build/audit-5002363/compiled-' + [guid]::NewGuid().ToString('N')) }
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
+if (!$ToolDirectory) { $ToolDirectory = Join-Path $steamlinkBuildRoot 'build/startup-boundary-tools' }
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $steamlinkBuildRoot ('build/audit-5002363/compiled-' + [guid]::NewGuid().ToString('N')) }
 $java = if ($JavaHome) { Join-Path $JavaHome 'bin/java.exe' } else { (Get-Command java).Source }
 $compiler = Get-ChildItem (Join-Path $env:USERPROFILE '.gradle/wrapper/dists') -Recurse -Filter 'kotlin-compiler-embeddable-*.jar' |
     Sort-Object FullName | Select-Object -Last 1

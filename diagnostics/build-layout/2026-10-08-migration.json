@@ -1,0 +1,60 @@
+{
+  "Date": "2026-10-08",
+  "Status": "moved-and-verified",
+  "ExternalRoot": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches",
+  "Directories": 6,
+  "Files": 40428,
+  "BytesMoved": 14416180455,
+  "ProtectedHashesVerified": 15,
+  "BytesDeleted": 0,
+  "FileMetadataVerified": 40428,
+  "Mapping": [
+    {
+      "Source": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\build",
+      "Destination": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\build",
+      "Files": 39075,
+      "Bytes": 14357116626,
+      "NestedGitMarkers": []
+    },
+    {
+      "Source": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\patches\\build",
+      "Destination": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\gradle\\patches",
+      "Files": 48,
+      "Bytes": 14462228,
+      "NestedGitMarkers": []
+    },
+    {
+      "Source": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\.gradle",
+      "Destination": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\.gradle",
+      "Files": 18,
+      "Bytes": 3211805,
+      "NestedGitMarkers": []
+    },
+    {
+      "Source": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\.kotlin",
+      "Destination": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\.kotlin",
+      "Files": 1,
+      "Bytes": 7459,
+      "NestedGitMarkers": []
+    },
+    {
+      "Source": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\extensions\\controller-velocity-layer\\build-android",
+      "Destination": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\extensions\\controller-velocity-layer\\build-android",
+      "Files": 517,
+      "Bytes": 12269015,
+      "NestedGitMarkers": [
+        "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\extensions\\controller-velocity-layer\\build-android\\_deps\\openxr_headers-src\\.git"
+      ]
+    },
+    {
+      "Source": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\extensions\\controller-velocity-layer\\build-host",
+      "Destination": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\extensions\\controller-velocity-layer\\build-host",
+      "Files": 769,
+      "Bytes": 29113322,
+      "NestedGitMarkers": [
+        "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\steamlink-patches\\extensions\\controller-velocity-layer\\build-host\\_deps\\openxr_headers-src\\.git"
+      ]
+    }
+  ],
+  "Validation": "Same-volume native PowerShell moves; file sizes/timestamps and retained APK/bundle SHA-256 checked."
+}

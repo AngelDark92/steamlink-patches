@@ -18,7 +18,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$buildRoot = [IO.Path]::GetFullPath((Join-Path $repo 'build/udp-receive-buffer'))
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
+$buildRoot = [IO.Path]::GetFullPath((Join-Path $steamlinkBuildRoot 'build/udp-receive-buffer'))
 if (!$OutputDirectory) {
     $OutputDirectory = Join-Path $buildRoot ('archive-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8))
 }
@@ -146,7 +147,7 @@ summary={'archive':str(output),'sha256':hashlib.sha256(output.read_bytes()).hexd
 print(json.dumps(summary))
 '@ | & $Python - $repo $compiled $staged $Version
     if ($LASTEXITCODE -ne 0) { throw 'MPP packaging failed' }
-    $toolDirectory = Join-Path $repo 'build/startup-boundary-tools'
+    $toolDirectory = Join-Path $steamlinkBuildRoot 'build/startup-boundary-tools'
     $dependencyClasspath = @('gson.jar','jcommander.jar','junit.jar','kotlin-test-junit5.jar','kotlin-test.jar','morphe-desktop-1.13.1-all.jar') |
         ForEach-Object { (Resolve-Path (Join-Path $toolDirectory $_)).Path }
     # Crucially exclude compiled/classes, compiled/resources and source resource directories.
@@ -208,7 +209,7 @@ print('PASS catalog regression: all existing JSON preserved; stable catalog enti
 '@ | & $Python - $catalogBefore $catalogRoot $Version
     if ($LASTEXITCODE -ne 0) { throw 'Catalog regression failed; nothing published' }
     # Publish only after every APK case and catalog generation succeeded.
-    $artifact = Join-Path (Join-Path $repo 'patches/build/libs') $artifactName
+    $artifact = Join-Path (Join-Path $steamlinkBuildRoot 'gradle/patches/libs') $artifactName
     $backup = Join-Path $run 'previous-published-files'
     $null = New-Item -ItemType Directory -Path $backup
     foreach ($name in $catalogNames) {

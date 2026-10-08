@@ -15,10 +15,23 @@ Kotlin morphe-patcher patch library targeting exact `(versionName, versionCode)`
 ## Extension DEX (smali)
 
 - Sources: `patches/src/main/resources/steamlink/androidxr/smali/`
-- Built by `assembleExtension` task; output: `patches/build/generated/extension-resources/extensions/extension.mpe`
+- Built by `assembleExtension` task; output: `../builds/steamlink-patches/gradle/patches/generated/extension-resources/extensions/extension.mpe`
 - **Smali assembler flag: `-a 33`** — NEVER `-a 35` (produces DEX 040/041 container format; dexlib2 crashes).
 
 ## Build
+
+All generated outputs, temporary checkouts and project caches always go to
+`../builds/steamlink-patches/` outside this repository. Use `gradle/root` and
+`gradle/patches` for Gradle output, mixed `build/` for retained fixtures/tools/evidence,
+and `extensions/<name>/build-*` for native CMake. Preserve mixed inputs during
+`clean`; keep canonical source/resources and committed release metadata here.
+See `AGENTS.md` and `diagnostics/build-layout/README.md`; pass this contract to
+delegated agents and check release asset/attestation consumers when editing builds.
+Attestation resolves the exact released bundle to a canonical absolute path;
+`..` is rejected even inside absolute patterns. Keep release preparation's
+Gradle-only clean so an older preflight bundle cannot become a release asset.
+Local Packages access: `tools/Configure-GitHubPackages.ps1`, classic token with
+`read:packages`, user Gradle properties outside source. Never put tokens in chat.
 
 ```powershell
 .\gradlew.bat build

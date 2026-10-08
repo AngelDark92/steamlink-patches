@@ -52,8 +52,8 @@ val myPatch = bytecodePatch(          // or rawResourcePatch / resourcePatch
 
 - Sources: `patches/src/main/resources/steamlink/androidxr/smali/`
 - Built by `assembleExtension` Gradle task
-- Output: `build/generated/extension-resources/extensions/extension.mpe`
-- Delete cached `.mpe` before rebuilding: `Remove-Item patches/build/generated/extension-resources/extensions/extension.mpe`
+- Output: `../builds/steamlink-patches/gradle/patches/generated/extension-resources/extensions/extension.mpe`
+- Delete cached `.mpe` before rebuilding: `Remove-Item ../builds/steamlink-patches/gradle/patches/generated/extension-resources/extensions/extension.mpe`
 - **Smali API level: `-a 33`** — never use 35 or higher
 
 ### DEX format follows the pinned toolchain
@@ -93,6 +93,20 @@ the repository-root `AGENTS.md`. Never replace the existing compatibility list w
 
 ## Build commands
 
+### Required output location
+
+Every local build, native compile, diagnostic runner, temporary checkout and
+project cache must write under `../builds/steamlink-patches/`:
+`D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/builds/steamlink-patches`
+in this workspace. Gradle uses `gradle/root` and `gradle/patches`; fixtures/tools
+and retained evidence use mixed `build/`; native CMake output uses
+`extensions/<name>/build-*`. Keep release catalogs and canonical source/resources
+in the checkout. Use the wrappers' configured paths; update release consumers
+with output changes. Never create a local `build`, `patches/build`, `.gradle`,
+`.kotlin` or Zig cache tree. Read [the layout and validation](../../../diagnostics/build-layout/README.md)
+when building or relocating artifacts. Saved classpaths/receipts must be resolved
+through the known relocation map; regenerate moved CMake configure state.
+
 ### Dependency scopes and release preflight
 
 Tests importing a production `compileOnly` library must declare their own
@@ -110,8 +124,18 @@ dependency/plugin, generator or test changes:
 Use `stable` on main. The workflow must run this gate before semantic-release,
 including commits that do not produce a release. Preserve generated extensions
 and mandatory portable tests in this graph.
-Use an isolated checkout for this clean command; the working repository's root
-`build/` contains protected fixtures/tools/evidence. Use `Verify-Build.ps1` for
+Attestation uses the exact release version through
+`.github/scripts/resolve_release_artifact.cjs`, yielding a canonical absolute
+path without `..`. Prefixing a relative pattern with the workspace is insufficient.
+Keep release preparation's Gradle `clean` before rebuilding; this removes the
+preflight version from upload candidates while preserving retained `build/` inputs.
+Run `node .github/scripts/test_release_artifact_paths.cjs` after `npm ci` for its
+actual `@actions/glob` regression checks. On Windows, configure GitHub Packages
+with `tools/Configure-GitHubPackages.ps1` and a classic `read:packages` token in
+user Gradle properties; tokens must stay outside source, chat and logs.
+Use an isolated checkout for this clean command; retained inputs are now in
+`../builds/steamlink-patches/build/`, separately from cleanable `gradle/` outputs.
+Wrappers route project caches outside the checkout. Use `Verify-Build.ps1` for
 scoped local test/Android checks rather than cleaning that mixed directory.
 
 Manual compiler classpaths and desktop fat JARs can hide missing declarations and

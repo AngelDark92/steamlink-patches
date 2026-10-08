@@ -34,6 +34,17 @@ File order, ascending line numbers within file.
 
 ## Boundaries
 
+- Read repository-root `AGENTS.md`. In this project, require generated build,
+  scratch and cache paths under `../builds/steamlink-patches/`; Gradle outputs use
+  `gradle/root` and `gradle/patches`, native CMake uses `extensions/<name>/build-*`.
+  Mixed retained `build/` fixtures/tools/evidence must survive `clean`. Check
+  release consumers and saved-path translation with routing changes. Distinguish
+  cached/static checks from actual Gradle/Morphe and corrected-commit CI proof.
+  See `diagnostics/build-layout/README.md` for the relocation contract.
+- For release path edits, require an exact-version canonical absolute attestation
+  path (no `..`) and Gradle-only release cleanup before rebuilding, preventing
+  stale preflight bundles from upload. Check the actual toolkit glob regression.
+
 - Review only what's in front of you. No "while we're here".
 - No big-refactor proposals.
 - Need more context → append `(see L<n> in <file>)`. Don't guess.
