@@ -69,7 +69,7 @@
       {
         "assets": [
           {
-            "path": "patches/build/libs/patches-!(*sources*|*javadoc*).mpp?(.asc)"
+            "path": "../builds/steamlink-patches/gradle/patches/libs/patches-!(*sources*|*javadoc*).mpp?(.asc)"
           }
         ],
         "successComment": false

@@ -169,20 +169,27 @@ On Windows, verify JVM tests and build the Android bundle with automatic cleanup
 ```
 
 Each run uses a fresh workspace. Bundles remain under
-`build/verification/<run>/artifacts/patches/libs`, alongside retained test reports,
+`../builds/steamlink-patches/build/verification/<run>/artifacts/patches/libs`, alongside retained test reports,
 the Gradle log and a cleanup receipt. Compiler files and decoded audit derivatives
 are removed after Gradle exits, including on failure. Pass `-KeepBuildOutputs` to
 retain intermediates. Exact fixtures, tools, caches and existing outputs are
 preserved. See [verification and disk cleanup](diagnostics/build-verification/README.md).
 
-Direct Gradle commands remain available and keep their usual output locations;
+Direct Gradle commands use the external output folders described below;
 they do not perform the wrapper's automatic cleanup:
 
 ```
 ./gradlew buildAndroid
 ```
 
-Output: `patches/build/libs/patches-*.mpp`
+Output: `../builds/steamlink-patches/gradle/patches/libs/patches-*.mpp`
+
+All generated output and project Gradle/Kotlin state live beneath
+`../builds/steamlink-patches/`. Retained audit fixtures/tools/evidence use its
+`build/` directory; Gradle uses separate `gradle/root` and `gradle/patches`
+directories so `clean` preserves those inputs. Native CMake output uses
+`extensions/<name>/build-*` under the same external root. See the
+[2026-10-08 relocation record](diagnostics/build-layout/README.md).
 
 No Android SDK is required. The extension DEX is assembled from smali sources directly by the build.
 

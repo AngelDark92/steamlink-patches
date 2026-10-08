@@ -57,4 +57,4 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-name: 'Morphe Patches ${{ steps.release.outputs.new_release_git_tag }}'
-          subject-path: patches/build/libs/patches-*.mpp
+          subject-path: ../builds/steamlink-patches/gradle/patches/libs/patches-*.mpp

@@ -19,3 +19,10 @@ pluginManagement {
 plugins {
     id("app.morphe.patches") version "1.3.4"
 }
+
+// Keep compiler output separate from the retained fixtures/tools in external build/.
+val externalBuildRoot = settingsDir.resolve("../builds/steamlink-patches").canonicalFile
+gradle.beforeProject {
+    val projectOutput = if (path == ":") "root" else path.removePrefix(":").replace(':', '/')
+    layout.buildDirectory.set(externalBuildRoot.resolve("gradle/$projectOutput"))
+}

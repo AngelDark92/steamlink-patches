@@ -35,6 +35,9 @@ set APP_HOME=%DIRNAME%
 @rem Resolve any "." and ".." in APP_HOME to make it shorter.
 for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
 
+@rem Project-local Gradle/Kotlin state belongs beside all other build outputs.
+for %%i in ("%APP_HOME%\..\builds\steamlink-patches") do set STEAMLINK_BUILD_ROOT=%%~fi
+
 @rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
 set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
 
@@ -75,7 +78,7 @@ echo location of your Java installation. 1>&2
 @rem Execute Gradle
 @rem endlocal doesn't take effect until after the line is parsed and variables are expanded
 @rem which allows us to clear the local environment before executing the java command
-endlocal & "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %* & call :exitWithErrorLevel
+endlocal & "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" "--project-cache-dir=%STEAMLINK_BUILD_ROOT%\.gradle" "-Pkotlin.project.persistent.dir=%STEAMLINK_BUILD_ROOT%\.kotlin" %* & call :exitWithErrorLevel
 
 :exitWithErrorLevel
 @rem Use "%COMSPEC%" /c exit to allow operators to work properly in scripts

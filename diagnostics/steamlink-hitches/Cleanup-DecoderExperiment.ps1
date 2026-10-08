@@ -8,12 +8,13 @@ for local execution; it has not been run by the agent.
 param()
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$buildRoot = Join-Path $repo 'build/decoder-buffering'
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
+$buildRoot = Join-Path $steamlinkBuildRoot 'build/decoder-buffering'
 $run = Join-Path $buildRoot 'archive-final-run2'
 $receiptPath = Join-Path $PSScriptRoot 'decoder-staging-v1-validation.json'
 $receipt = Get-Content -LiteralPath $receiptPath -Raw | ConvertFrom-Json
 if ($receipt.experiment -ne 'decoder-staging-v1' -or $receipt.apk_cases.Count -ne 14) { throw 'Unexpected validation receipt' }
-$artifact = Join-Path $repo 'patches/build/libs/patches-1.17.0-dev.2-decoder-staging-v1-local.mpp'
+$artifact = Join-Path $steamlinkBuildRoot 'gradle/patches/libs/patches-1.17.0-dev.2-decoder-staging-v1-local.mpp'
 if ((Get-FileHash -LiteralPath $artifact).Hash.ToLowerInvariant() -ne $receipt.artifact.sha256) { throw 'Retained MPP does not match the tested artifact' }
 $targets = @('audit-syntax','audit-syntax-v2','kotlin-first','kotlin-second','kotlin-orders','kotlin-expanded','archive-final-run1','native') |
     ForEach-Object { Join-Path $buildRoot $_ }
@@ -33,9 +34,9 @@ foreach ($case in $receipt.apk_cases) {
         $targets += $apk
     }
 }
-$extraTestFiles = @('build/decoder-staging-pool-test.exe','build/decoder-staging-pool-test.pdb',
-    'build/live-hitch-20260915/bridge-test-5002322.exe','build/live-hitch-20260915/bridge-test-5002322.pdb',
-    'build/live-hitch-20260915/bridge-test-5002363.exe','build/live-hitch-20260915/bridge-test-5002363.pdb') |
+$extraTestFiles = @('../builds/steamlink-patches/build/decoder-staging-pool-test.exe','../builds/steamlink-patches/build/decoder-staging-pool-test.pdb',
+    '../builds/steamlink-patches/build/live-hitch-20260915/bridge-test-5002322.exe','../builds/steamlink-patches/build/live-hitch-20260915/bridge-test-5002322.pdb',
+    '../builds/steamlink-patches/build/live-hitch-20260915/bridge-test-5002363.exe','../builds/steamlink-patches/build/live-hitch-20260915/bridge-test-5002363.pdb') |
     ForEach-Object { [IO.Path]::GetFullPath((Join-Path $repo $_)) }
 $targets += $extraTestFiles
 $prefix = [IO.Path]::GetFullPath($buildRoot).TrimEnd('\') + '\'

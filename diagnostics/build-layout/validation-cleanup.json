@@ -1,0 +1,25 @@
+{
+  "Date": "2026-10-08",
+  "Status": "deferred-before-execution",
+  "Reason": "Automatic approval review rejected the native PowerShell cleanup with blocked by policy.",
+  "FilesRemoved": 0,
+  "BytesRemoved": 0,
+  "Targets": [
+    {
+      "Path": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\validation\\build-layout-20261008\\checkout",
+      "Files": 578,
+      "Bytes": 25999271
+    },
+    {
+      "Path": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\validation\\build-layout-20261008\\tracked-source.zip",
+      "Files": 1,
+      "Bytes": 17041539
+    },
+    {
+      "Path": "D:\\Angelo\\Desktop\\SteamLink-GalaxyXR-Windows-Toolkit-FULL\\builds\\steamlink-patches\\validation\\skill-tools",
+      "Files": 44,
+      "Bytes": 738302
+    }
+  ],
+  "CompletionCondition": "Remove only this recorded task-owned allowlist when policy permits, after fresh containment/link checks; preserve the full Gradle failure log and relocated original artifacts."
+}

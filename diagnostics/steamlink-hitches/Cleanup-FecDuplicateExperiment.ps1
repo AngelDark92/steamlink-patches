@@ -2,8 +2,10 @@
 param([Parameter(Mandatory)][string]$AuditDirectory, [switch]$Execute)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$root = [IO.Path]::GetFullPath($(if ([IO.Path]::IsPathRooted($AuditDirectory)) { $AuditDirectory } else { Join-Path $repo $AuditDirectory }))
-$allowed = [IO.Path]::GetFullPath((Join-Path $repo 'build/fec-duplicate-reservation'))
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
+. (Join-Path $repo 'tools/Build-Paths.ps1')
+$root = Convert-LegacyBuildPath $AuditDirectory $repo
+$allowed = [IO.Path]::GetFullPath((Join-Path $steamlinkBuildRoot 'build/fec-duplicate-reservation'))
 function Assert-Owned([string]$Path, [string]$Parent) {
     $absolute = [IO.Path]::GetFullPath($Path)
     if (!$absolute.StartsWith($Parent.TrimEnd('\','/') + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "Outside intended directory: $absolute" }
@@ -22,12 +24,12 @@ if ($result.Status -ne 'passed' -or $result.ApkCases -ne 16) { throw 'Require co
 $receipt = Join-Path $repo 'diagnostics/steamlink-hitches/fec-duplicate-reservation-validation.json'
 if (!(Test-Path -LiteralPath $receipt)) { throw 'Preserve canonical validation receipt first' }
 $validation = Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
-if ($validation.artifact.AuditDirectory -ne $root -or $validation.artifact.Sha256 -ne $result.Sha256 -or $validation.artifact.Artifact -ne $result.Artifact -or
+if ((Convert-LegacyBuildPath $validation.artifact.AuditDirectory $repo) -ne $root -or $validation.artifact.Sha256 -ne $result.Sha256 -or (Convert-LegacyBuildPath $validation.artifact.Artifact $repo) -ne (Convert-LegacyBuildPath $result.Artifact $repo) -or
     @($validation.cases).Count -ne 16 -or @($validation.cases | Where-Object { $_.status -ne 'passed' }).Count) {
     throw 'Canonical validation receipt does not match this completed audit run'
 }
-$artifact = [IO.Path]::GetFullPath($result.Artifact)
-Assert-Owned $artifact ([IO.Path]::GetFullPath((Join-Path $repo 'patches/build/libs')))
+$artifact = Convert-LegacyBuildPath $result.Artifact $repo
+Assert-Owned $artifact ([IO.Path]::GetFullPath((Join-Path $steamlinkBuildRoot 'gradle/patches/libs')))
 if ((Get-FileHash -LiteralPath $artifact).Hash.ToLowerInvariant() -ne $result.Sha256) { throw 'Published MPP differs from validated artifact' }
 $records = Join-Path $root 'cleanup'
 $null = New-Item -ItemType Directory -Force -Path $records

@@ -144,12 +144,12 @@ Native layer (use a short build directory, the fetched OpenXR-SDK tree is deep):
 $sdk = "$env:LOCALAPPDATA\Android\Sdk"
 $cmake = "$sdk\cmake\3.22.1\bin"
 $ndk = "$sdk\ndk\28.2.13676358"
-& "$cmake\cmake.exe" -S extensions/controller-hal-pose -B <short build dir> -G Ninja `
+& "$cmake\cmake.exe" -S extensions/controller-hal-pose -B ../builds/steamlink-patches/extensions/controller-hal-pose/build-android -G Ninja `
     "-DCMAKE_MAKE_PROGRAM=$cmake\ninja.exe" `
     "-DCMAKE_TOOLCHAIN_FILE=$ndk\build\cmake\android.toolchain.cmake" `
     -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 -DANDROID_STL=c++_static `
     -DCMAKE_BUILD_TYPE=Release
-& "$cmake\cmake.exe" --build <short build dir> --target gxr_controller_hal_pose
+& "$cmake\cmake.exe" --build ../builds/steamlink-patches/extensions/controller-hal-pose/build-android --target gxr_controller_hal_pose
 ```
 
 Java extension (the Shizuku API itself is in the Shizuku bridge's extension):

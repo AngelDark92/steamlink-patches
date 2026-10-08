@@ -73,7 +73,7 @@ try {
         Write-Host 'The Microsoft RNDIS6 driver is already bound. No changes made.'
         return
     }
-    $backupRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'build\usb-streaming'
+    $backupRoot = Join-Path (Split-Path $PSScriptRoot -Parent) '../builds/steamlink-patches/build/usb-streaming'
     $null = New-Item -ItemType Directory -Path $backupRoot -Force
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
     $backupPath = Join-Path $backupRoot ("rndis-driver-before-{0}-{1}.json" -f $stamp, [guid]::NewGuid().ToString('N').Substring(0, 8))

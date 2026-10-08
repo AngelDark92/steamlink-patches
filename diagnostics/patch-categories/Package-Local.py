@@ -2,6 +2,10 @@ from pathlib import Path
 import hashlib,json,subprocess,zipfile
 
 root=Path.cwd()
+import sys
+sys.pycache_prefix = str((root / '../builds/steamlink-patches/build/python-cache').resolve())
+sys.path.insert(0, str(root / 'tools'))
+from build_paths import relocate_classpath
 import argparse
 parser=argparse.ArgumentParser()
 parser.add_argument('--work',type=Path,required=True)
@@ -9,7 +13,7 @@ a=parser.parse_args()
 work=a.work.resolve()
 compiled=work/'fresh-compiled'
 java='F:/Runtimes/Java21/bin/java.exe'
-runtime=(compiled/'runtime-classpath.txt').read_text().strip()
+runtime=relocate_classpath((compiled/'runtime-classpath.txt').read_text().strip(), root)
 jar=compiled/'catalog-work/patches/build/libs/patches-categories.mpp'
 dex=work/'dex'
 dex.mkdir(exist_ok=True)
@@ -17,7 +21,7 @@ class_input=work/'d8-input.jar'
 with zipfile.ZipFile(class_input,'w',zipfile.ZIP_DEFLATED) as z:
     for p in (compiled/'classes').rglob('*.class'):
         z.write(p,p.relative_to(compiled/'classes').as_posix())
-command=[java,'-Xmx1g','-cp',str(root/'build/tooling/r8-9.4.17.jar'),'com.android.tools.r8.D8',
+command=[java,'-Xmx1g','-cp',str(root/'../builds/steamlink-patches/build/tooling/r8-9.4.17.jar'),'com.android.tools.r8.D8',
          '--release','--min-api','26','--lib',str(root/'.android-sdk/platforms/android-33/android.jar')]
 for p in runtime.split(';'):
     if p.endswith('.jar'): command+=['--classpath',p]

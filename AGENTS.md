@@ -50,10 +50,23 @@ AppTarget(
 
 ## Local artifact lifecycle
 
+- All build output and project-local Gradle/Kotlin caches belong under
+  `../builds/steamlink-patches/`, outside this repository. Gradle uses
+  `gradle/root` and `gradle/patches`; retained fixtures/tools/evidence use `build/`.
+  Keep `clean` confined to Gradle output, independently of retained inputs.
+  Native CMake output belongs under `extensions/<name>/build-*` in that external root.
+  Update scripts, release asset consumers, and current reproduction commands together.
+  This includes new experiments, temporary checkouts, diagnostic logs, compiler
+  scratch and Zig/Python caches. Pass this requirement to every delegated agent;
+  build-related skills and agent presets must follow it. On the Hermes host, Cavecrew children are spawned via `delegate_task` with the role contracts from `.agents/skills/cavecrew/references/hermes-roles.md` pasted into each child's `context`; the main thread runs all checks and owns verification claims. On this workspace the
+  absolute root is `D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/builds/steamlink-patches`.
+  Invoke repository Python helpers with `python -B` or configure an external
+  `sys.pycache_prefix`; do not leave `__pycache__` directories in source folders.
+
 - Apply the parent workspace's required cleanup rule whenever an experiment ends or a patch is finalized/applied. Keep a dated tried/retired record and validation evidence, then delete obsolete experiment APKs, bundles, decoded derivatives, compiler output, and stale source/resource copies.
 - Canonical patch code and payloads are under `patches/src/main`; do not create or use `patches/bin` as another source tree. Keep generated CMake build trees out of Git.
 - GitHub release workflows build Morphe bundles and catalogs; they do not currently regenerate the native `.so` payloads. Preserve source resource binaries, tracked release catalogs/docs, exact decoded bases, fixture APKs, and tools required by local audit scripts.
-- Root `build/` mixes disposable output with required `decoded-fixture-apks`, tool dependencies, and unique diagnostic evidence. Classify children individually; retain current captures and compact historical reports. Never delete it wholesale.
+- External `../builds/steamlink-patches/build/` mixes disposable output with required `decoded-fixture-apks`, tool dependencies, and unique diagnostic evidence. Classify children individually; retain current captures and compact historical reports. Never delete it wholesale. Older records refer to its former repository-root `build/` path; see the 2026-10-08 relocation map.
 - See `WORKSPACE_CLEANUP.md` for audited ownership, recovery commands, retained exceptions, and the dated cleanup record.
 
 ## Retired hitch experiments — tested, did not work, removed from source (2026-09-19)

@@ -14,9 +14,9 @@ if (-not $compiler) { throw 'No cached Gradle Kotlin compiler found. Run Gradle 
 $compilerLib = $compiler.DirectoryName
 # The audit requires its output directory to be absent or empty and creates it itself.
 # Keep the compilation workspace (helpers, shim, jar) in a separate directory.
-$work = Join-Path $repo ('build/sdr10-shader-assemble-compile-' + [guid]::NewGuid().ToString('N'))
+$work = Join-Path $repo ('../builds/steamlink-patches/build/sdr10-shader-assemble-compile-' + [guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Path $work
-$output = Join-Path $repo ('build/sdr10-shader-assemble-' + [guid]::NewGuid().ToString('N'))
+$output = Join-Path $repo ('../builds/steamlink-patches/build/sdr10-shader-assemble-' + [guid]::NewGuid().ToString('N'))
 if (Test-Path -LiteralPath $output) { throw "Output directory must be absent or empty: $output" }
 $source = [IO.File]::ReadAllText((Join-Path $repo 'patches/src/main/kotlin/app/template/patches/steamlink/binary/OledCalibrationPatch.kt'))
 $marker = '@Suppress("unused")'

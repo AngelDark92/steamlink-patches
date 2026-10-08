@@ -50,18 +50,18 @@ Run from the repository root. This checkout currently has NDK r27c and cached Op
 
 ```powershell
 $gxrRoot = (Get-Location).Path
-$gxrSdk = Join-Path $gxrRoot 'extensions/controller-velocity-layer/build-android/_deps/openxr_headers-src'
+$gxrSdk = Join-Path $gxrRoot '../builds/steamlink-patches/extensions/controller-velocity-layer/build-android/_deps/openxr_headers-src'
 $gxrNdk = Join-Path $gxrRoot '.android-sdk/ndk/27.2.12479018'
 
 # Windows host: native lifecycle tests and the actual 2-/3-projection layer with
 # mock Android/OpenXR calls. CTest makes no device connections.
-cmake -S extensions/resolution-trace-layer/tests -B extensions/resolution-trace-layer/build-host-tests "-DOPENXR_SDK_SOURCE_DIR=$gxrSdk"
-cmake --build extensions/resolution-trace-layer/build-host-tests --config Release
-ctest --test-dir extensions/resolution-trace-layer/build-host-tests -C Release --output-on-failure
+cmake -S extensions/resolution-trace-layer/tests -B ../builds/steamlink-patches/extensions/resolution-trace-layer/build-host-tests "-DOPENXR_SDK_SOURCE_DIR=$gxrSdk"
+cmake --build ../builds/steamlink-patches/extensions/resolution-trace-layer/build-host-tests --config Release
+ctest --test-dir ../builds/steamlink-patches/extensions/resolution-trace-layer/build-host-tests -C Release --output-on-failure
 
 # Android helpers: use Ninja from PATH, or pass -DCMAKE_MAKE_PROGRAM=<ninja.exe>.
-cmake -S extensions/resolution-trace-layer -B extensions/resolution-trace-layer/build-android-cpu -G Ninja "-DCMAKE_TOOLCHAIN_FILE=$gxrNdk/build/cmake/android.toolchain.cmake" "-DOPENXR_SDK_SOURCE_DIR=$gxrSdk" -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release
-cmake --build extensions/resolution-trace-layer/build-android-cpu
+cmake -S extensions/resolution-trace-layer -B ../builds/steamlink-patches/extensions/resolution-trace-layer/build-android-cpu -G Ninja "-DCMAKE_TOOLCHAIN_FILE=$gxrNdk/build/cmake/android.toolchain.cmake" "-DOPENXR_SDK_SOURCE_DIR=$gxrSdk" -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-29 -DANDROID_STL=c++_static -DCMAKE_BUILD_TYPE=Release
+cmake --build ../builds/steamlink-patches/extensions/resolution-trace-layer/build-android-cpu
 ```
 
 After both builds succeed, copy both generated `.so` files to

@@ -130,6 +130,13 @@ The [2.0.20/5001812 and 2.0.21/5001968 audit](diagnostics/steamlink-legacy-1812-
 
 The [2.0.23/5002363 audit](diagnostics/steamlink-5002363/README.md) records the original APK, native addresses, patch scope, option checks and remaining headset validation. Its 7 stable individual adaptations and 2 optional blue-noise patches remain available; the decoder input buffering, UDP receive buffering and FEC duplicate reservation guard experiments were tested, did not work, and were removed from source on 2026-09-19. The 14 legacy patches remain excluded because this base already uses Valve's native Android XR paths.
 
+## Agent instructions
+
+This repository follows the shared `AGENTS.md` contract; each agent host reads a different subset of the instruction files.
+
+- **Hermes** reads `AGENTS.md` and, once the checkout is trusted (`hermes skills trust` in the repository root, once per machine), the project skills in `.agents/skills/`. Hermes does not read `.github/agents/` or `.github/copilot-instructions.md`. Delegated work uses the `delegate_task` tool, not named presets: paste the role contract from [`.agents/skills/cavecrew/references/hermes-roles.md`](.agents/skills/cavecrew/references/hermes-roles.md) into each child's `context`, with the goal and every path.
+- **Copilot / preset hosts** keep using `.github/agents/` and `.github/copilot-instructions.md`; those files stay for them.
+
 ## More information
 
 See the [technical reference](TECHNICAL_REFERENCE.md) for the full patch list, implementation details, validation notes, build instructions, and links to diagnostic documentation. Release changes are listed in the [changelog](CHANGELOG.md).

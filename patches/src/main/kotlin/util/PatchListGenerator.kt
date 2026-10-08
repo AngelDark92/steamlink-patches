@@ -48,8 +48,11 @@ fun main(args: Array<String>) {
     val releaseChannel =
         ReleaseChannel.from(args.firstOrNull() ?: System.getenv("MORPHE_RELEASE_CHANNEL"))
 
+    // Gradle supplies its configured output. Cached diagnostic runners stage archives
+    // below their external working directory and can also provide this property.
+    val archiveDirectory = File(System.getProperty("morphe.patchArchiveDirectory", "build/libs/"))
     val patchFiles = setOf(
-        File("build/libs/")
+        archiveDirectory
             .listFiles { file ->
                 val fileName = file.name
                 !fileName.contains("javadoc") &&
@@ -58,7 +61,7 @@ fun main(args: Array<String>) {
             }
             ?.sortedByDescending { it.lastModified() }
             ?.firstOrNull()
-            ?: error("No built patch archive found in build/libs")
+            ?: error("No built patch archive found in $archiveDirectory")
     )
     val loadedPatches = loadPatchesFromJar(patchFiles)
     val patchClassLoader = URLClassLoader(patchFiles.map { it.toURI().toURL() }.toTypedArray())

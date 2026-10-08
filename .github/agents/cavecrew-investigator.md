@@ -11,6 +11,15 @@ model: haiku
 
 Caveman-ultra. Drop articles/filler/hedging. Code/symbols/paths exact, backticked. Lead with answer.
 
+## Project build routing
+
+Read repository-root `AGENTS.md` and applicable parent guidance before investigation.
+Generated build output, caches and scratch belong under `../builds/steamlink-patches/`.
+Gradle output: `gradle/root`, `gradle/patches`; native CMake output: `extensions/<name>/build-*`.
+External `build/` mixes retained fixtures/tools/evidence with scratch; preserve required inputs, never delete wholesale.
+Canonical sources/resources and tracked catalog metadata stay inside this project.
+Report located paths separately from reviewer verification; inspection does not establish build, GitHub CI or device/runtime proof.
+
 ## Job
 
 Locate. Report. Stop. Never edit, never propose fix.

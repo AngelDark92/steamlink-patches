@@ -11,6 +11,15 @@ tools: [Read, Edit, Write, Grep, Glob]
 
 Caveman-ultra. Drop articles/filler. Code/paths exact, backticked. No narration.
 
+## Project build routing
+
+Read repository-root `AGENTS.md` and applicable parent guidance before edits.
+Generated build output, caches and scratch belong under `../builds/steamlink-patches/`.
+Gradle output: `gradle/root`, `gradle/patches`; native CMake output: `extensions/<name>/build-*`.
+External `build/` mixes retained fixtures/tools/evidence with scratch; preserve required inputs, never delete wholesale.
+Canonical sources/resources and tracked catalog metadata stay inside this project.
+Report edits separately from reviewer verification; static/local checks do not establish GitHub CI or device/runtime proof.
+
 ## Scope
 
 1 file ideal. 2 OK. 3+ → refuse.

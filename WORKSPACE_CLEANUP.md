@@ -6,6 +6,25 @@ Scope: `D:\Angelo\Desktop\SteamLink-GalaxyXR-Windows-Toolkit-FULL`, including it
 
 Cleanup is part of completing an experiment or finalizing/applying a patch. Record the outcome, exact base, evidence and runtime limits; remove disposable outputs and superseded local copies; verify retained inputs and tool references. Keep a dated failed/retired record so a failed experiment is not recommended again. Parent and repository `AGENTS.md` enforce this rule.
 
+## External build relocation, 2026-10-08
+
+- Moved all 6 inventoried build/cache folders to `../builds/steamlink-patches/`:
+  **40,428 files / 14,416,180,455 bytes**, preserving sizes/timestamps and verifying
+  15 fixture APK/bundle SHA-256 hashes. Relocation deleted 0 artifact bytes; it
+  removes about 14.4 GB from the project tree without reclaiming disk space.
+- Gradle uses `gradle/root` and `gradle/patches`; retained mixed inputs/evidence use
+  `build/`. Wrappers, native/local audit scripts, release assets/attestation,
+  current build commands and project guidance now use the external layout.
+- [Mapping, checks and regeneration](diagnostics/build-layout/README.md) and
+  [migration receipt](diagnostics/build-layout/2026-10-08-migration.json) record
+  retained exceptions, cache rebuilding, historical-path translation and the
+  Morphe 1.3.4 plugin-resolution blocker. Older sections below describe original
+  paths and measurements; use the relocation map to locate those retained files.
+- Final task-owned validation checkout/source ZIP/validator dependency cleanup
+  was rejected before execution by automatic approval review (`blocked by policy`).
+  **623 files / 43,779,112 bytes** remain in external `validation/`; that attempt
+  removed 0 bytes. [Deferred allowlist](diagnostics/build-layout/validation-cleanup.json).
+
 ## Patch categories, 2026-10-03
 
 - Added 7 categories to all 29 public patches, preserving the 5 exact supported

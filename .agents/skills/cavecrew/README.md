@@ -6,6 +6,9 @@ Decision guide. When to delegate to caveman subagents instead of doing the work 
 
 Tells the main thread when to spawn a caveman-style subagent versus the vanilla equivalent. The win: subagent tool-results inject back into main context verbatim, and caveman output is roughly 1/3 the size of vanilla prose. Across 20 delegations in one session, that is the difference between context exhaustion and finishing the task.
 
+For this project, all build output, scratch checkouts and project caches always
+go under `../builds/steamlink-patches/`. See [the layout](../../../diagnostics/build-layout/README.md).
+
 Three subagents:
 
 | Subagent | Job | Use when |
@@ -22,6 +25,14 @@ This skill is a decision guide, not a slash command. It activates when the conve
 
 Triggers on phrases like "delegate to subagent", "use cavecrew", "spawn investigator", "save context", "compressed agent output".
 
+## Under Hermes (delegate_task, not presets)
+
+Hermes does not read `.github/agents/` and has no named agent presets. Run the three roles as
+`delegate_task` children by pasting the matching contract from
+[references/hermes-roles.md](references/hermes-roles.md) into each child's `context`, with the goal and
+every path. Children inherit the parent's tools and model and cannot ask questions; their summaries are
+self-reports the parent verifies.
+
 ## Example chaining
 
 Locate → fix → verify (most common):
@@ -32,7 +43,7 @@ Locate → fix → verify (most common):
 
 Parallel scout: spawn 2-3 `cavecrew-investigator` calls in one message with different angles (defs, callers, tests). Aggregate in main.
 
-## Model overrides
+## Model overrides (Claude Code plugin hosts)
 
 By default, `cavecrew-reviewer` and `cavecrew-investigator` pin `model: haiku` in their frontmatter; `cavecrew-builder` has no `model:` line (uses the API session default). Set env vars in your shell before launching Claude Code to override per-agent:
 
@@ -55,7 +66,8 @@ Overrides patch only the `model:` line in the installed agent's frontmatter; the
 ## See also
 
 - [`SKILL.md`](./SKILL.md) — full decision matrix and output contracts
-- [`agents/cavecrew-investigator.md`](../../agents/cavecrew-investigator.md)
-- [`agents/cavecrew-builder.md`](../../agents/cavecrew-builder.md)
-- [`agents/cavecrew-reviewer.md`](../../agents/cavecrew-reviewer.md)
+- [`agents/cavecrew-investigator.md`](../../../.github/agents/cavecrew-investigator.md)
+- [`agents/cavecrew-builder.md`](../../../.github/agents/cavecrew-builder.md)
+- [`agents/cavecrew-reviewer.md`](../../../.github/agents/cavecrew-reviewer.md)
+- [`references/hermes-roles.md`](references/hermes-roles.md) — Hermes role contracts for `delegate_task`
 - [Caveman README](../../README.md) — repo overview

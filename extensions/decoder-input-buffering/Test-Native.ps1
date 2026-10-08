@@ -2,12 +2,18 @@
 param([string]$Zig, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-if (!$Zig) { $Zig = Join-Path $repo 'build/tooling/zig/ziglang/zig.exe' }
-if (!$OutputDirectory) { $OutputDirectory = Join-Path $repo 'build/decoder-buffering/host-tests' }
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
+if (!$Zig) { $Zig = Join-Path $steamlinkBuildRoot 'build/tooling/zig/ziglang/zig.exe' }
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $steamlinkBuildRoot 'build/decoder-buffering/host-tests' }
 $output = [IO.Path]::GetFullPath($OutputDirectory)
-$allowed = [IO.Path]::GetFullPath((Join-Path $repo 'build/decoder-buffering')).TrimEnd('\') + '\'
+$allowed = [IO.Path]::GetFullPath((Join-Path $steamlinkBuildRoot 'build/decoder-buffering')).TrimEnd('\') + '\'
 if (!$output.StartsWith($allowed, [StringComparison]::OrdinalIgnoreCase)) { throw 'Test output must be under build/decoder-buffering' }
 $null = New-Item -ItemType Directory -Force -Path $output
+$savedZigLocalCache = $env:ZIG_LOCAL_CACHE_DIR
+$savedZigGlobalCache = $env:ZIG_GLOBAL_CACHE_DIR
+$env:ZIG_LOCAL_CACHE_DIR = Join-Path $output 'zig-cache'
+$env:ZIG_GLOBAL_CACHE_DIR = Join-Path $steamlinkBuildRoot 'build/tooling/zig-global-cache'
+try {
 $cases = @(
     @{ Name = 'pool'; Source = 'staging_pool_test.cpp'; Flags = @() },
     @{ Name = 'fec-compat'; Source = 'fec_guard_compat_test.cpp'; Flags = @(); Arguments = @($repo) },
@@ -34,3 +40,7 @@ $sources = Get-ChildItem (Join-Path $PSScriptRoot 'src'),(Join-Path $PSScriptRoo
     ForEach-Object { @{ Path = $_.FullName; Sha256 = (Get-FileHash -LiteralPath $_.FullName).Hash.ToLowerInvariant() } }
 @{ Status = 'passed'; Cases = @($cases.Name); BridgeScenariosPerBuild = 15; Sources = @($sources); DeviceTest = $false } |
     ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $output 'result.json') -Encoding utf8
+} finally {
+    $env:ZIG_LOCAL_CACHE_DIR = $savedZigLocalCache
+    $env:ZIG_GLOBAL_CACHE_DIR = $savedZigGlobalCache
+}

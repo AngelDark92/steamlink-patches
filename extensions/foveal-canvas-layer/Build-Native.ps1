@@ -2,9 +2,10 @@
 param([string]$NdkDirectory, [string]$OpenXrDirectory, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $fcRepo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $fcRepo '../builds/steamlink-patches'))
 if (!$NdkDirectory) { $NdkDirectory = Join-Path $fcRepo '.android-sdk/ndk/27.2.12479018' }
-if (!$OpenXrDirectory) { $OpenXrDirectory = Join-Path $fcRepo 'extensions/controller-velocity-layer/build-android/_deps/openxr_headers-src' }
-if (!$OutputDirectory) { $OutputDirectory = Join-Path $fcRepo 'build/foveal-canvas-work/native-direct' }
+if (!$OpenXrDirectory) { $OpenXrDirectory = Join-Path $steamlinkBuildRoot 'extensions/controller-velocity-layer/build-android/_deps/openxr_headers-src' }
+if (!$OutputDirectory) { $OutputDirectory = Join-Path $steamlinkBuildRoot 'build/foveal-canvas-work/native-direct' }
 $fcBin = Join-Path $NdkDirectory 'toolchains/llvm/prebuilt/windows-x86_64/bin'
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 $fcLibrary = Join-Path $OutputDirectory 'libgxr_foveal_canvas.so'

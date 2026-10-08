@@ -13,6 +13,15 @@ description: >
 
 Cavecrew = three subagent presets that emit caveman output. Same job as Anthropic defaults (`Explore`, edit-style agents, reviewer); difference is the tool-result they return is compressed, so main context shrinks per delegation.
 
+## Under Hermes (delegate_task, not presets)
+
+Hermes does not read `.github/agents/` and has no named agent presets. Run `cavecrew-investigator`,
+`cavecrew-builder` and `cavecrew-reviewer` as `delegate_task` children: paste the matching role contract
+from [references/hermes-roles.md](references/hermes-roles.md) verbatim into each child's `context`, with
+the goal and every path. Children inherit the parent's tools and model (no per-child tool list, no `haiku`
+pin) and cannot call `clarify` — keep the `ambiguous. ask:` terminal line. A child's summary is a
+self-report: the parent re-reads the cited lines and runs the checks itself.
+
 ## Numeric style
 
 Write numeric quantities and ordinals as digits (`1`, `2`, `3`, `1st`, `2nd`), not spelled-out number words. Preserve exact quotes, identifiers, commands, and established names unchanged. Apply this to delegated prompts, subagent output, and the main-thread summary.
@@ -62,6 +71,18 @@ totals: N🔴 N🟡 N🔵 N❓
 Or `No issues.` Findings sorted file → line ascending.
 
 ## Chaining patterns
+
+For every delegated task in this project, pass the repository's `AGENTS.md` and
+the external build contract: all generated outputs, temporary checkouts, logs and
+project caches belong under `../builds/steamlink-patches/` (on this workspace,
+`D:/Angelo/Desktop/SteamLink-GalaxyXR-Windows-Toolkit-FULL/builds/steamlink-patches`).
+Gradle uses `gradle/root` and `gradle/patches`; mixed retained fixtures/tools/evidence
+use `build/`; native CMake uses `extensions/<name>/build-*` there. Do not create
+repository-local build trees or clean retained inputs wholesale. See
+[the build layout](../../../diagnostics/build-layout/README.md) and the local
+[agent presets](../../../.github/agents/). Reviewers must check output routing,
+release consumers and clean/input separation. Static routing checks and cached
+compiler passes do not establish a successful Morphe Gradle or GitHub CI build.
 
 For Steam Link patch/test changes in this repository, include fresh-checkout input availability in the investigator/reviewer task. Use the [Morphe skill](../morphe-patches/SKILL.md) CI guidance: local ignored decoded APKs are not GitHub inputs, and absent-input audits must be distinguished from mandatory portable tests.
 

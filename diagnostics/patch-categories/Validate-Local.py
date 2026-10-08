@@ -12,7 +12,7 @@ out = a.out.resolve()
 out.mkdir(parents=True, exist_ok=True)
 java = 'F:/Runtimes/Java21/bin/java.exe'
 task = Path(__file__).resolve().parent
-tools = Path.cwd() / 'build/startup-boundary-tools'
+tools = Path.cwd() / '../builds/steamlink-patches/build/startup-boundary-tools'
 deps = [tools/n for n in ('gson.jar','jcommander.jar','junit4.jar','hamcrest-core.jar','kotlin-test-junit.jar','kotlin-test.jar')]
 deps += [tools/'morphe-desktop-1.15.1-all.jar']
 compiler = sorted((Path.home()/'.gradle/wrapper/dists').rglob('kotlin-compiler-embeddable-*.jar'))[-1]

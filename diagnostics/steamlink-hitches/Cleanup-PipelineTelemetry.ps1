@@ -2,17 +2,19 @@
 param([switch]$Execute)
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$auditRoot = Join-Path $repo 'build/decoder-buffering/telemetry-archive-20260915'
-$transitionRoot = Join-Path $repo 'build/decoder-buffering/telemetry-transitions'
-$recordRoot = Join-Path $repo 'build/decoder-buffering/telemetry-cleanup'
+$steamlinkBuildRoot = [IO.Path]::GetFullPath((Join-Path $repo '../builds/steamlink-patches'))
+. (Join-Path $repo 'tools/Build-Paths.ps1')
+$auditRoot = Join-Path $steamlinkBuildRoot 'build/decoder-buffering/telemetry-archive-20260915'
+$transitionRoot = Join-Path $steamlinkBuildRoot 'build/decoder-buffering/telemetry-transitions'
+$recordRoot = Join-Path $steamlinkBuildRoot 'build/decoder-buffering/telemetry-cleanup'
 $null = New-Item -ItemType Directory -Force -Path $recordRoot
-$artifact = Join-Path $repo 'patches/build/libs/patches-1.18.0-dev.1-decoder-pipeline-v2-local.mpp'
+$artifact = Join-Path $steamlinkBuildRoot 'gradle/patches/libs/patches-1.18.0-dev.1-decoder-pipeline-v2-local.mpp'
 if ((Get-FileHash -LiteralPath $artifact).Hash.ToLowerInvariant() -ne '5a232e650c4485913c16fc56063b10b05e5c0e4554561d32a6d9b05a8ab3859f') { throw 'Published artifact verification failed' }
 if ((Get-Content (Join-Path $transitionRoot 'result.json') -Raw | ConvertFrom-Json).status -ne 'passed') { throw 'Missing transition validation' }
 if ((Get-Content (Join-Path $auditRoot 'result.json') -Raw | ConvertFrom-Json).Status -ne 'passed') { throw 'Missing APK validation' }
 $targets = [Collections.Generic.List[string]]::new()
 foreach ($item in (Get-Content (Join-Path $transitionRoot 'cleanup-allowlist.json') -Raw | ConvertFrom-Json).targets) {
-    $targets.Add($item.path)
+    $targets.Add((Convert-LegacyBuildPath $item.path $repo))
 }
 foreach ($code in @('5002322','5002363')) {
     $targets.Add((Join-Path $auditRoot "apks/$code-baseline/result-unsigned.apk"))
@@ -25,18 +27,18 @@ foreach ($code in @('5002322','5002363')) {
 foreach ($relative in @('compiled/classes','compiled/resources','compiled/test-classes','catalogs/work',
         'patches-1.18.0-dev.1-decoder-pipeline-v2-local.mpp')) { $targets.Add((Join-Path $auditRoot $relative)) }
 $targets.Add((Join-Path $transitionRoot 'classes'))
-$targets.Add((Join-Path $repo 'build/decoder-buffering/telemetry-native'))
-$allowedRoots = @($auditRoot,$transitionRoot,(Join-Path $repo 'build/decoder-buffering/telemetry-native'))
+$targets.Add((Join-Path $steamlinkBuildRoot 'build/decoder-buffering/telemetry-native'))
+$allowedRoots = @($auditRoot,$transitionRoot,(Join-Path $steamlinkBuildRoot 'build/decoder-buffering/telemetry-native'))
 $inventory = foreach ($target in $targets) {
     $absolute = [IO.Path]::GetFullPath($target)
     if (!($allowedRoots | Where-Object { $absolute -eq $_ -or $absolute.StartsWith($_ + '\', [StringComparison]::OrdinalIgnoreCase) })) { throw "Outside allowlist roots: $absolute" }
-    if (!$absolute.StartsWith($repo + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "Outside workspace: $absolute" }
+    if (!$absolute.StartsWith($steamlinkBuildRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "Outside workspace: $absolute" }
     $ancestor = $absolute
-    while ($ancestor.Length -ge $repo.Length) {
+    while ($ancestor) {
         if (Test-Path -LiteralPath $ancestor) {
             if ((Get-Item -LiteralPath $ancestor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Reparse ancestor: $ancestor" }
         }
-        if ($ancestor -eq $repo) { break }
+        if ($ancestor -eq $steamlinkBuildRoot) { break }
         $ancestor = Split-Path -Parent $ancestor
     }
     if (!(Test-Path -LiteralPath $absolute)) { continue }
@@ -52,8 +54,8 @@ $protected = @($artifact,
     (Join-Path $repo 'patches/src/main/resources/steamlink/decoder/libgxr_dbuf_5002363.so'),
     (Join-Path $repo 'patches/src/main/resources/steamlink/decoder/libgxr_dbuf_5002322_telemetry.so'),
     (Join-Path $repo 'patches/src/main/resources/steamlink/decoder/libgxr_dbuf_5002363_telemetry.so'),
-    (Join-Path $repo 'build/live-hitch-20260915/telemetry-followup/installed.apk'),
-    (Join-Path $repo 'build/live-hitch-20260915/telemetry-followup/capture/stream.pftrace'))
+    (Join-Path $steamlinkBuildRoot 'build/live-hitch-20260915/telemetry-followup/installed.apk'),
+    (Join-Path $steamlinkBuildRoot 'build/live-hitch-20260915/telemetry-followup/capture/stream.pftrace'))
 $before = @($protected | ForEach-Object { Get-FileHash -LiteralPath $_ })
 foreach ($gitRepo in @($repo,(Join-Path $repo '../Tools'),(Join-Path $repo '../CustomHeadsetOpenVrGxR'))) {
     $name = Split-Path -Leaf ([IO.Path]::GetFullPath($gitRepo))
