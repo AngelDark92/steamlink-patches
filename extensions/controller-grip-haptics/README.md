@@ -47,6 +47,8 @@ request only changes what is generated next, as in
   20 ms). They play as a short tone of 130, 100 or 60 Hz by sent amplitude, light to strong.
 - A vibration that keeps repeating (requests less than 50 ms apart) is held for at least
   60 ms per request, so it plays as one continuous tone, and so do ticks in quick succession.
+- While both controllers play the same tone and nothing else (crossed sabers in Beat Saber),
+  one chunk is sent to both of them at once instead of a chunk each; see below.
 - Zero-amplitude requests are ignored. Beat Saber sends about 70 of them per second per hand
   while nothing vibrates; treated as a stop they cut every vibration short.
 - An OpenXR amplitude `a` is sent as `min + (max - min) * a^gamma`. A plain multiplier strong
@@ -68,7 +70,8 @@ SteamVR dashboard ticks and in Beat Saber.
 | `debug.gxr.haptic.gamma` | `0.5` | curve between them; below 1 lifts weak requests, 1 is linear |
 | `debug.gxr.haptic.minms` | `10` | shortest vibration in milliseconds, at least 10 |
 | `debug.gxr.haptic.streamms` | `60` | how long a repeating request is held |
-| `debug.gxr.haptic.chunkms` | `40` | chunk length for one controller; doubled while both vibrate |
+| `debug.gxr.haptic.chunkms` | `40` | chunk length for one controller; doubled while both vibrate differently |
+| `debug.gxr.haptic.shared` | `1` | `1` one chunk for both controllers while they play the same tone, `0` always a chunk each |
 | `debug.gxr.haptic.hzscale` | `0.5` | multiplier for the requested frequency |
 | `debug.gxr.haptic.maxhz` | `130` | highest tone played |
 | `debug.gxr.haptic.hz` | `0` | fixed tone in Hz for everything, `0` = from the request |
@@ -91,6 +94,16 @@ Found by sending waveforms by hand from `adb shell` and by reading the HAL
 - The HAL needs about 14 ms per chunk and handles both controllers in one queue. With 10 ms
   chunks it played 371 of 500 and the tone rattled; 20, 30 and 60 ms chunks all played, and
   20 ms felt clean on one controller. 40 ms is the value used in games.
+- Device 2 is both controllers. The HAL has a third controller descriptor next to left (0)
+  and right (1), `KxrControllerDescBoth`, with the radio group left + right, and
+  `performHapticFeedback` accepts it: the log shows `VcmPlay: group = Peripheral` and one
+  upload plays in both grips (felt on 2026-10-05, 1.4 s of 80 ms chunks, no errors).
+  `getDeviceStatus` knows no device 2, so the user service checks both controllers and sends
+  to the connected one when the other is asleep. Sent separately, the left controller's chunk
+  goes first and the right one's follows about 20 ms later in the same queue; in Beat Saber
+  the right grip was reported to go on for about half a second after crossed sabers were
+  parted while the left one stopped at once, although the HAL log showed the same chunks for
+  both. The shared chunk has not been run in a game yet.
 - Long waveforms are unusable: the controller buffers about a second, after that an upload
   takes as long as the sound and the HAL queues the rest. Ten 1 s waveforms sent 0.5 s apart
   played one after another, the last 3.5 s late.

@@ -1,3 +1,33 @@
+## [1.27.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.26.0...v1.27.0) (2026-10-07)
+
+### ✨ New Features
+
+* predict the controller HAL pose 60 ms ahead by default ([c8609ed](https://github.com/AngelDark92/steamlink-patches/commit/c8609edc2b1e48b9a3d0ee7947f14720b24cd15c))
+
+## [1.26.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.25.0...v1.26.0) (2026-10-05)
+
+### ✨ New Features
+
+* angular velocity frame per Steam Link base, HAL velocities for the pose's time ([effe0da](https://github.com/AngelDark92/steamlink-patches/commit/effe0da03393ffcf612f5c60ed80a470da5638bf))
+
+## [1.25.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.24.1...v1.25.0) (2026-10-05)
+
+### 🐛 Bug Fixes
+
+* send one haptic chunk to both controllers for the same tone ([7327056](https://github.com/AngelDark92/steamlink-patches/commit/7327056c63939df4cf8283f8951796140c77ef81))
+
+### ✨ New Features
+
+* report the controller HAL's pose 2 ms ahead by default ([03c4b86](https://github.com/AngelDark92/steamlink-patches/commit/03c4b866a26a3cc471145f8479a559eed6b6331c))
+* report the controller HAL's pose raw, 20 ms ahead ([b422634](https://github.com/AngelDark92/steamlink-patches/commit/b42263477533195c556c42f0220fc2ee77c6b30d))
+
+## [1.24.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.24.0...v1.24.1) (2026-10-05)
+
+### 🐛 Bug Fixes
+
+* ask the controller HAL ahead of the system's requests ([d2b3f09](https://github.com/AngelDark92/steamlink-patches/commit/d2b3f095e40506195e82e9e3c915fc46a0ccedcf))
+* start a Shizuku user service again when it does not connect ([79e7008](https://github.com/AngelDark92/steamlink-patches/commit/79e700800be6edd35dcefc9c5fe64cc567ec7998))
+
 ## [1.24.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.23.0...v1.24.0) (2026-10-05)
 
 ### 🐛 Bug Fixes

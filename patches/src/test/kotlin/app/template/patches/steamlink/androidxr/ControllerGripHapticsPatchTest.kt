@@ -20,7 +20,7 @@ class ControllerGripHapticsPatchTest {
 
         assertContentEquals(byteArrayOf(0x7f, 0x45, 0x4c, 0x46), library.copyOfRange(0, 4))
         // extensions/controller-grip-haptics, NDK 28.2.13676358, arm64-v8a, Release.
-        assertEquals("6be8628958841e031ce5bbfd0ee2811ade4f575b95644bfc92f7356adbba0cec", sha256(library))
+        assertEquals("8204dbd693df9f0f46e799352d40fb72adacb6a9a3a307fe7e730aa1773895e3", sha256(library))
         val text = String(library, Charsets.ISO_8859_1)
         assertTrue("xrNegotiateLoaderApiLayerInterface" in text)
         // Called by the bridge class in the extension, and the interface of its user service.
@@ -58,7 +58,7 @@ class ControllerGripHapticsPatchTest {
     fun `extension adds only the haptic classes`() {
         val extension = controllerGripHapticsResource(CONTROLLER_GRIP_HAPTICS_EXTENSION)
         // extensions/controller-grip-haptics/java, d8 --min-api 29.
-        assertEquals("7370483b19239360f2eb4b10bc4b1b11218bd26a350cd5792e4c26d2de998bec", sha256(extension))
+        assertEquals("047fa4c406ceca691bab4e0632cfae7cd7fc7290287be8b2a8c5f883df707373", sha256(extension))
 
         val types = DexBackedDexFile.fromInputStream(Opcodes.getDefault(), extension.inputStream().buffered())
             .classes

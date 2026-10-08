@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-05T08:19:16",
-  "description": "## [1.24.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.23.0...v1.24.0) (2026-10-05)\n\n### 🐛 Bug Fixes\n\n* read the controllers one HAL call each again ([40c9bd1](https://github.com/AngelDark92/steamlink-patches/commit/40c9bd151b25949b9aa42f92c5d05d4e81972830))\n* use the measured grip pitch in the controller velocity frame ([d73314d](https://github.com/AngelDark92/steamlink-patches/commit/d73314dd702832e220d26398ad2769bb2d8c41e9))\n\n### ✨ New Features\n\n* add controller tracking from the controller HAL ([1bb25da](https://github.com/AngelDark92/steamlink-patches/commit/1bb25da7fbbc6e8c9a0d035fe67f2c778d69e5cd))\n* raise the position filter's rest cutoff to 3 Hz ([0f78ca3](https://github.com/AngelDark92/steamlink-patches/commit/0f78ca378417204cd03884e7eb670fe89d7c38ee))\n* re-read the HAL request lead while streaming ([cae3af5](https://github.com/AngelDark92/steamlink-patches/commit/cae3af52316bd33362add9cb29a83f0935dc4042))\n* read both controller poses in one HAL call, filter HAL velocities ([e01e58b](https://github.com/AngelDark92/steamlink-patches/commit/e01e58bf01cf4ce6068e97fa726c522c3b530d02))\n* read the HAL 360 times per second, steadier pose at rest ([cd553c5](https://github.com/AngelDark92/steamlink-patches/commit/cd553c5c776234a05092c9982939f23faa614c08))\n* take controller velocities from the controller HAL ([aa9fcae](https://github.com/AngelDark92/steamlink-patches/commit/aa9fcaeb0dc27083a6309c5b8e7346bf70ac18e0))",
-  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.24.0/patches-1.24.0.mpp",
+  "created_at": "2026-10-07T08:13:33",
+  "description": "## [1.27.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.26.0...v1.27.0) (2026-10-07)\n\n### ✨ New Features\n\n* predict the controller HAL pose 60 ms ahead by default ([c8609ed](https://github.com/AngelDark92/steamlink-patches/commit/c8609edc2b1e48b9a3d0ee7947f14720b24cd15c))",
+  "download_url": "https://github.com/AngelDark92/steamlink-patches/releases/download/v1.27.0/patches-1.27.0.mpp",
   "signature_download_url": "",
-  "version": "1.24.0"
+  "version": "1.27.0"
 }

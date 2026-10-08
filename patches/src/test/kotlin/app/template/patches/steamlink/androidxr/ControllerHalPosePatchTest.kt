@@ -20,7 +20,7 @@ class ControllerHalPosePatchTest {
 
         assertContentEquals(byteArrayOf(0x7f, 0x45, 0x4c, 0x46), library.copyOfRange(0, 4))
         // extensions/controller-hal-pose, NDK 28.2.13676358, arm64-v8a, Release.
-        assertEquals("bf65d35e2233b01e7c7e2927cadfa03bf8cb479a614e05428b0694020d90fac7", sha256(library))
+        assertEquals("be7b192fd72723c09d9106cdd32ee60f62464fe48ddfab670d9bf67c9068b28d", sha256(library))
         val text = String(library, Charsets.ISO_8859_1)
         assertTrue("xrNegotiateLoaderApiLayerInterface" in text)
         // Called by the bridge class in the extension, and the interface of its user service.
@@ -35,15 +35,29 @@ class ControllerHalPosePatchTest {
         assertTrue("debug.gxr.halpose.ahead" in text)
         assertTrue("debug.gxr.halpose.pitch" in text)
         assertTrue("debug.gxr.halpose.hz" in text)
-        assertTrue("debug.gxr.halpose.filter" in text)
-        assertTrue("debug.gxr.halpose.pos.cutoff" in text)
-        assertTrue("debug.gxr.halpose.pos.beta" in text)
-        assertTrue("debug.gxr.halpose.rot.cutoff" in text)
-        assertTrue("debug.gxr.halpose.rot.beta" in text)
-        assertTrue("debug.gxr.halpose.lin.cutoff" in text)
-        assertTrue("debug.gxr.halpose.lin.beta" in text)
-        assertTrue("debug.gxr.halpose.ang.cutoff" in text)
-        assertTrue("debug.gxr.halpose.ang.beta" in text)
+        assertTrue("debug.gxr.halpose.lead" in text)
+        assertTrue("debug.gxr.halpose.velocity_sync" in text)
+        assertTrue("debug.gxr.halpose.angular" in text)
+        // The smoothing was taken out: no filter properties any more.
+        assertFalse("debug.gxr.halpose.filter" in text)
+        assertFalse("debug.gxr.halpose.pos.cutoff" in text)
+        // The bundled library reports the angular velocity local until a patch says otherwise.
+        assertFalse(library.angularVelocityWorld(CONTROLLER_HAL_POSE_CONFIG_MAGIC))
+    }
+
+    @Test
+    fun `each patch writes its base's angular velocity frame and nothing else`() {
+        val bundled = controllerHalPoseResource("steamlink/androidxr/$CONTROLLER_HAL_POSE_LIBRARY")
+        val local = controllerHalPoseLibrary(angularWorld = false)
+        val world = controllerHalPoseLibrary(angularWorld = true)
+
+        assertContentEquals(bundled, local)
+        assertFalse(local.angularVelocityWorld(CONTROLLER_HAL_POSE_CONFIG_MAGIC))
+        assertTrue(world.angularVelocityWorld(CONTROLLER_HAL_POSE_CONFIG_MAGIC))
+        assertEquals(bundled.size, world.size)
+        assertEquals(1, bundled.indices.count { bundled[it] != world[it] })
+        // Setting it again changes nothing.
+        assertContentEquals(world, world.withAngularVelocityFrame(CONTROLLER_HAL_POSE_CONFIG_MAGIC, true))
     }
 
     @Test
@@ -83,20 +97,31 @@ class ControllerHalPosePatchTest {
     }
 
     @Test
-    fun `patch is opt-in, experimental and names Shizuku`() {
-        assertFalse(controllerHalPosePatch.default)
+    fun `patches are opt-in, experimental, name Shizuku and split the bases`() {
         assertEquals(
             "Controller tracking from the controller HAL through Shizuku (experimental)",
             controllerHalPosePatch.name,
         )
-        assertTrue("needs Shizuku" in controllerHalPosePatch.description.orEmpty())
-
-        val compatibilities = controllerHalPosePatch.compatibility.orEmpty()
-        assertTrue(compatibilities.all { it.name == EXPERIMENTAL_COMPATIBILITY_NAME })
         assertEquals(
-            setOf(5001712, 5001812, 5001968, 5002244, 5002363),
-            compatibilities.flatMap { it.targets }.flatMap { it.versionCodes!!.values }.toSet(),
+            "Controller tracking from the controller HAL through Shizuku, 2.0.20 - 2.0.22 (experimental)",
+            controllerHalPoseLegacyPatch.name,
         )
+        mapOf(
+            controllerHalPosePatch to setOf(5002363),
+            controllerHalPoseLegacyPatch to setOf(5001712, 5001812, 5001968, 5002244),
+        ).forEach { (patch, versionCodes) ->
+            assertFalse(patch.default, patch.name)
+            assertTrue("needs Shizuku" in patch.description.orEmpty(), patch.name)
+            val compatibilities = patch.compatibility.orEmpty()
+            assertTrue(compatibilities.all { it.name == EXPERIMENTAL_COMPATIBILITY_NAME }, patch.name)
+            assertEquals(
+                versionCodes,
+                compatibilities.flatMap { it.targets }.flatMap { it.versionCodes!!.values }.toSet(),
+                patch.name,
+            )
+        }
+        assertTrue("local to the grip pose" in controllerHalPosePatch.description.orEmpty())
+        assertTrue("in the base space" in controllerHalPoseLegacyPatch.description.orEmpty())
 
         listOf("2.0.20" to "5001712", "2.0.20" to "5001812", "2.0.21" to "5001968", "2.0.22" to "5002244",
             "2.0.23" to "5002363")
