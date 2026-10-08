@@ -27,6 +27,11 @@ and `extensions/<name>/build-*` for native CMake. Preserve mixed inputs during
 `clean`; keep canonical source/resources and committed release metadata here.
 See `AGENTS.md` and `diagnostics/build-layout/README.md`; pass this contract to
 delegated agents and check release asset/attestation consumers when editing builds.
+Attestation resolves the exact released bundle to a canonical absolute path;
+`..` is rejected even inside absolute patterns. Keep release preparation's
+Gradle-only clean so an older preflight bundle cannot become a release asset.
+Local Packages access: `tools/Configure-GitHubPackages.ps1`, classic token with
+`read:packages`, user Gradle properties outside source. Never put tokens in chat.
 
 ```powershell
 .\gradlew.bat build

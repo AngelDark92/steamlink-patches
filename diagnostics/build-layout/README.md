@@ -2,6 +2,8 @@
 
 The project uses `D:\Angelo\Desktop\SteamLink-GalaxyXR-Windows-Toolkit-FULL\builds\steamlink-patches`.
 Scripts compute the same sibling location relative to the checkout, including on CI.
+The [CI repair receipt](2026-10-08-ci-repair.md) records exact-version absolute
+attestation paths, release-only Gradle cleanup, and local dependency setup.
 
 | Former project folder | External folder |
 |---|---|

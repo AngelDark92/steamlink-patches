@@ -94,6 +94,12 @@ contain undeclared libraries: compressed reports must label fallback checks as
 diagnostic, not Gradle/CI proof. Include actual commands, compiler/runtime versions
 and executed/skipped counts; only the corrected SHA's workflow can establish its
 CI result. Main thread retains responsibility for this final verification.
+For external release bundles, reviewers must verify exact-version canonical
+absolute attestation paths (`..` is rejected even in absolute patterns) and the
+Gradle-only clean before release rebuilding, preventing stale preflight uploads.
+Run the release path regression with the actual toolkit glob dependency. Local
+Packages setup uses `tools/Configure-GitHubPackages.ps1`; never ask for a token
+in chat, print it, or store it in the repository.
 
 **Locate → fix → verify** (most common):
 1. `cavecrew-investigator` returns site list.

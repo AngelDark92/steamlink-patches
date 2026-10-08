@@ -47,6 +47,14 @@ AppTarget(
 - For dependency, plugin, generator or test changes, validate the actual Gradle graph from a fresh checkout: `./gradlew clean :patches:test :patches:buildAndroid :patches:generatePatchesList -PreleaseChannel=experimental --no-daemon` (use `stable` for main). This must pass before semantic-release prepares metadata or publishes artifacts.
 - A desktop fat JAR or hand-built compiler classpath can supply undeclared dependencies. Such fallback checks are diagnostic evidence only, even when every test passes; they do not validate Gradle dependency scopes, the pinned compiler or the release build. If Gradle is blocked locally, state the blocker and verify the corrected commit in GitHub Actions before reporting the workflow fixed.
 - Investigate the exact failed commit, run, job and first failed task before editing. Retain a compact failure receipt and check both test compilation and Android packaging; a production compile or documentation pass alone is insufficient. Do not rerun an old commit to validate new changes, disable tests or widen production dependencies to hide missing test declarations.
+- Attestation must use the canonical absolute path of the exact released version,
+  resolved by `.github/scripts/resolve_release_artifact.cjs`. `actions/attest`
+  rejects `..` segments even in absolute patterns. Release preparation must clean
+  only external Gradle output before rebuilding so preflight bundles are not
+  uploaded as assets of a newer release. Run the release path regression check.
+- Local GitHub Packages access uses a classic token with `read:packages`, kept
+  in user Gradle properties outside the repository. Use
+  `tools/Configure-GitHubPackages.ps1`; never request tokens in chat or commit them.
 
 ## Local artifact lifecycle
 

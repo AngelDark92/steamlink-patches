@@ -124,6 +124,15 @@ dependency/plugin, generator or test changes:
 Use `stable` on main. The workflow must run this gate before semantic-release,
 including commits that do not produce a release. Preserve generated extensions
 and mandatory portable tests in this graph.
+Attestation uses the exact release version through
+`.github/scripts/resolve_release_artifact.cjs`, yielding a canonical absolute
+path without `..`. Prefixing a relative pattern with the workspace is insufficient.
+Keep release preparation's Gradle `clean` before rebuilding; this removes the
+preflight version from upload candidates while preserving retained `build/` inputs.
+Run `node .github/scripts/test_release_artifact_paths.cjs` after `npm ci` for its
+actual `@actions/glob` regression checks. On Windows, configure GitHub Packages
+with `tools/Configure-GitHubPackages.ps1` and a classic `read:packages` token in
+user Gradle properties; tokens must stay outside source, chat and logs.
 Use an isolated checkout for this clean command; retained inputs are now in
 `../builds/steamlink-patches/build/`, separately from cleanable `gradle/` outputs.
 Wrappers route project caches outside the checkout. Use `Verify-Build.ps1` for
