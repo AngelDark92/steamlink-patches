@@ -42,10 +42,12 @@ try {
     [Net.ServicePointManager]::SecurityProtocol = $previousProtocol -bor [Net.SecurityProtocolType]::Tls12
     try {
         $response = Invoke-WebRequest -Uri $markerUrl -Headers @{ Authorization = $authorization } -UseBasicParsing -TimeoutSec 30
-        if ($response.StatusCode -ne 200 -or $response.Content -notmatch '<project[\s>]') { throw 'Unexpected package response.' }
+        $responseContent = if ($response.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($response.Content) } else { [string]$response.Content }
+        if ($response.StatusCode -ne 200 -or $responseContent -notmatch '<project[\s>]') { throw 'Unexpected package response.' }
     }
     catch {
-        throw 'GitHub Packages validation failed. Check the username, token read:packages permission, token expiration, and network access. Nothing was saved.'
+        $failure = if ($_.Exception.Response) { 'HTTP ' + [int]$_.Exception.Response.StatusCode } else { $_.Exception.GetType().Name }
+        throw "GitHub Packages validation failed ($failure). Check the username, classic token read:packages permission, token expiration, and network access. Nothing was saved."
     }
     if ($ValidateOnly) {
         Write-Host "GitHub Packages access verified for $Username. Nothing was saved."
