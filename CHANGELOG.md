@@ -1,3 +1,9 @@
+## [1.28.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.28.0-dev.1...v1.28.0-dev.2) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* repair external build attestation ([87a016f](https://github.com/AngelDark92/steamlink-patches/commit/87a016f12115bbc20ef8ffd4461a46c6392d1b37))
+
 ## [1.28.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.27.0...v1.28.0-dev.1) (2026-10-08)
 
 ### ✨ New Features
