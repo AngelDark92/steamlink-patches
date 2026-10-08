@@ -1,3 +1,9 @@
+## [1.28.0-dev.1](https://github.com/AngelDark92/steamlink-patches/compare/v1.27.0...v1.28.0-dev.1) (2026-10-08)
+
+### ✨ New Features
+
+* Add diagnostics and verification scripts for Steam Link GalaxyXR patches ([03c7dd5](https://github.com/AngelDark92/steamlink-patches/commit/03c7dd576d56f8ee0d8c2eb10257606da551bbe2))
+
 ## [1.27.0](https://github.com/AngelDark92/steamlink-patches/compare/v1.26.0...v1.27.0) (2026-10-07)
 
 ### ✨ New Features
