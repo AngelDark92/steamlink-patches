@@ -1,3 +1,9 @@
+## [1.28.0-dev.3](https://github.com/AngelDark92/steamlink-patches/compare/v1.28.0-dev.2...v1.28.0-dev.3) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* decode Packages validation responses ([14b3deb](https://github.com/AngelDark92/steamlink-patches/commit/14b3debf66f49c02f62c1e1fdb03a237f1d3a879))
+
 ## [1.28.0-dev.2](https://github.com/AngelDark92/steamlink-patches/compare/v1.28.0-dev.1...v1.28.0-dev.2) (2026-10-08)
 
 ### 🐛 Bug Fixes
