@@ -144,6 +144,7 @@ private val retiredProjectionModes = setOf(
 )
 private val retiredProjectionLibraries = setOf(
     "libgxr_surface_video.so",
+    "libgxr_surface_video_trigger.so",
     "libgxr_asf.so",
     "libgxr_ast_underside.so",
     "libgxr_ast_warmup_omit.so",
@@ -155,6 +156,9 @@ private val retiredProjectionLibraries = setOf(
     "libgxr_nqvd.so",
     "libgxr_pst.so",
     "libgxr_nspp.so",
+)
+private val retiredProjectionManifests = setOf(
+    "XR_APILAYER_local_GalaxyXR_surface_video_trigger_v1.json",
 )
 
 private fun ByteArray.containsAscii(value: String): Boolean {
@@ -210,15 +214,6 @@ internal fun installProjectionModeResources(
         }
     }
 
-    // The Surface-video experiment appends its own terminal trigger. Reject either
-    // patch order so Alpha-0 can never leave a three-layer Surface-video frame behind.
-    if (File(libDir, SURFACE_VIDEO_TRIGGER_LIBRARY).exists() ||
-        File(layerDir, SURFACE_VIDEO_TRIGGER_MANIFEST).exists()) {
-        throw PatchException(
-            "Surface video + trigger is mutually exclusive with Alpha-0 high-resolution trigger",
-        )
-    }
-
     retiredProjectionModes.forEach { mode ->
         listOf(
             File(libDir, "libgxr_$mode.so"),
@@ -231,6 +226,12 @@ internal fun installProjectionModeResources(
     }
     retiredProjectionLibraries.forEach { library ->
         val retiredFile = File(libDir, library)
+        if (retiredFile.exists() && !retiredFile.delete()) {
+            throw PatchException("Could not remove retired XR projection resource: ${retiredFile.path}")
+        }
+    }
+    retiredProjectionManifests.forEach { manifest ->
+        val retiredFile = File(layerDir, manifest)
         if (retiredFile.exists() && !retiredFile.delete()) {
             throw PatchException("Could not remove retired XR projection resource: ${retiredFile.path}")
         }

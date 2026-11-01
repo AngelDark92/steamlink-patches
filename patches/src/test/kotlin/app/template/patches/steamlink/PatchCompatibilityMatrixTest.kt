@@ -5,7 +5,7 @@ import app.template.patches.steamlink.androidxr.appearOnTopPatch
 import app.template.patches.steamlink.androidxr.androidXrUiExtensionPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityFramePatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
-import app.template.patches.steamlink.androidxr.surfaceVideoTriggerPatch
+import app.template.patches.steamlink.androidxr.hybridCodecPatch
 import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.performanceBoostPatch
 import app.template.patches.steamlink.androidxr.xrCodecsSupportPatch
@@ -13,6 +13,8 @@ import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 import app.template.patches.steamlink.androidxr.xrDirectInputFixPatch
 import app.template.patches.steamlink.androidxr.alpha0HighResolutionTriggerPatch
+import app.template.patches.steamlink.androidxr.atlasSurfacePatch
+import app.template.patches.steamlink.androidxr.swapchainEnlargePatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
@@ -83,7 +85,7 @@ class PatchCompatibilityMatrixTest {
     @Test
     fun `legacy base exposes every standalone patch with matching defaults`() {
         val reference = allIndividualPatches.filter { it.supports("2.0.20", 5001712) }.toSet()
-        assertEquals(25, reference.size)
+        assertEquals(27, reference.size)
         recommendedFor("2.0.20", 5001712).forEach { assertTrue(it.default, it.name) }
         (reference - legacyRecommendedPatches).forEach { patch ->
             assertFalse(patch.default, patch.name)
@@ -92,21 +94,23 @@ class PatchCompatibilityMatrixTest {
 
     @Test
     fun `native base exposes its expected individual patches`() {
-        val expected = setOf(
+        val expectedModern = setOf(
             alpha0HighResolutionTriggerPatch,
             gxrFacebridgePatch,
             microphoneInputPresetPatch,
             networkOptimizationsPatch,
             blueNoisePatch,
             xrCodecsSupportPatch,
+            hybridCodecPatch,
             performanceBoostPatch,
             unrestrictedBatteryUsagePatch,
             hmdOnlyPatch,
             oledCalibrationPatch,
             controllerVelocityFramePatch,
         )
-        assertEquals(expected, allIndividualPatches.filter { it.supports("2.0.23", 5002363) }.toSet())
-        assertEquals(expected, allIndividualPatches.filter { it.supports("2.0.24", 5002395) }.toSet())
+        val expected5002395 = expectedModern + setOf(swapchainEnlargePatch, atlasSurfacePatch)
+        assertEquals(expectedModern, allIndividualPatches.filter { it.supports("2.0.23", 5002363) }.toSet())
+        assertEquals(expected5002395, allIndividualPatches.filter { it.supports("2.0.24", 5002395) }.toSet())
         listOf("2.0.22" to 5002322, "2.0.22" to 5002363, "2.0.23" to 5002322, "2.0.23" to 5002364,
             "2.0.24" to 5002363, "2.0.24" to 5002394)
             .forEach { (version, versionCode) ->
@@ -114,8 +118,8 @@ class PatchCompatibilityMatrixTest {
                     assertFalse(patch.supports(version, versionCode), "${patch.name}: $version/$versionCode")
                 }
             }
-        val excludedPublicPatches = allIndividualPatches.toSet() - expected
-        assertEquals(14, excludedPublicPatches.size)
+        val excludedPublicPatches = allIndividualPatches.toSet() - expected5002395
+        assertEquals(13, excludedPublicPatches.size)
         val modernClosure = nativeRecommendedPatches.flatMap { it.dependencyClosure() }.toSet()
         assertTrue(modernClosure.intersect(excludedPublicPatches).isEmpty())
     }
@@ -184,6 +188,7 @@ class PatchCompatibilityMatrixTest {
             microphoneInputPresetPatch,
             networkOptimizationsPatch, blueNoisePatch,
             xrCodecsSupportPatch,
+            hybridCodecPatch,
             performanceBoostPatch,
             oledCalibrationPatch,
             unrestrictedBatteryUsagePatch,
@@ -194,7 +199,8 @@ class PatchCompatibilityMatrixTest {
             xrLauncherBootstrapPatch,
             xrInputRoutingConfigPatch,
             controllerVelocityFramePatch,
-            surfaceVideoTriggerPatch,
+            swapchainEnlargePatch,
+            atlasSurfacePatch,
         )
 
         val legacyRecommendedPatches = setOf(

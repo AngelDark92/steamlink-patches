@@ -2,6 +2,25 @@
 
 This directory is the historical record for approaches that did not produce permission-free, persistently high resolution. Do not stack these experiments into a new APK.
 
+## 2026-10-27 — Surface video + trigger: tried, no high resolution; removed
+
+The default-off **Surface video + trigger (experimental)** patch copied Valve's already-rendered
+sRGB8 projection images 1:1 into Android Surface swapchains of the same size, re-pointed the two
+projection views at those images, and appended the 2x2 alpha-0 terminal quad on exact
+2.0.20/5001712. It did not produce high resolution.
+
+The copy preserved Valve's source extent, so it could not raise detail. The trigger was appended
+only after all four source views copied; any copy failure fell back to the original two-projection
+frame with no trigger. It also replaced Valve's normal projection swapchains, which is the opposite
+of the working Alpha-0 helper (`preservesValveProjectionLayers:true`,
+`androidSurfaceSwapchain:false`).
+
+The patch, native source, payload, manifest and tests are removed. Build ID
+`surface-video-trigger-2proj-v1.0-20261025`, hashes and logcat evidence remain in
+[diagnostics/steamlink-surface-video-trigger](../diagnostics/steamlink-surface-video-trigger/README.md).
+Do not re-add this copy bridge or another terminal-quad variant; the next attempt must render the
+atlas at the target extent or redirect the decoder output.
+
 ## 2026-10-25 — Fovea/quad composition arms: incomplete reproduction; removed
 
 Two default-off OpenXR API-layer arms converted Steam Link's fovea projection to per-eye quads, one keeping the background projection and one converting both projections to quads. Both produced low resolution on exact 2.0.20/5001712. The arms were not a faithful reproduction of the reference standard-codec path: they omitted the small trigger projection and reused Valve's projection swapchains instead of the decoder-to-runtime-Surface path used by HEVC, AV1 and H.264. The ASTC path was deliberately out of scope. The patches, native source, payloads and manifests are removed. Do not re-add another topology-only quad approximation; a future attempt must start from a decoder Surface-swapchain experiment and a captured `xrEndFrame` layer array.
