@@ -73,13 +73,17 @@ Separate, default-off experiment for exact **2.0.22/5002322** and **2.0.23/50023
 
 Steam Link 2.0.20/5001812, 2.0.21/5001968 and 2.0.22/5002244 support was retired on 2026-10-21 and restored on 2026-10-22 with per-build native tables, compatibility entries, tests and catalogs. The restored pre-2363 builds share the same 21-patch recommended set. Historical retired/restored records stay under `diagnostics/`.
 
+## GXR spacewarp layer (experimental) — RETIRED 2026-11-01 (removed from source)
+
+**Status: retired and deleted. Do not re-add or re-derive this patch (including partial VTS/EGL variants) without a new mechanism and new evidence.**
+
+The layer tried to synthesize a frame when the stream missed a display tick by hooking private VRLink scene internals: per-build code windows, the `eglCreateImageKHR` GOT slot and the value-transport read. It cannot be implemented reliably without tapping into VRLink or creating a separate listener, so the patch, native layer, manifest, six per-base gate/VTS profile pairs, payload and tests were removed on 2026-11-01. The PC driver's **Async Spacewarp** setting is separate; without a headset-side synthesizer it holds frames instead of producing intermediate ones. See the [retirement record](diagnostics/steamlink-spacewarp-retirement/README.md) and the historical [pin record](diagnostics/steamlink-5002395/SPACEWARP-2026-10-26.md).
+
 ## Current adaptations
 
 The current catalog supports exactly **2.0.20/5001712**, **2.0.20/5001812**, **2.0.21/5001968**, **2.0.22/5002244**, **2.0.23/5002363** and **2.0.24/5002395**. Compatibility uses the exact version name and build code, never a version range. Historical references to 5001740, 5002296, 5002313, 5002318, and 5002322 below do not make those builds selectable.
 
 The four pre-2363 builds expose the same 24 standalone patches and recommend the same 21, including Codecs Support, Network Optimizations and Controller velocity frame. 2.0.23/5002363 and 2.0.24/5002395 each expose 11 individual patches and recommend 10. The OpenXR CPU and GPU BOOST patch is experimental and off by default. Morphe Manager auto-selects the set for the detected exact version and build. Appear on top and Change package name remain optional.
-
-The GXR spacewarp layer supports the same six exact builds: 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363 and 2.0.24/5002395. Its bundled native layer embeds one scene/VTS profile per base and selects it by hashing that base's pinned identity window at load time; a build with no matching profile stands down to stock.
 
 The 5001712 reference is an analysis reconstruction, so its regression checks do not establish pristine-source APK patching. 5002244 has a reconstructed decoded fixture; 5001812 and 5001968 currently have decoded trees only.
 
@@ -93,7 +97,7 @@ See the [5002363 validation](diagnostics/steamlink-5002363/README.md), [native t
 
 ### Steam Link 2.0.24 / 5002395
 
-This exact pair exposes the same 11 core individual patches and 10-patch recommended set as 2.0.23. The manifest and all four config assets are byte-identical to 2.0.23; only the SDL smali and native libraries changed. Device identity remains legacy-only. Native targets: OLED shader `0x97aae`; format MOVs `0x10da98`, `0x10db08`, `0x10db78`; microphone `0xf5710`; HMD pose hook `0x103174`; tongue block `0x1433ac`; Network scene `0x1682a0`/`0x169044`/`0x1772cc` and main `0x903634`; Codecs Support anchor `0xfe954` with 15 GOT slots. High resolution retains the verified 3-projection topology. The optional telemetry setting is not admitted for 2.0.24 yet and fails closed instead of installing an empty receipt. The experimental GXR spacewarp layer now carries a 2.0.24 scene/VTS profile (identity anchor `0xfe954`, `eglCreateImageKHR` slot `0x232170`) and is selectable for this pair; it stays off by default and headset validation is pending.
+This exact pair exposes the same 11 core individual patches and 10-patch recommended set as 2.0.23. The manifest and all four config assets are byte-identical to 2.0.23; only the SDL smali and native libraries changed. Device identity remains legacy-only. Native targets: OLED shader `0x97aae`; format MOVs `0x10da98`, `0x10db08`, `0x10db78`; microphone `0xf5710`; HMD pose hook `0x103174`; tongue block `0x1433ac`; Network scene `0x1682a0`/`0x169044`/`0x1772cc` and main `0x903634`; Codecs Support anchor `0xfe954` with 15 GOT slots. High resolution retains the verified 3-projection topology. The optional telemetry setting is not admitted for 2.0.24 yet and fails closed instead of installing an empty receipt.
 
 See the [5002395 native validation](diagnostics/steamlink-5002395/README.md) and [native targets](diagnostics/steamlink-5002395/native-targets.md).
 

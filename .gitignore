@@ -180,6 +180,11 @@ diagnostics/steamlink-foveal-canvas/*
 !diagnostics/steamlink-foveal-canvas/*.txt
 !diagnostics/steamlink-foveal-canvas/Verify-Catalogs.py
 
+# Keep the spacewarp retirement record reviewable.
+!diagnostics/steamlink-spacewarp-retirement/
+diagnostics/steamlink-spacewarp-retirement/*
+!diagnostics/steamlink-spacewarp-retirement/*.md
+
 # Category validation keeps compact receipts/recipes; compiler logs and reports stay local.
 !diagnostics/patch-categories/
 diagnostics/patch-categories/*

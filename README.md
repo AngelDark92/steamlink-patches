@@ -7,7 +7,7 @@
 
 [Morphe](https://morphe.software) patches that run **Meta Quest / Pico apps on Android XR devices**, starting with the **Samsung Galaxy XR (SM-I610)**.
 
-> **For the best Spacewarp or Optical Flow experience:** use the [Galaxy XR Driver](https://github.com/AngelDark92/GalaxyXR-Driver) on your PC.
+> **For the best Optical Flow experience:** use the [Galaxy XR Driver](https://github.com/AngelDark92/GalaxyXR-Driver) on your PC.
 
 ## Apps
 
@@ -71,22 +71,21 @@
 
 ## Optional
 
-### Spacewarp and Optical Flow
+### Optical Flow
 
-For the best Spacewarp and Optical Flow experience, install the [Galaxy XR Driver](https://github.com/AngelDark92/GalaxyXR-Driver) and **Galaxy XR Companion** on the PC. It also adds Galaxy XR identity, native panel resolution, controller models and image processing.
+For the best Optical Flow experience, install the [Galaxy XR Driver](https://github.com/AngelDark92/GalaxyXR-Driver) and **Galaxy XR Companion** on the PC. It also adds Galaxy XR identity, native panel resolution, controller models and image processing.
 
 | Mode | Runs on | Needs |
 |---|---|---|
-| **Async Spacewarp** | Headset | The experimental **GXR spacewarp layer** patch on the headset, plus **Async Spacewarp** in the PC driver. Without the headset layer, enabling Async Spacewarp holds frames instead of synthesizing them. |
 | **Optical Flow** | PC | The driver's bundled OFXR Bridge. |
 
-> **One mode at a time.** Spacewarp is experimental; headset validation is pending.
+> **Async Spacewarp on the headset is retired.** The former GXR spacewarp layer patch was deleted: a missing display tick cannot be synthesized without tapping into VRLink or creating a separate listener. See the [retirement record](diagnostics/steamlink-spacewarp-retirement/README.md).
 
 ### Extras
 
 - **Face and tongue tracking:** install VRCFaceTracking and the [Galaxy XR LinkFT module](https://github.com/compdoge/LinkFT); enable OSC, eye and face sharing in Steam Link; set the output port to **9015**.
 - **USB streaming** (2.0.23/5002363): [setup guide](Install/USB-STREAMING.md). Wi-Fi must stay on for discovery; longer stability untested.
-- **Experimental patches:** GXR spacewarp layer, Controller pose time, OpenXR CPU and GPU BOOST and the 4XVR premium unlock are off by default, not in the recommended set; headset validation is pending.
+- **Experimental patches:** Controller pose time, OpenXR CPU and GPU BOOST and the 4XVR premium unlock are off by default, not in the recommended set; headset validation is pending.
 
 ---
 

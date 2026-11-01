@@ -142,6 +142,13 @@ package. Never infer it from the version name, a neighboring build or another ap
     `SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md`
     before resolution work.
 
+    The GXR spacewarp layer was retired and deleted on 2026-11-01: it cannot be
+    implemented without tapping into VRLink or creating a separate listener. Do
+    not re-add or re-derive it, including partial VTS/EGL variants, without a new
+    mechanism and new evidence. Read
+    `diagnostics/steamlink-spacewarp-retirement/README.md` before frame-synthesis
+    work.
+
 14. **4XVR gates.** The adaptation targets exact base 2.0.22/20022 only. The
     pristine stock APK is retained at
     `../builds/steamlink-patches/build/4xvr-2.0.22/` with SHA-256

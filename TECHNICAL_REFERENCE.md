@@ -12,7 +12,7 @@ Exact 2.0.23/5002363 exposes 11 core individual patches and recommends 10 by def
 
 ## Steam Link 2.0.24 / 5002395
 
-Exact 2.0.24/5002395 exposes the same 11 core individual patches and 10-patch recommended set. The manifest and all four config assets are byte-identical to 2.0.23; only SDL smali and native libraries changed. Device identity remains legacy-only. New native targets: OLED `0x97aae` and formats `0x10da98`/`0x10db08`/`0x10db78`; microphone `0xf5710`; HMD pose `0x103174`; tongue `0x1433ac`; Network `0x1682a0`/`0x169044`/`0x1772cc` and main `0x903634`; Codecs anchor `0xfe954`. The GXR spacewarp layer now carries a 2.0.24 profile (identity window `0xfe954`, `eglCreateImageKHR` slot `0x232170`, value-transport read `0x17ba50`) and is advertised for this build; it stays experimental and off by default. The optional telemetry setting still fails closed. See the [5002395 audit](diagnostics/steamlink-5002395/README.md) for the derived targets and the [spacewarp record](diagnostics/steamlink-5002395/SPACEWARP-2026-10-26.md) for the per-base pins.
+Exact 2.0.24/5002395 exposes the same 11 core individual patches and 10-patch recommended set. The manifest and all four config assets are byte-identical to 2.0.23; only SDL smali and native libraries changed. Device identity remains legacy-only. New native targets: OLED `0x97aae` and formats `0x10da98`/`0x10db08`/`0x10db78`; microphone `0xf5710`; HMD pose `0x103174`; tongue `0x1433ac`; Network `0x1682a0`/`0x169044`/`0x1772cc` and main `0x903634`; Codecs anchor `0xfe954`. The optional telemetry setting still fails closed. See the [5002395 audit](diagnostics/steamlink-5002395/README.md) for the derived targets.
 
 ## Compatibility and implementation notes
 
@@ -22,6 +22,8 @@ kept 3 projections and omitted the dummy quad. Its failure cause is unknown; the
 working terminal-quad fix is unchanged. See the [retirement record](diagnostics/steamlink-surface-fovea/README.md).
 
 The Full-FOV foveal canvas was retired on 2026-10-24; it did not solve the high-resolution problem. Its patch, native layer and payload are removed. See the [resolution ledger](SteamLink-GalaxyXR-Python-Patches-Already-Tried-for_Resolution_issue/README.md).
+
+The GXR spacewarp layer was retired and deleted on 2026-11-01. Synthesizing a missing display tick cannot be implemented without tapping into VRLink or creating a separate listener; the patch, native layer, per-base gate/VTS profiles and tests are removed. See the [retirement record](diagnostics/steamlink-spacewarp-retirement/README.md). The PC driver's Async Spacewarp setting is separate; without a headset-side synthesizer it holds frames instead of producing intermediate ones.
 
 Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
 
@@ -68,7 +70,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v2.5.0](https://github.com/AngelDark92/xr-porting-hub/releases/tag/v2.5.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;47 patches total
+> **[v2.5.0](https://github.com/AngelDark92/xr-porting-hub/releases/tag/v2.5.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;46 patches total
 <details open>
 <summary>📦 4XVR&nbsp;&nbsp;•&nbsp;&nbsp;16 patches</summary>
 <br>
@@ -198,7 +200,7 @@ This section is generated from the patch catalog during releases.
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;8 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;7 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -238,7 +240,6 @@ This section is generated from the patch catalog during releases.
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
 | [Codecs Support](#codecs-support) | Lets the headset decode H.264 or AV1 streams; HEVC is untouched. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: the matching driver codec setting. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 | • Enable telemetry |
-| [GXR spacewarp layer (experimental)](#gxr-spacewarp-layer-experimental) | Synthesizes a frame when the stream misses a display tick; any failure stands down to stock. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Experimental; headset validation pending. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 |  |
 
 </details>
 
