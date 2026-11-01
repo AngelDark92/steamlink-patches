@@ -68,7 +68,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v2.5.0](https://github.com/AngelDark92/xr-porting-hub/releases/tag/v2.5.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;48 patches total
+> **[v2.6.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/releases/tag/v2.6.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;49 patches total
 <details open>
 <summary>📦 4XVR&nbsp;&nbsp;•&nbsp;&nbsp;16 patches</summary>
 <br>
@@ -198,7 +198,7 @@ This section is generated from the patch catalog during releases.
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;9 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;10 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -240,6 +240,7 @@ This section is generated from the patch catalog during releases.
 |----------|----------------|----------------|-----------|
 | [Codecs Support](#codecs-support) | Lets the headset decode H.264 or AV1 streams; HEVC is untouched. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: the matching driver codec setting. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 | • Enable telemetry |
 | [GXR spacewarp layer (experimental)](#gxr-spacewarp-layer-experimental) | Synthesizes a frame when the stream misses a display tick; any failure stands down to stock. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Experimental; headset validation pending. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 |  |
+| [Hybrid codec helper (experimental)](#hybrid-codec-helper-experimental) | Experimental fovea helper for the hybrid ASTC/PyroWave stream; decode-only, no compositing claim. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: the Codecs Support layer. Kill switch: GXR_DISABLE_HYBRID_CODEC. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 |  |
 
 </details>
 

@@ -1,3 +1,9 @@
+## [2.6.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/compare/v2.5.0...v2.6.0-dev.1) (2026-11-01)
+
+### ✨ New Features
+
+* Add unit tests for HybridCodec and ResolutionLayer patches ([ec77494](https://github.com/AngelDark92/xr-porting-hub/commit/ec7749441acc16c22ff4d117dc969326f63367d9))
+
 ## [2.5.0](https://github.com/AngelDark92/xr-porting-hub/compare/v2.4.0...v2.5.0) (2026-10-26)
 
 ### ✨ New Features
