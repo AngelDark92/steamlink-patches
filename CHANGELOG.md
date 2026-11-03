@@ -1,3 +1,13 @@
+## [2.6.0-dev.2](https://github.com/AngelDark92/xr-porting-hub/compare/v2.6.0-dev.1...v2.6.0-dev.2) (2026-11-03)
+
+### 🐛 Bug Fixes
+
+* retire and remove the GXR spacewarp layer ([a2ba13d](https://github.com/AngelDark92/xr-porting-hub/commit/a2ba13d7f6a51149b12cf862449a26b1445069e5))
+
+### ✨ New Features
+
+* Add StockQuadCompositionPatchTest for validating stock quad composition patch functionality ([0db8d35](https://github.com/AngelDark92/xr-porting-hub/commit/0db8d3561c27ecc7ef0b4fb8f1b0259292e1376a))
+
 ## [2.6.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/compare/v2.5.0...v2.6.0-dev.1) (2026-11-01)
 
 ### ✨ New Features

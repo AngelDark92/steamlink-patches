@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-11-01T17:20:00",
-  "description": "## [2.6.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/compare/v2.5.0...v2.6.0-dev.1) (2026-11-01)\n\n### ✨ New Features\n\n* Add unit tests for HybridCodec and ResolutionLayer patches ([ec77494](https://github.com/AngelDark92/xr-porting-hub/commit/ec7749441acc16c22ff4d117dc969326f63367d9))",
-  "download_url": "https://github.com/AngelDark92/xr-porting-hub/releases/download/v2.6.0-dev.1/patches-2.6.0-dev.1.mpp",
+  "created_at": "2026-11-03T12:56:51",
+  "description": "## [2.6.0-dev.2](https://github.com/AngelDark92/xr-porting-hub/compare/v2.6.0-dev.1...v2.6.0-dev.2) (2026-11-03)\n\n### 🐛 Bug Fixes\n\n* retire and remove the GXR spacewarp layer ([a2ba13d](https://github.com/AngelDark92/xr-porting-hub/commit/a2ba13d7f6a51149b12cf862449a26b1445069e5))\n\n### ✨ New Features\n\n* Add StockQuadCompositionPatchTest for validating stock quad composition patch functionality ([0db8d35](https://github.com/AngelDark92/xr-porting-hub/commit/0db8d3561c27ecc7ef0b4fb8f1b0259292e1376a))",
+  "download_url": "https://github.com/AngelDark92/xr-porting-hub/releases/download/v2.6.0-dev.2/patches-2.6.0-dev.2.mpp",
   "signature_download_url": "",
-  "version": "2.6.0-dev.1"
+  "version": "2.6.0-dev.2"
 }
