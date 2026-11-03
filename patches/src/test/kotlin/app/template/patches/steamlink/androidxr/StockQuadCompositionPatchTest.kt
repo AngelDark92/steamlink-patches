@@ -162,6 +162,54 @@ class StockQuadCompositionPatchTest {
     }
 
     @Test
+    fun `resolution layers conflict with stock quad in both orders`() = withSyntheticBase { root ->
+        val lib = libDirectory(root)
+        val layers = layerDirectory(root).apply { mkdirs() }
+        // Incoming layer first: stock quad must fail before touching anything.
+        ResolutionLayer.values().forEach { layer ->
+            val layerHelper = File(lib, layer.library).apply { writeText("layer helper") }
+            val layerManifest = File(layers, layer.manifest).apply { writeText("layer manifest") }
+            val retired = File(lib, "libgxr_surface_video_trigger.so").apply { writeText("retired") }
+            assertFailsWith<PatchException> {
+                installStockQuadResources(root, steamLink, "2.0.24", "5002395")
+            }
+            assertEquals("layer helper", layerHelper.readText())
+            assertEquals("layer manifest", layerManifest.readText())
+            assertTrue(retired.exists(), "no cleanup before the guard")
+            assertFalse(File(lib, STOCK_QUAD_LIBRARY).exists())
+            assertFalse(File(layers, STOCK_QUAD_MANIFEST).exists())
+            retired.delete()
+            layerHelper.delete()
+            layerManifest.delete()
+        }
+        // A lone leftover manifest is also rejected.
+        val loneManifest = File(layers, ResolutionLayer.ATLAS_SURFACE.manifest).apply { writeText("m") }
+        assertFailsWith<PatchException> {
+            installStockQuadResources(root, steamLink, "2.0.24", "5002395")
+        }
+        assertFalse(File(lib, STOCK_QUAD_LIBRARY).exists())
+        loneManifest.delete()
+
+        // Stock quad first: both resolution layers are rejected without writes.
+        assertTrue(installStockQuadResources(root, steamLink, "2.0.24", "5002395"))
+        val stockHelper = File(lib, STOCK_QUAD_LIBRARY).readBytes()
+        val stockManifest = File(layers, STOCK_QUAD_MANIFEST).readBytes()
+        ResolutionLayer.values().forEach { layer ->
+            assertFailsWith<PatchException> {
+                installResolutionLayerFiles(
+                    lib, layers, layer,
+                    projectionModeResource(layer.library), projectionModeResource(layer.manifest),
+                )
+            }
+            assertFalse(File(lib, layer.library).exists())
+            assertFalse(File(layers, layer.manifest).exists())
+        }
+        assertContentEquals(stockHelper, File(lib, STOCK_QUAD_LIBRARY).readBytes())
+        assertContentEquals(stockManifest, File(layers, STOCK_QUAD_MANIFEST).readBytes())
+        assertFalse(root.walkTopDown().any { it.name.endsWith(".tmp") })
+    }
+
+    @Test
     fun `stock quad removes retired surface video resources and preserves neighbours`() = withSyntheticBase { root ->
         val helper = projectionModeResource(STOCK_QUAD_LIBRARY)
         val manifest = projectionModeResource(STOCK_QUAD_MANIFEST)

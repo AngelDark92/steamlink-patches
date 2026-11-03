@@ -20,6 +20,25 @@ head offsets, 1.996 m geometry and preserved composition-settings chains. Its
 backport is a separate experimental layer, not the retired 1.0 m/head-only/
 chain-dropping approximation. Static layout verification and host tests do not
 prove headset acceptance or high resolution; no runtime claim is made yet.
+### Historical surface-video findings
+
+The default-off **Surface video + trigger (experimental)** patch copied Valve's already-rendered
+sRGB8 projection images 1:1 into Android Surface swapchains of the same size, re-pointed the two
+projection views at those images, and appended the 2x2 alpha-0 terminal quad on exact
+2.0.20/5001712. It did not produce high resolution.
+
+The copy preserved Valve's source extent, so it could not raise detail. The trigger was appended
+only after all four source views copied; any copy failure fell back to the original two-projection
+frame with no trigger. It also replaced Valve's normal projection swapchains, which is the opposite
+of the working Alpha-0 helper (`preservesValveProjectionLayers:true`,
+`androidSurfaceSwapchain:false`).
+
+The patch, native source, payload, manifest and tests are removed. Build ID
+`surface-video-trigger-2proj-v1.0-20261025`, hashes and logcat evidence remain in
+[diagnostics/steamlink-surface-video-trigger](../diagnostics/steamlink-surface-video-trigger/README.md).
+Do not re-add this copy bridge or another terminal-quad variant; the next attempt must render the
+atlas at the target extent or redirect the decoder output.
+
 
 ## 2026-10-25 — Fovea/quad composition arms: incomplete reproduction; removed
 

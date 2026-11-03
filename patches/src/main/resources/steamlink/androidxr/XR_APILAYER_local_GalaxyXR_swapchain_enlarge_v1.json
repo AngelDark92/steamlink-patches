@@ -1,0 +1,11 @@
+{
+  "file_format_version": "1.0.0",
+  "api_layer": {
+    "name": "XR_APILAYER_local_GalaxyXR_swapchain_enlarge_v1",
+    "library_path": "libgxr_swapchain_enlarge.so",
+    "api_version": "1.1",
+    "implementation_version": "1",
+    "description": "Enlarges Steam Link projection swapchains without adding a layer",
+    "disable_environment": "GXR_DISABLE_SWAPCHAIN_ENLARGE"
+  }
+}

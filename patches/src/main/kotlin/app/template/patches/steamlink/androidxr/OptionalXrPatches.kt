@@ -113,6 +113,18 @@ private val activeProjectionModes = listOf(
         ANDROID_SURFACE_TRIGGER_MANIFEST,
     ),
     ProjectionModeResources(STOCK_QUAD_MODE, STOCK_QUAD_LIBRARY, STOCK_QUAD_MANIFEST),
+    // Resolution layers install files only (no GXR_RESOLUTION_MODE metadata), but listing them
+    // makes Alpha-0 reject a stale layer left by a prior run, matching their own Alpha-0 guard.
+    ProjectionModeResources(
+        "swapchain_enlarge_v1",
+        ResolutionLayer.SWAPCHAIN_ENLARGE.library,
+        ResolutionLayer.SWAPCHAIN_ENLARGE.manifest,
+    ),
+    ProjectionModeResources(
+        "atlas_surface_v1",
+        ResolutionLayer.ATLAS_SURFACE.library,
+        ResolutionLayer.ATLAS_SURFACE.manifest,
+    ),
 )
 
 internal fun projectionModesConflict(existingMode: String, requestedMode: String): Boolean =
@@ -161,6 +173,9 @@ private val retiredProjectionLibraries = setOf(
     "libgxr_nqvd.so",
     "libgxr_pst.so",
     "libgxr_nspp.so",
+)
+private val retiredProjectionManifests = setOf(
+    "XR_APILAYER_local_GalaxyXR_surface_video_trigger_v1.json",
 )
 
 private fun ByteArray.containsAscii(value: String): Boolean {
@@ -218,6 +233,12 @@ internal fun removeRetiredProjectionResources(libDir: File, layerDir: File) {
     }
     retiredProjectionLibraries.forEach { library ->
         val retiredFile = File(libDir, library)
+        if (retiredFile.exists() && !retiredFile.delete()) {
+            throw PatchException("Could not remove retired XR projection resource: ${retiredFile.path}")
+        }
+    }
+    retiredProjectionManifests.forEach { manifest ->
+        val retiredFile = File(layerDir, manifest)
         if (retiredFile.exists() && !retiredFile.delete()) {
             throw PatchException("Could not remove retired XR projection resource: ${retiredFile.path}")
         }

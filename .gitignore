@@ -176,6 +176,19 @@ diagnostics/steamlink-surface-video-trigger/*
 !diagnostics/steamlink-surface-video-trigger/*.md
 !diagnostics/steamlink-surface-video-trigger/*.json
 
+# Keep the atlas-surface experiment's compact provenance and receipts reviewable.
+!diagnostics/steamlink-atlas-surface/
+diagnostics/steamlink-atlas-surface/*
+!diagnostics/steamlink-atlas-surface/*.md
+!diagnostics/steamlink-atlas-surface/*.json
+
+# Keep the decoder-redirect gate reviewable; the native audit lands here.
+!diagnostics/steamlink-decoder-redirect/
+diagnostics/steamlink-decoder-redirect/*
+!diagnostics/steamlink-decoder-redirect/*.md
+!diagnostics/steamlink-decoder-redirect/*.json
+!diagnostics/steamlink-decoder-redirect/*.py
+
 # Keep the new experiment's compact provenance and receipts reviewable.
 !diagnostics/steamlink-foveal-canvas/
 diagnostics/steamlink-foveal-canvas/*
