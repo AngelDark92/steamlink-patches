@@ -5,7 +5,7 @@ import app.template.patches.steamlink.androidxr.appearOnTopPatch
 import app.template.patches.steamlink.androidxr.androidXrUiExtensionPatch
 import app.template.patches.steamlink.androidxr.controllerVelocityFramePatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
-import app.template.patches.steamlink.androidxr.surfaceVideoTriggerPatch
+import app.template.patches.steamlink.androidxr.stockQuadCompositionPatch
 import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.performanceBoostPatch
 import app.template.patches.steamlink.androidxr.xrCodecsSupportPatch
@@ -104,6 +104,7 @@ class PatchCompatibilityMatrixTest {
             hmdOnlyPatch,
             oledCalibrationPatch,
             controllerVelocityFramePatch,
+            stockQuadCompositionPatch,
         )
         assertEquals(expected, allIndividualPatches.filter { it.supports("2.0.23", 5002363) }.toSet())
         assertEquals(expected, allIndividualPatches.filter { it.supports("2.0.24", 5002395) }.toSet())
@@ -115,7 +116,7 @@ class PatchCompatibilityMatrixTest {
                 }
             }
         val excludedPublicPatches = allIndividualPatches.toSet() - expected
-        assertEquals(14, excludedPublicPatches.size)
+        assertEquals(13, excludedPublicPatches.size)
         val modernClosure = nativeRecommendedPatches.flatMap { it.dependencyClosure() }.toSet()
         assertTrue(modernClosure.intersect(excludedPublicPatches).isEmpty())
     }
@@ -194,7 +195,7 @@ class PatchCompatibilityMatrixTest {
             xrLauncherBootstrapPatch,
             xrInputRoutingConfigPatch,
             controllerVelocityFramePatch,
-            surfaceVideoTriggerPatch,
+            stockQuadCompositionPatch,
         )
 
         val legacyRecommendedPatches = setOf(

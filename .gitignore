@@ -166,7 +166,11 @@ extensions/resolution-trace-layer/build-android-cpu/
 extensions/resolution-trace-layer/build-host-tests/
 VirtualDesktop/**
 diagnostics/*
-# Keep the new experiment's compact provenance and receipts reviewable.
+!diagnostics/steamlink-stock-quad-composition/
+diagnostics/steamlink-stock-quad-composition/*
+!diagnostics/steamlink-stock-quad-composition/*.md
+
+# Keep the retired experiment's compact provenance and receipts reviewable.
 !diagnostics/steamlink-surface-video-trigger/
 diagnostics/steamlink-surface-video-trigger/*
 !diagnostics/steamlink-surface-video-trigger/*.md

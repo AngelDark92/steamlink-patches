@@ -19,7 +19,7 @@ class PatchCategoriesTest {
     private val groups = linkedMapOf(
         "Image quality" to listOf(
             alpha0HighResolutionTriggerPatch, oledCalibrationPatch, blueNoisePatch,
-            surfaceVideoTriggerPatch,
+            stockQuadCompositionPatch,
         ),
         "Tracking & audio" to listOf(
             hmdOnlyPatch, gxrFacebridgePatch,

@@ -12,7 +12,7 @@ The retired entries below are historical records and are not selectable.
 
 | Category | Count | Current patches |
 |---|---:|---|
-| Image quality | 4 | [Alpha-0 high-resolution trigger](#alpha-0-high-resolution-trigger-alpha0highresolutiontriggerpatch); [OLED color calibration](#oled-color-calibration-oledcalibrationpatch); [Blue-noise dithering](#blue-noise-dithering-bluenoisepatch); [Surface video + trigger (experimental)](#surface-video--trigger-experimental-surfacevideotriggerpatch) |
+| Image quality | 4 | [Alpha-0 high-resolution trigger](#alpha-0-high-resolution-trigger-alpha0highresolutiontriggerpatch); [OLED color calibration](#oled-color-calibration-oledcalibrationpatch); [Blue-noise dithering](#blue-noise-dithering-bluenoisepatch); [Stock quad composition (experimental)](#stock-quad-composition-experimental-stockquadcompositionpatch) |
 | Tracking & audio | 4 | [Visual Delay Fix](#visual-delay-fix-hmdonlypatch); [GXR face and tongue bridge](#gxr-face-and-tongue-bridge-gxrfacebridgepatch); [XR Input Routing Config](#xr-input-routing-config-xrinputroutingconfigpatch); [Microphone input preset](#microphone-input-preset-microphoneinputpresetpatch) |
 | Startup & permissions | 4 | [Startup permission requests (before 5002322)](#startup-permission-requests-before-5002322-xrstartuppermissionspatch); [Startup splash and XR launch mode (before 5002322)](#startup-splash-and-xr-launch-mode-before-5002322-xrlauncherbootstrappatch); [Unrestricted battery usage](#unrestricted-battery-usage-unrestrictedbatteryusagepatch); [Appear on top (legacy)](#appear-on-top-legacy-appearontoppatch) |
 | App & device identity | 4 | [Change package name](#change-package-name-changepackagenamepatch); [Device identity](#device-identity-deviceidentitypatch); Galaxy XR vendor driver; [OpenXR CPU and GPU BOOST](#openxr-cpu-and-gpu-boost-performanceboostpatch) |
@@ -324,7 +324,7 @@ Preserves Valve's native `XR_ANDROID_face_tracking` mapping for expressions 0–
 |---|---|
 | `AndroidManifest.xml` `uses-permission` | Adds `android.permission.SYSTEM_ALERT_WINDOW` (required for `GxrOverlayBridge` TYPE_APPLICATION_OVERLAY compositor window) |
 | `AndroidManifest.xml` launcher | Adds/routes through `GalaxyXRPermissionActivity`; preserves the stock target SDK, XR features/categories, VRLink start mode, native permission routine, and controller config on the supported legacy build. Native 5002363 excludes this fallback. |
-| Minimal extension DEX | Adds only `GalaxyXRPermissionActivity`, `GxrOverlayBridge`, and `GxrResolutionProbe`; contains no SDL/controller class fragments. |
+| Minimal extension DEX | Adds only `GalaxyXRPermissionActivity` and `GxrOverlayBridge`; contains no SDL/controller class fragments. |
 | `SteamLink` lifecycle methods | Adds the overlay/resolution probe calls without modifying `SDLSurface`, `SDLControllerManager`, or generic-motion routing |
 
 ---
@@ -443,15 +443,15 @@ Both the sRGB8-only and dual-format CPU+GPU variants submitted Valve's sources a
 
 ---
 
-### Surface video + trigger (experimental) (`surfaceVideoTriggerPatch`)
-**Default: off; experimental catalog only** - exact 2.0.20/5001712.
+### Stock quad composition (experimental) (`stockQuadCompositionPatch`)
+**Default: off; experimental catalog only** - exact 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363 and 2.0.24/5002395.
 
 | Artifact | Exact guarded edit |
 |---|---|
-| `lib/arm64-v8a/libgxr_surface_video_trigger.so` | Release-built, stripped implicit OpenXR API layer (`surface-video-trigger-2proj-v1.0-20261025`). Copies the two Valve sRGB8 projection images into Android Surface swapchains of the same size/alpha, re-points the two projection views at those Surface images, and appends a 2x2 fully transparent terminal trigger quad. RGB10/FP16 sources pass through. |
-| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_surface_video_trigger_v1.json` | Registers the layer; disable environment is `GXR_DISABLE_SURFACE_VIDEO_TRIGGER`. |
+| `lib/arm64-v8a/libgxr_stock_quad.so` | Separate implicit OpenXR API layer (`stock-quad-5002527-v1`). Reproduces stock 5002527's four eye-aware quads from verified two- and three-projection layouts. |
+| `assets/openxr/1/api_layers/implicit.d/XR_APILAYER_local_GalaxyXR_stock_quad_v1.json` | Registers the layer; disable environment is `GXR_DISABLE_STOCK_QUAD`. |
 
-This tests the standard-codec presentation mechanism (HEVC/AV1/H.264) without ASTC and without quad conversion. It is a GPU copy bridge, not a direct decoder-to-Surface bypass. It reads runtime images only after wait and before release, with no atlas reconstruction or fovea resampling. Only sRGB8 source swapchains are converted; RGB10 and FP16 frames pass through unchanged. Any frame without exactly two projection layers passes through unchanged. A transfer or runtime rejection disables the layer for the session and leaves later frames untouched. **Needs:** deselect Alpha-0 high-resolution trigger; both append a terminal trigger and the installer rejects either order. [Implementation and runtime check](extensions/surface-video-trigger/README.md). Headset validation is pending.
+Outputs background-left/right then fovea-left/right quads at 1.996 m using runtime eye-to-head poses, with flags 0/0/6/6. It preserves the original swapchains, rectangles, spaces, composition-settings chains, frame chain and trailing layers. On three-projection builds, only the unused underside projection is dropped. Stock four-quad and unsupported frames pass through. Invalid preconditions forward the original frame; a rejected converted frame disables conversion for the rest of that session without a second `xrEndFrame`. **Needs:** deselect Alpha-0 high-resolution trigger; the installer rejects either order. [Implementation and diagnostics](extensions/stock-quad-composition/README.md). Static and host validation only; headset acceptance and resolution behavior remain unverified.
 
 ---
 

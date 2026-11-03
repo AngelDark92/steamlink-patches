@@ -2,6 +2,25 @@
 
 This directory is the historical record for approaches that did not produce permission-free, persistently high resolution. Do not stack these experiments into a new APK.
 
+## 2026-11-03 — Surface video + trigger and lifecycle resolution probe removed
+
+The user requested removal of active high-resolution alternatives while keeping
+the working Alpha-0 fallback. The Surface-video experiment was reported not
+working. Its first pass-through blocker was corrected statically, but no later
+headset validation established acceptance or high resolution; the decoder-to-
+Surface causal claim remained a hypothesis. Its selectable patch, native source,
+tests and payloads are removed. Historical diagnostics are retained.
+
+The `GxrResolutionProbe` DEX lifecycle hook and its activation calls were also
+removed. This was a removable legacy hook, not a new runtime failure claim.
+Unrelated permission, launcher, codec and display-color patches remain.
+
+Stock 5002527 supplies a new static mechanism: four per-eye quads with eye-to-
+head offsets, 1.996 m geometry and preserved composition-settings chains. Its
+backport is a separate experimental layer, not the retired 1.0 m/head-only/
+chain-dropping approximation. Static layout verification and host tests do not
+prove headset acceptance or high resolution; no runtime claim is made yet.
+
 ## 2026-10-25 — Fovea/quad composition arms: incomplete reproduction; removed
 
 Two default-off OpenXR API-layer arms converted Steam Link's fovea projection to per-eye quads, one keeping the background projection and one converting both projections to quads. Both produced low resolution on exact 2.0.20/5001712. The arms were not a faithful reproduction of the reference standard-codec path: they omitted the small trigger projection and reused Valve's projection swapchains instead of the decoder-to-runtime-Surface path used by HEVC, AV1 and H.264. The ASTC path was deliberately out of scope. The patches, native source, payloads and manifests are removed. Do not re-add another topology-only quad approximation; a future attempt must start from a decoder Surface-swapchain experiment and a captured `xrEndFrame` layer array.

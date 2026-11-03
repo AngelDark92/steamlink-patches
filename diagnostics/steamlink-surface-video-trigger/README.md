@@ -1,5 +1,11 @@
 # Surface video + trigger experiment (2026-10-25)
 
+**Retired and removed 2026-11-03 at the owner's request.** The user reported it
+not working. Static investigation found and corrected the layer/frame-`next`
+pass-through bug, but no post-correction headset evidence exists. This document
+retains the historical rationale only; do not present the experiment as verified.
+The selectable patch, native source, tests, helper and manifest are removed.
+
 One default-off experimental patch tests the standard-codec presentation path on
 exact Steam Link **2.0.20/5001712**, without ASTC and without quad conversion.
 
