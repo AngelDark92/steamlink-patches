@@ -68,10 +68,6 @@ constexpr const char* kDisableEnv = "GXR_DISABLE_CODECS_SUPPORT";
 constexpr const char* kSceneSoname = "libvrlink_scene.so";
 constexpr const char* kMediaNdkSoname = "libmediandk.so";
 constexpr size_t kMaxSniffedAu = 4u << 20;
-constexpr const char* kHybridSoname = "libgxr_hybrid_codec.so";
-constexpr const char* kDisableHybridEnv = "GXR_DISABLE_HYBRID_CODEC";
-// "GXH1" in little-endian memory order, the only envelope this layer forwards to the helper.
-constexpr uint32_t kGxh1Magic = 0x31485847u;
 
 // ---------------------------------------------------------------------------
 // Pinned scene-library layout (extracted from the exact signed bases).
@@ -187,84 +183,10 @@ gxr::Av1SeqInfo g_av1Seq{};     // sequence-header geometry of the live session
 std::map<void*, std::pair<size_t, uint8_t*>> g_inputPtrs;  // codec -> (idx, ptr)
 std::map<void*, void*> g_handleMap;                        // retired -> live
 
-// Last buffer returned by WrapGetInput. MediaCodec's normal flow is getInputBuffer(idx) ->
-// fill -> queueInput(idx), so reusing it removes a second getInputBuffer call per access
-// unit from the armed path. Cleared on flush/stop/delete/reconfigure.
-void* g_lastInputCodec = nullptr;
-size_t g_lastInputIndex = 0;
-uint8_t* g_lastInputPtr = nullptr;
-size_t g_lastInputCapacity = 0;
-
-void ForgetInputPointer() {
-    g_lastInputCodec = nullptr;
-    g_lastInputIndex = 0;
-    g_lastInputPtr = nullptr;
-    g_lastInputCapacity = 0;
-}
-
 std::atomic<int> g_patchState{0};  // 0 = not yet, 1 = installed, 2 = skipped/failed
 std::atomic<bool> g_patchBusy{false};
 uintptr_t g_sceneBase = 0;
 bool g_sceneFound = false;
-
-// ---------------------------------------------------------------------------
-// Optional GXH1 hybrid-frame demux (extensions/hybrid-codec).
-//
-// Resolved exactly once, when the first decoder of a session arms. Off unless
-// GXR_DISABLE_HYBRID_CODEC is unset and the helper library answers its probe.
-// After that resolution the per-access-unit cost is one cached bool test:
-// nothing here resolves, allocates or locks again. The helper itself keeps no
-// state that is read unless an envelope is actually present.
-// ---------------------------------------------------------------------------
-bool g_hybridArmed = false;
-// Envelopes the helper refused this session (logged sparingly; never fed to MediaCodec).
-uint32_t g_hybridRejected = 0;
-// Resolved helper entry point (same name as the exported ABI symbol); null while off.
-int (*gxr_hybrid_on_access_unit)(const uint8_t**, size_t*) = nullptr;
-
-static bool HybridEnabled() {
-    static const bool enabled = []() {
-        const char* disabled = std::getenv(kDisableHybridEnv);
-        if (disabled && disabled[0] && std::strcmp(disabled, "0") != 0) {
-            LOG("hybrid: disabled by %s", kDisableHybridEnv);
-            return false;
-        }
-        // The layer and its helper are packaged in the same APK directory. Resolve the
-        // helper relative to this translation unit's own image first: the linker's
-        // soname search path is not guaranteed to include lib/arm64-v8a, and a stale
-        // copy elsewhere must not shadow the payload installed beside this layer.
-        void* helper = nullptr;
-        Dl_info self{};
-        if (dladdr(reinterpret_cast<void*>(&HybridEnabled), &self) && self.dli_fname) {
-            std::string path(self.dli_fname);
-            const size_t slash = path.find_last_of('/');
-            if (slash != std::string::npos) {
-                path.resize(slash + 1);
-                path.append(kHybridSoname);
-                helper = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
-            }
-        }
-        if (!helper) {
-            // Fallback: the helper is already reachable by its bare soname.
-            helper = dlopen(kHybridSoname, RTLD_NOW | RTLD_LOCAL);
-        }
-        if (!helper) {
-            LOG("hybrid: %s not packaged; GXH1 demux off", kHybridSoname);
-            return false;
-        }
-        auto probe = reinterpret_cast<int (*)()>(dlsym(helper, "gxr_hybrid_probe"));
-        auto onAccessUnit = reinterpret_cast<int (*)(const uint8_t**, size_t*)>(
-            dlsym(helper, "gxr_hybrid_on_access_unit"));
-        if (!probe || !onAccessUnit || probe() != 1) {
-            LOG("hybrid: helper failed its probe; GXH1 demux off");
-            return false;
-        }
-        gxr_hybrid_on_access_unit = onAccessUnit;
-        LOG("hybrid: GXH1 demux armed");
-        return true;
-    }();
-    return enabled;
-}
 
 // ---------------------------------------------------------------------------
 // Interception wrappers (installed into the scene GOT).
@@ -475,9 +397,6 @@ void* WrapCreateDecoder(const char* mime) {
             g_savedWindow = nullptr;
             g_savedCrypto = nullptr;
             g_savedFlags = 0;
-            // One-time resolution for the life of this layer copy; see HybridEnabled.
-            g_hybridArmed = HybridEnabled();
-            g_hybridRejected = 0;
         }
     }
     return handle;
@@ -508,7 +427,6 @@ int32_t WrapSetInt32(void* format, const char* key, int32_t value) {
 
 int32_t WrapConfigure(void* codec, const void* format, void* window, void* crypto, uint32_t flags) {
     std::lock_guard<std::recursive_mutex> lock(g_mutex);
-    ForgetInputPointer();
     if (g_armed && codec == g_pendingCodec) {
         g_armedCodec = codec;
         g_capturedFormat = const_cast<void*>(format);
@@ -520,16 +438,8 @@ int32_t WrapConfigure(void* codec, const void* format, void* window, void* crypt
 }
 
 int32_t WrapCbStart(void* codec) { return o_start(RealHandle(codec)); }
-int32_t WrapCbFlush(void* codec) {
-    std::lock_guard<std::recursive_mutex> lock(g_mutex);
-    ForgetInputPointer();
-    return o_flush(RealHandle(codec));
-}
-int32_t WrapCbStop(void* codec) {
-    std::lock_guard<std::recursive_mutex> lock(g_mutex);
-    ForgetInputPointer();
-    return o_stop(RealHandle(codec));
-}
+int32_t WrapCbFlush(void* codec) { return o_flush(RealHandle(codec)); }
+int32_t WrapCbStop(void* codec) { return o_stop(RealHandle(codec)); }
 
 void WrapFormatDelete(void* format) {
     std::lock_guard<std::recursive_mutex> lock(g_mutex);
@@ -556,10 +466,6 @@ uint8_t* WrapGetInput(void* codec, size_t idx, size_t* outSize) {
     if (g_armed && !g_sniffDone && codec == g_armedCodec && ptr) {
         g_inputPtrs[codec] = std::make_pair(idx, ptr);
     }
-    g_lastInputCodec = codec;
-    g_lastInputIndex = idx;
-    g_lastInputPtr = ptr;
-    g_lastInputCapacity = (outSize && ptr) ? *outSize : 0;
     return ptr;
 }
 
@@ -567,54 +473,6 @@ int32_t WrapQueueInput(void* codec, size_t idx, int64_t offset, size_t size, uin
                        uint32_t flags) {
     std::lock_guard<std::recursive_mutex> lock(g_mutex);
     void* live = RealHandle(codec);
-    // Snapshot and retire the cached input buffer: the codec owns it once queued.
-    uint8_t* cachedPtr = g_lastInputPtr;
-    void* cachedCodec = g_lastInputCodec;
-    size_t cachedIndex = g_lastInputIndex;
-    size_t cachedCapacity = g_lastInputCapacity;
-    ForgetInputPointer();
-    // Invariant: while the hybrid helper is off, everything below runs exactly the path
-    // that existed before GXH1 support: one cached bool test, no allocation, no extra lock
-    // and no call into the helper. The helper is resolved once at arm time, and an ordinary
-    // access unit is rejected by a four-byte magic compare before any helper call.
-    if (g_hybridArmed && size > 0 && offset >= 0) {
-        const size_t start = static_cast<size_t>(offset);
-        size_t capacity = 0;
-        uint8_t* buffer = nullptr;
-        if (cachedPtr && cachedCodec == codec && cachedIndex == idx) {
-            buffer = cachedPtr;
-            capacity = cachedCapacity;
-        } else {
-            buffer = o_getInput(live, idx, &capacity);
-        }
-        if (buffer && start <= capacity && size <= capacity - start && size >= sizeof(uint32_t)) {
-            const uint8_t* au = buffer + start;
-            uint32_t magic = 0;
-            std::memcpy(&magic, au, sizeof(magic));
-            if (magic == kGxh1Magic) {
-                size_t auSize = size;
-                const int stripped = gxr_hybrid_on_access_unit(&au, &auSize);
-                if (stripped > 0) {
-                    // Continue through the ordinary path with the base access unit: the
-                    // sniff/AV1 sequence-header handling below must still see it.
-                    if (au != buffer + start) std::memmove(buffer + start, au, auSize);
-                    size = auSize;
-                } else if (stripped < 0) {
-                    // A GXH1 magic can never start an Annex-B or AV1 access unit, so these
-                    // bytes are not video: hand the dequeued index back empty (the decoder
-                    // sees a dropped frame, exactly like network loss) instead of feeding
-                    // the envelope to MediaCodec. The helper stays armed, so the next valid
-                    // envelope is demultiplexed again.
-                    ++g_hybridRejected;
-                    if (g_hybridRejected <= 3 || g_hybridRejected % 900 == 0) {
-                        LOG("hybrid: unreadable GXH1 envelope (%zu bytes, %u this session); access unit dropped",
-                            size, g_hybridRejected);
-                    }
-                    size = 0;
-                }
-            }
-        }
-    }
     if (live == codec && g_armed && !g_sniffDone && codec == g_armedCodec && size > 0 &&
         size <= kMaxSniffedAu) {
         auto it = g_inputPtrs.find(codec);
@@ -653,7 +511,6 @@ int32_t WrapQueueInput(void* codec, size_t idx, int64_t offset, size_t size, uin
 
 int32_t WrapDelete(void* codec) {
     std::lock_guard<std::recursive_mutex> lock(g_mutex);
-    ForgetInputPointer();
     auto it = g_handleMap.find(codec);
     if (it != g_handleMap.end()) {
         void* live = it->second;

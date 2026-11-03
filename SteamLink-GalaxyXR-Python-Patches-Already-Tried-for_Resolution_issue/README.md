@@ -2,6 +2,15 @@
 
 This directory is the historical record for approaches that did not produce permission-free, persistently high resolution. Do not stack these experiments into a new APK.
 
+## 2026-11-03 — Unneeded hybrid, swapchain and atlas experiments removed
+
+Hybrid codec helper, Swapchain enlarge and Atlas surface were independent
+experiments, not prerequisites of Stock quad composition or Alpha-0. At the
+owner's request their selectable patches, native code, payloads and tests were
+removed. Optional hybrid-loading/demux code was also removed from Codecs Support;
+standard codec support remains. Retired filenames remain cleanup-only to remove
+old payloads when re-patching. This is scope cleanup, not a new headset result.
+
 ## 2026-11-03 — Surface video + trigger and lifecycle resolution probe removed
 
 The user requested removal of active high-resolution alternatives while keeping

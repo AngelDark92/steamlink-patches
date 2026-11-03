@@ -16,8 +16,6 @@ import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
 import app.template.patches.steamlink.androidxr.xrCoreRuntimePatch
 import app.template.patches.steamlink.androidxr.xrDeviceConfigBaselinePatch
 import app.template.patches.steamlink.androidxr.alpha0HighResolutionTriggerPatch
-import app.template.patches.steamlink.androidxr.atlasSurfacePatch
-import app.template.patches.steamlink.androidxr.swapchainEnlargePatch
 import app.template.patches.steamlink.androidxr.xrInputRoutingConfigPatch
 import app.template.patches.steamlink.androidxr.xrLauncherBootstrapPatch
 import app.template.patches.steamlink.androidxr.xrManifestCapabilityPackPatch
@@ -85,8 +83,6 @@ private val publicPatchesFor5001712: List<Patch<*>> = listOf(
     forceStreamXrGatesPatch,
     gxrFacebridgePatch,
     alpha0HighResolutionTriggerPatch,
-    swapchainEnlargePatch,
-    atlasSurfacePatch,
     microphoneInputPresetPatch,
     oledCalibrationPatch,
     unrestrictedBatteryUsagePatch,
@@ -300,22 +296,6 @@ private fun verifyPublicPatchOutput(outputApk: File, patch: Patch<*>, fixture: H
             }
 
             alpha0HighResolutionTriggerPatch -> verifyHighResolutionZip(apk, fixture)
-
-            swapchainEnlargePatch -> {
-                apk.requireElf("lib/arm64-v8a/libgxr_swapchain_enlarge.so")
-                apk.requireEntryBytes(
-                    "assets/openxr/1/api_layers/implicit.d/" +
-                        "XR_APILAYER_local_GalaxyXR_swapchain_enlarge_v1.json",
-                ).requireEncodedString("libgxr_swapchain_enlarge.so")
-            }
-
-            atlasSurfacePatch -> {
-                apk.requireElf("lib/arm64-v8a/libgxr_atlas_surface.so")
-                apk.requireEntryBytes(
-                    "assets/openxr/1/api_layers/implicit.d/" +
-                        "XR_APILAYER_local_GalaxyXR_atlas_surface_v1.json",
-                ).requireEncodedString("libgxr_atlas_surface.so")
-            }
 
             microphoneInputPresetPatch -> scene.requireBytesAt(sites.mic, "c1008052".hexBytes())
 

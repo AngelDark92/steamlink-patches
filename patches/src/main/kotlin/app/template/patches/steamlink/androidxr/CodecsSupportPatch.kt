@@ -16,7 +16,7 @@ import java.security.MessageDigest
 internal const val CODECS_SUPPORT_LIBRARY = "libgxr_codecs_support.so"
 internal const val CODECS_SUPPORT_MANIFEST = "XR_APILAYER_local_GalaxyXR_codecs_support.json"
 internal const val CODECS_SUPPORT_LIBRARY_SHA256 =
-    "96d53e57b4e9e35181767d841581b1821b77ffe4d758584e9cfbc8a3a6a7ecb5"
+    "4ad5e8b16c7cef480d9cb0ea0905fbbb823d534d986704402bf5bb48977f2e51"
 internal const val CODECS_SUPPORT_MANIFEST_SHA256 =
     "801f2a6cf8155486879339a7eb7b83b1554a537f517ba50b6406a5a98a96fec5"
 

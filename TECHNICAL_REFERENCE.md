@@ -68,7 +68,7 @@ No desktop IP, pairing token, APK hash, or native telemetry enrollment is requir
 This section is generated from the patch catalog during releases.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v2.6.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/releases/tag/v2.6.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;49 patches total
+> **[v2.6.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/releases/tag/v2.6.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;46 patches total
 <details open>
 <summary>📦 4XVR&nbsp;&nbsp;•&nbsp;&nbsp;16 patches</summary>
 <br>
@@ -198,22 +198,20 @@ This section is generated from the patch catalog during releases.
 </details>
 
 <details open>
-<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;10 patches</summary>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;7 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 2.0.20 (5001712) | 2.0.24 (5002395) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.24 (5002395) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.24 (5002395) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) |
+| 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.24 (5002395) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.24 (5002395) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.24 (5002395) |
 | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Steam Link 2.0.20/5001712 high-resolution target. | Steam Link 2.0.24/5002395 high-resolution target. | Experimental Steam Link 2.0.20/5001712. | Experimental Steam Link 2.0.20/5001812. | Experimental Steam Link 2.0.21/5001968. | Experimental Steam Link 2.0.22/5002244. | Experimental Steam Link 2.0.23/5002363. | Experimental Steam Link 2.0.24/5002395. | Controller pose extrapolation layer for exact Steam Link 2.0.20/5001712; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.20/5001812; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.21/5001968; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.22/5002244; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.23/5002363; measured on a Galaxy XR headset. | Controller pose extrapolation layer for exact Steam Link 2.0.24/5002395; measured on 2.0.23/5002363 only, not run on this base. | Steam Link 2.0.20/5001812 high-resolution target. | Steam Link 2.0.21/5001968 high-resolution target. | Steam Link 2.0.22/5002244 high-resolution target. | Steam Link 2.0.23/5002363 high-resolution target. |
+| Experimental Steam Link 2.0.20/5001712. | Experimental Steam Link 2.0.20/5001812. | Experimental Steam Link 2.0.21/5001968. | Experimental Steam Link 2.0.22/5002244. | Experimental Steam Link 2.0.23/5002363. | Experimental Steam Link 2.0.24/5002395. | Controller pose extrapolation layer for exact Steam Link 2.0.20/5001712; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.20/5001812; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.21/5001968; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.22/5002244; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.23/5002363; measured on a Galaxy XR headset. | Controller pose extrapolation layer for exact Steam Link 2.0.24/5002395; measured on 2.0.23/5002363 only, not run on this base. | Steam Link 2.0.20/5001712 high-resolution target. | Steam Link 2.0.20/5001812 high-resolution target. | Steam Link 2.0.21/5001968 high-resolution target. | Steam Link 2.0.22/5002244 high-resolution target. | Steam Link 2.0.23/5002363 high-resolution target. | Steam Link 2.0.24/5002395 high-resolution target. |
 
 #### Image quality
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
-| [Atlas surface (experimental)](#atlas-surface-experimental) | Presents Steam Link's projection views through a runtime Android Surface at the runtime's max extent without adding a layer. Builds: 2.0.20/5001712, 2.0.24/5002395. Needs: deselect Alpha-0 and Swapchain enlarge. | 5001712, 5002395 |  |
 | [Stock quad composition (experimental)](#stock-quad-composition-experimental) | Rebuilds Steam Link's projection layers as eye-aware stock-style quads in a separate OpenXR layer. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: deselect Alpha-0 high-resolution trigger. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 |  |
-| [Swapchain enlarge (experimental)](#swapchain-enlarge-experimental) | Enlarges Steam Link's projection swapchains up to 1.5x without adding a layer. Builds: 2.0.20/5001712, 2.0.24/5002395. Needs: deselect Alpha-0 and Atlas surface. | 5001712, 5002395 |  |
 
 #### App & device identity
 
@@ -240,7 +238,6 @@ This section is generated from the patch catalog during releases.
 | 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
 |----------|----------------|----------------|-----------|
 | [Codecs Support](#codecs-support) | Lets the headset decode H.264 or AV1 streams; HEVC is untouched. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: the matching driver codec setting. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 | • Enable telemetry |
-| [Hybrid codec helper (experimental)](#hybrid-codec-helper-experimental) | Experimental fovea helper for the hybrid ASTC/PyroWave stream; decode-only, no compositing claim. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: the Codecs Support layer. Kill switch: GXR_DISABLE_HYBRID_CODEC. | 5001712, 5001812, 5001968, 5002244, 5002363, 5002395 |  |
 
 </details>
 

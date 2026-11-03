@@ -80,3 +80,9 @@ decoder-output redirect, not another composition-layer variant.
 These are presentation experiments. Neither adds stream detail. A real detail
 increase requires a higher host stream resolution or a decoder-output redirect. No
 headset result is claimed here.
+# Retirement notice — 2026-11-03
+
+Swapchain enlarge and Atlas surface were removed at the owner's request. Neither
+is required by Stock quad composition or Alpha-0. Their patches, native source,
+payloads and tests are removed; this document is historical, not an active setup
+guide. No new runtime success or failure is inferred from this removal.

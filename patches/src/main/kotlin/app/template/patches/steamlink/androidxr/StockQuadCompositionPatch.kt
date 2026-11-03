@@ -99,14 +99,6 @@ internal fun installStockQuadResources(
         File(layerDir, ANDROID_SURFACE_TRIGGER_MANIFEST).exists()) {
         throw PatchException("Stock quad composition needs Alpha-0 high-resolution trigger deselected")
     }
-    // Swapchain enlarge / atlas surface rewrite the projections stock quad replaces.
-    ResolutionLayer.values().forEach { layer ->
-        if (File(libDir, layer.library).exists() || File(layerDir, layer.manifest).exists()) {
-            throw PatchException(
-                "Stock quad composition needs ${layer.library} deselected",
-            )
-        }
-    }
 
     val files = listOf(
         File(libDir, STOCK_QUAD_LIBRARY) to helper,
