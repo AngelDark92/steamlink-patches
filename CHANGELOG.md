@@ -1,3 +1,9 @@
+## [2.6.0-dev.3](https://github.com/AngelDark92/xr-porting-hub/compare/v2.6.0-dev.2...v2.6.0-dev.3) (2026-11-03)
+
+### 🐛 Bug Fixes
+
+* Refactor patches: Remove swapchain enlarge and atlas surface patches ([449512d](https://github.com/AngelDark92/xr-porting-hub/commit/449512d293c9a2c00c9373b2800010eac1c49af3))
+
 ## [2.6.0-dev.2](https://github.com/AngelDark92/xr-porting-hub/compare/v2.6.0-dev.1...v2.6.0-dev.2) (2026-11-03)
 
 ### 🐛 Bug Fixes
