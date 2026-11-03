@@ -8,15 +8,37 @@ import app.morphe.patcher.patch.resourcePatch
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_HIGH_RESOLUTION
 import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_BEFORE_LATEST
+import app.template.patches.shared.Constants.isEarlierStartupSteamLinkBuild
 import app.template.patches.shared.Constants.isHighResolutionSteamLinkBuild
 import app.template.patches.shared.buildLabel
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.io.File
 
+// Morphe runs dependencies without re-checking compatibility: the manifest edit must stay inert on
+// any other package and on any build this patch does not list (legacy bases plus the native pairs).
+internal fun isUnrestrictedBatteryTarget(packageName: String, version: String, versionCode: String): Boolean =
+    packageName == CONTROLLER_STEAM_LINK_PACKAGE &&
+        (isEarlierStartupSteamLinkBuild(version, versionCode) ||
+            isNativeBatterySettingsBuild(version, versionCode))
+
 private val unrestrictedBatteryManifestPatch = resourcePatch {
-    execute { ensureIdsXml(get("res/values/ids.xml")) }
+    execute {
+        if (!isUnrestrictedBatteryTarget(
+                packageMetadata.packageName, packageMetadata.versionName, packageMetadata.versionCode,
+            )
+        ) {
+            return@execute
+        }
+        ensureIdsXml(get("res/values/ids.xml"))
+    }
     finalize {
+        if (!isUnrestrictedBatteryTarget(
+                packageMetadata.packageName, packageMetadata.versionName, packageMetadata.versionCode,
+            )
+        ) {
+            return@finalize
+        }
         document("AndroidManifest.xml").use { document ->
             val manifest = document.documentElement
             val app = manifest.getElementsByTagName("application").item(0) as Element

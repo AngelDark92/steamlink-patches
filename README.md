@@ -13,10 +13,11 @@
 
 | App | Package | Supported builds | Patches by |
 |---|---|---|---|
-| Steam Link VR | `com.valvesoftware.steamlinkvr` | 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395 | AngelDark92; controller tracking and haptics by [@4uva4ek](https://github.com/4uva4ek) |
+| Steam Link VR | `com.valvesoftware.steamlinkvr` | 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395, 2.0.24/5002527 | AngelDark92; controller tracking and haptics by [@4uva4ek](https://github.com/4uva4ek) |
 | 4XVR | `cn.vr4p.oculus4xvrplayerov` | 2.0.22/20022 | [@logkim1](https://github.com/logkim1/4XVR-GalaxyXR) |
 
 - **Steam Link VR** streams SteamVR from your PC. Patches fix resolution, color/OLED, microphone, controller tracking, permissions and startup.
+- **5002527 validation:** native targets and host-side audits are recorded in [the adaptation notes](diagnostics/steamlink-5002527/README.md); fresh headset validation remains pending.
 - **4XVR** is a 4X clarity, MVC 3D and HDR video player. The port adds Galaxy XR launch, controller models, HDR/playback, 72 Hz, 5.1 audio, subtitles and the launch-critical, default-on Meta platform decoupling; the premium unlock (no purchase check) is experimental and off by default.
 
 ## Quick start

@@ -12,7 +12,7 @@ extension payload and compatibility list.
 
 | App | Package | Exact bases (versionName/versionCode) | Kotlin | Resources | Extension |
 |---|---|---|---|---|---|
-| Steam Link VR | `com.valvesoftware.steamlinkvr` | 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395 | `patches/src/main/kotlin/app/template/patches/steamlink/` | `patches/src/main/resources/steamlink/` plus `patches/src/main/resources/extensions/` | `assembleExtension` -> `extension.mpe`; also `assembleMinimalExtension`, `assembleBatteryExtension` |
+| Steam Link VR | `com.valvesoftware.steamlinkvr` | 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395, 2.0.24/5002527 | `patches/src/main/kotlin/app/template/patches/steamlink/` | `patches/src/main/resources/steamlink/` plus `patches/src/main/resources/extensions/` | `assembleExtension` -> `extension.mpe`; also `assembleMinimalExtension`, `assembleBatteryExtension` |
 | 4XVR | `cn.vr4p.oculus4xvrplayerov` | 2.0.22/20022 | `patches/src/main/kotlin/app/template/patches/fourxvr/` | `patches/src/main/resources/fourxvr/` | `assembleFourXvrExtension` -> `fourxvr-extension.mpe` |
 
 Per-app registries are in `shared/Constants.kt`; categories are shared in
