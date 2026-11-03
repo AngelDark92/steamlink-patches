@@ -1,3 +1,9 @@
+## [2.6.0-dev.4](https://github.com/AngelDark92/xr-porting-hub/compare/v2.6.0-dev.3...v2.6.0-dev.4) (2026-11-03)
+
+### ✨ New Features
+
+* added support for 5002527 (beta) ([cd37edd](https://github.com/AngelDark92/xr-porting-hub/commit/cd37eddf05339b0ef7d7cfc03fee852a96fc8183))
+
 ## [2.6.0-dev.3](https://github.com/AngelDark92/xr-porting-hub/compare/v2.6.0-dev.2...v2.6.0-dev.3) (2026-11-03)
 
 ### 🐛 Bug Fixes
