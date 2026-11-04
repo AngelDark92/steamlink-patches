@@ -1,4 +1,8 @@
-# ASW integration defects — validation and fix plan (2026-10-20)
+# ASW integration defects — validation and fix plan
+
+> **Superseded 2026-11-01:** the GXR spacewarp layer was retired and deleted. This
+> plan is historical and is not actionable. See the
+> [retirement record](../steamlink-spacewarp-retirement/README.md). (2026-10-20)
 
 Scope: the 9 findings in the owner-supplied analysis of the shipped `gxr-spacewarp` path
 (layer + driver + Companion). Read-only validation against the working trees; no source
