@@ -1759,7 +1759,7 @@
       "name": "Network Optimizations",
       "description": "Keeps streaming smooth after packet loss. Builds: 5001712, 5001812, 5001968, 5002244, 5002363, 5002395, 5002527.",
       "category": "Streaming & network",
-      "default": true,
+      "default": false,
       "dependencies": [],
       "compatiblePackages": [
         {
