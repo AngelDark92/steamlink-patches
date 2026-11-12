@@ -10,6 +10,7 @@ import app.template.patches.shared.buildLabel
 import app.template.patches.steamlink.binary.NATIVE_QUAD_BUILD_ID
 import app.template.patches.steamlink.binary.NATIVE_QUAD_HELPER_SHA256
 import app.template.patches.steamlink.binary.applyNativeQuadReplacement
+import app.template.patches.steamlink.binary.isNativeQuadFarPayload
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -101,7 +102,18 @@ internal fun installNativeQuadResources(
     validateNativeQuadPayload(helper)
 
     val helperTarget = File(libDir, NATIVE_QUAD_LIBRARY)
-    if (helperTarget.exists() && (!helperTarget.isFile || !helperTarget.readBytes().contentEquals(helper))) {
+    val priorHelper = if (helperTarget.exists()) {
+        if (!helperTarget.isFile) {
+            throw PatchException("Native quad composition found a stale or modified resource: ${helperTarget.path}")
+        }
+        helperTarget.readBytes()
+    } else {
+        null
+    }
+    // The far-plane experiment owns the same file name. Its pinned payload is recognised so that
+    // turning the experiment off restores the bundled helper; any other mismatch stays a hard fail.
+    val restoreHelper = priorHelper != null && !priorHelper.contentEquals(helper)
+    if (restoreHelper && !isNativeQuadFarPayload(priorHelper)) {
         throw PatchException("Native quad composition found a stale or modified resource: ${helperTarget.path}")
     }
 
@@ -113,14 +125,14 @@ internal fun installNativeQuadResources(
     }
 
     // Already patched with the same artifact.
-    if (helperTarget.exists() && newScene.contentEquals(originalScene)) {
+    if (priorHelper != null && !restoreHelper && newScene.contentEquals(originalScene)) {
         return true
     }
 
     val staged = mutableListOf<Pair<File, File>>()
     val created = mutableListOf<File>()
     try {
-        if (!helperTarget.exists()) {
+        if (priorHelper == null || restoreHelper) {
             if (!helperTarget.parentFile.isDirectory && !helperTarget.parentFile.mkdirs()) {
                 throw PatchException("Could not create native-quad resource directory")
             }
@@ -135,12 +147,19 @@ internal fun installNativeQuadResources(
 
         staged.forEach { (temporary, target) ->
             moveFile(temporary.toPath(), target.toPath())
-            if (target == helperTarget) created += target
+            if (target == helperTarget && priorHelper == null) created += target
         }
     } catch (failure: Exception) {
         created.asReversed().forEach { target ->
             try {
                 Files.deleteIfExists(target.toPath())
+            } catch (rollback: Exception) {
+                failure.addSuppressed(rollback)
+            }
+        }
+        if (restoreHelper) {
+            try {
+                helperTarget.writeBytes(priorHelper)
             } catch (rollback: Exception) {
                 failure.addSuppressed(rollback)
             }

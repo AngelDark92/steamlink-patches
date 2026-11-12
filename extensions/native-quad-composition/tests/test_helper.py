@@ -31,7 +31,7 @@ class Throw(Exception):
 
 
 class Harness:
-    def __init__(self):
+    def __init__(self, helper=None):
         self.cpu = Cpu()
         cpu = self.cpu
         self.stubs = {}
@@ -61,7 +61,7 @@ class Harness:
         stub('pthread_mutex_unlock', lambda c: (self.log.append(('unlock', c.x[0])), self.set_x0(0)))
         for n in ('__cxa_finalize', '__cxa_atexit', '__register_atfork'):
             stub(n, lambda c: self.set_x0(0))
-        data = open(HELPER, 'rb').read()
+        data = open(helper or HELPER, 'rb').read()
         self.exports, undefined = load_shared_object(cpu, data, BASE, self.stubs)
         assert not undefined, undefined
         self.entry = self.exports['gxr_sq_entry']

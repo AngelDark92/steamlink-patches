@@ -32,7 +32,24 @@
 #define KEEP __attribute__((visibility("default"), used))
 
 /* Identity string pinned by the Kotlin installer (NATIVE_QUAD_BUILD_ID); bump with any behaviour change. */
+#ifdef GXR_SQ_DISTANCE_SLOT
+__attribute__((used, retain)) static const char gxr_sq_build_id[] = "GXR-NATIVE-QUAD-1.2-FAR-ABI1";
+
+/* Far-plane experiment: ASCII marker followed by one little-endian float32 at +16. The Kotlin
+ * installer finds the marker, pins that file offset and rewrites exactly those 4 bytes before
+ * packaging. volatile plus a writable object stops the compiler from folding the stock value.
+ * op_create reads it once and fails closed (NULL, no layers) outside [1.0, 1000.0] m. */
+__attribute__((used, retain)) static volatile struct {
+    char marker[16];
+    float distance;
+} gxr_sq_distance_slot = { "GXRQUADDIST16M0", 1.996000051498413f };
+typedef __typeof__(gxr_sq_distance_slot) gxr_sq_distance_slot_t;
+_Static_assert(sizeof(gxr_sq_distance_slot_t) == 20, "distance slot size");
+_Static_assert(offsetof(gxr_sq_distance_slot_t, distance) == 16, "distance slot offset");
+#else
 __attribute__((used, retain)) static const char gxr_sq_build_id[] = "GXR-NATIVE-QUAD-1.2-ABI1";
+#define QUAD_DISTANCE 1.996000051498413f /* stock constant, bit pattern 0x3fff7cee */
+#endif
 
 typedef struct { float x, y, z, w; } quat_t;
 typedef struct { float x, y, z; } vec3_t;
@@ -98,6 +115,9 @@ typedef struct gxr_sq_state {
     float pend_fov[4][4];
     uint32_t pend_w[2], pend_h[2]; /* 0 = never staged */
     struct gxr_sq_state *next_free;
+#ifdef GXR_SQ_DISTANCE_SLOT
+    float distance; /* read once from the patchable slot in op_create */
+#endif
 } gxr_sq_state;
 
 _Static_assert(offsetof(gxr_sq_state, fov) == 0x1C0, "committed fov");
@@ -138,6 +158,11 @@ static void set_identity_eyes(gxr_sq_state *s) {
 
 static gxr_sq_state *op_create(const gxr_sq_table *t, const char *renderer) {
     if (!t || !renderer || t->abi != GXR_SQ_ABI_VERSION || t->size != sizeof(*t)) return NULL;
+#ifdef GXR_SQ_DISTANCE_SLOT
+    /* One read per state. Fail closed: a bad slot creates no layers rather than another distance. */
+    float quad_distance = gxr_sq_distance_slot.distance;
+    if (!finite_f(quad_distance) || quad_distance < 1.0f || quad_distance > 1000.0f) return NULL;
+#endif
     pthread_mutex_lock(&pool_lock);
     gxr_sq_state *s = pool_head;
     if (s) pool_head = s->next_free;
@@ -160,6 +185,9 @@ static gxr_sq_state *op_create(const gxr_sq_table *t, const char *renderer) {
     s->ref_space_fn = (ref_space_fn_t)resolve(t, t->ref_space_fn);
     s->fov_fn = (fov_fn_t)resolve(t, t->fov_fn);
     s->space_type_off = t->ctx_space_type_off;
+#ifdef GXR_SQ_DISTANCE_SLOT
+    s->distance = quad_distance;
+#endif
     for (int i = 0; i < 4; ++i) {
         gxr_quad *q = &s->quads[i];
         int fovea = i >= QUAD_FOVEA_L;
@@ -327,14 +355,18 @@ static quat_t quat_from_matrix(const float *m) {
     return q;
 }
 
-#define QUAD_DISTANCE 1.996000051498413f /* stock constant, bit pattern 0x3fff7cee */
-
+#ifdef GXR_SQ_DISTANCE_SLOT
+static int compose(const quat_t hq, const vec3_t hp, const float *eye, const float *fov,
+                   float distance, gxr_quad *out) {
+    float d = distance;
+#else
 static int compose(const quat_t hq, const vec3_t hp, const float *eye, const float *fov,
                    gxr_quad *out) {
+    float d = QUAD_DISTANCE;
+#endif
     quat_t eq = {eye[0], eye[1], eye[2], eye[3]};
     vec3_t ep = {eye[4], eye[5], eye[6]};
     float tl = tanf(fov[0]), tr = tanf(fov[1]), tu = tanf(fov[2]), td = tanf(fov[3]);
-    float d = QUAD_DISTANCE;
     vec3_t local = {((tl + tr) * d) * 0.5f, ((tu + td) * d) * 0.5f, -d};
     vec3_t in_eye = qrot(eq, local);
     vec3_t in_head = {ep.x + in_eye.x, ep.y + in_eye.y, ep.z + in_eye.z};
@@ -375,7 +407,11 @@ static void op_frame(gxr_sq_state *s, const char *meta) {
     for (int i = 0; i < 4; ++i) {
         uint32_t w = s->pend_w[i & 1], h = s->pend_h[i & 1];
         if (w == 0 || h == 0) return;
-        if (!compose(hq, hp, eyes[i & 1], s->pend_fov[i], &cand[i])) return;
+        if (!compose(hq, hp, eyes[i & 1], s->pend_fov[i],
+#ifdef GXR_SQ_DISTANCE_SLOT
+                     s->distance,
+#endif
+                     &cand[i])) return;
         cand[i].rect_x = cand[i].rect_y = 0;
         cand[i].rect_w = (int32_t)w;
         cand[i].rect_h = (int32_t)h;

@@ -7,6 +7,10 @@
 # These are Windows script files and should use crlf
 *.bat           text eol=crlf
 
+# Native quad helpers are byte-pinned binaries: never apply EOL conversion.
+/patches/src/main/resources/steamlink/nativequad/*.so     -text
+/patches/src/main/resources/steamlink/nativequad/far/*.so -text
+
 # This manifest is validated by a byte-exact SHA-256 pin on every platform.
 /patches/src/main/resources/steamlink/androidxr/XR_APILAYER_local_GalaxyXR_codecs_support.json text eol=lf
 /patches/src/main/resources/steamlink/androidxr/XR_APILAYER_local_GalaxyXR_stock_quad_v1.json text eol=lf

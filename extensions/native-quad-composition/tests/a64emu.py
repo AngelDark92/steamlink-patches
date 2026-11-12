@@ -542,7 +542,7 @@ class Cpu:
             self.mem_op(ins)
             return
         # --- floating point
-        if mn in ('fadd', 'fsub', 'fmul', 'fdiv', 'fsqrt', 'fneg', 'fabs', 'fmov', 'fcmp', 'fcmpe', 'fcvt',
+        if mn in ('fadd', 'fsub', 'fmul', 'fnmul', 'fdiv', 'fsqrt', 'fneg', 'fabs', 'fmov', 'fcmp', 'fcmpe', 'fcvt',
                   'scvtf', 'ucvtf', 'fcvtzs', 'fcvtzu', 'fmadd', 'fmsub', 'fnmadd', 'fnmsub', 'fcsel', 'fmin',
                   'fmax', 'movi', 'fmaxnm', 'fminnm', 'frintz', 'sshll', 'fabd'):
             self.fp_op(ins)
@@ -641,7 +641,7 @@ class Cpu:
                 self.v[int(R(0)[1:])] = 0
                 return
             raise Unsupported('movi non-zero')
-        if mn in ('fadd', 'fsub', 'fmul', 'fdiv', 'fmin', 'fmax', 'fminnm', 'fmaxnm'):
+        if mn in ('fadd', 'fsub', 'fmul', 'fnmul', 'fdiv', 'fmin', 'fmax', 'fminnm', 'fmaxnm'):
             d = R(0)
             a, b = read(R(1)), read(R(2))
             if mn == 'fadd':
@@ -650,6 +650,8 @@ class Cpu:
                 r = a - b
             elif mn == 'fmul':
                 r = a * b
+            elif mn == 'fnmul':
+                r = -(a * b)  # exact negate of the rounded product, like the instruction
             elif mn == 'fdiv':
                 r = (a / b) if b != 0 else (math.nan if a == 0 or a != a else math.copysign(math.inf, a) * math.copysign(1, b))
             elif mn in ('fmin', 'fminnm'):

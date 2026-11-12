@@ -195,3 +195,57 @@ Gradle cache (8 files), **12 protected entries**, zero errors. Receipt:
 All six decoded-input hashes were rechecked after cleanup. No CI run, pristine
 end-to-end apply for the missing APK bases, headset
 validation, performance result, installation, commit, push or release is claimed.
+
+## Far-plane experiment (2026-11-12)
+
+**Reports.** Patches 2.7.0 and later: the whole image shows a wrong pose for
+one or two frames on fast eye or head movement, and the fovea seems to sit on
+a different plane from the background.
+
+**Code audit, no defect found.** The helper has no projection or old-method
+fallback; a missing helper yields no stream layers for the whole session. Pose,
+fovea rectangle and texture are committed together once per decoded frame. Base
+and fovea quads use the same eye pose and distance, so they are coplanar. The
+helper matches the stock `2.0.24/5002527` quad path in Ghidra. The earlier
+in-helper diagnostics (helper 1.3) were removed unreleased; the bundled helper
+is 1.2 again.
+
+**Hypothesis, unproven.** Stock quads sit `1.996` m from the eye and are
+world-locked, so the runtime reprojects them with head position as well as
+rotation. The older projection layers carried the head pose only. A short
+position error in tracking would then shift the whole image.
+
+**Patch.** `Native quad far plane (experimental)`, default off, depends on
+`Native quad composition (experimental)`. Exact bases `2.0.20/5001712` and
+`2.0.20/5001812` only (owner decision, `AGENTS.md` rule 2). Option
+**Quad distance**: 16 m, 64 m (default) or 250 m. The angular size and
+direction of every quad are unchanged; only the distance grows.
+
+**Mechanism.** Same helper source built with `-DGXR_SQ_DISTANCE_SLOT`
+(`Build-Native.ps1 -Variant far`). The variant carries the marker
+`GXRQUADDIST16M0` followed by one little-endian float32 at file offset
+`0x1C50`. The installer accepts only the pinned 1.2 helper or the pinned far
+payload, then writes those four bytes. The helper reads the slot once per
+renderer state and creates no layers outside `1.0`-`1000.0` m; it never falls
+back to another distance. Re-applying native quad without this patch restores
+the 1.2 helper.
+
+| Payload | Size | SHA-256 | Build id |
+|---|---|---|---|
+| `nativequad/libgxr_quad_native.so` | 8640 | `e2f636a0661d1b6f7c3f84ff39e347ade1b59ec452ace2b584048534fe72e90c` | `GXR-NATIVE-QUAD-1.2-ABI1` |
+| `nativequad/far/libgxr_quad_native.so` | 8792 | `d4a300510124a1595124e54aacfc214ee78b5edef122dab7d010b20d4221cd84` | `GXR-NATIVE-QUAD-1.2-FAR-ABI1` |
+
+**Evidence.** Both variants rebuild to the pinned hashes with NDK
+`28.2.13676358`. Native host execution with `NATIVE_QUAD_FAR_HELPER` set:
+**47 executed, 0 skipped, 0 failures**; the default slot matches 1.2 geometry
+bit for bit, and 16/64/250 m keep orientation while position offset and size
+scale by distance. `:patches:test`: **293 total, 270 executed, 23 skipped,
+0 failures/errors**. Android packaging and stable catalog generation pass.
+No headset run exists.
+
+**Headset check.** Patch a pristine 2.0.20 APK twice with identical options,
+once without and once with this patch, and compare the flicker on fast eye and
+head movement and the fovea depth effect. Unknowns: whether the Android XR
+compositor clips or rejects quads this far or this large, and stereo comfort.
+If 64 m shows no image, try 16 m. If the symptoms are unchanged, the hypothesis
+is wrong and the patch should be removed.
