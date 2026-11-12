@@ -1,3 +1,9 @@
+## [2.8.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/compare/v2.7.3-dev.1...v2.8.0-dev.1) (2026-11-12)
+
+### ✨ New Features
+
+* restore Alpha-0 and isolate far-plane quads ([a264098](https://github.com/AngelDark92/xr-porting-hub/commit/a2640989c66c3128b68c817208a69453486ca5be))
+
 ## [2.7.3-dev.1](https://github.com/AngelDark92/xr-porting-hub/compare/v2.7.2...v2.7.3-dev.1) (2026-11-12)
 
 ### 🐛 Bug Fixes
