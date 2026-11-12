@@ -38,6 +38,150 @@
       "options": []
     },
     {
+      "name": "Alpha-0 high-resolution trigger",
+      "description": "Fully transparent high-resolution trigger quad that keeps Valve's native projection layout and formats untouched. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395.",
+      "category": "Image quality",
+      "default": true,
+      "dependencies": [
+        "RawResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001712,
+                "ARMEABI_V7A": 5001712,
+                "X86_64": 5001712,
+                "X86": 5001712
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Steam Link 2.0.20/5001712 high-resolution target."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.20",
+              "versionCodes": {
+                "ARM64_V8A": 5001812,
+                "ARMEABI_V7A": 5001812,
+                "X86_64": 5001812,
+                "X86": 5001812
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Steam Link 2.0.20/5001812 high-resolution target."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.21",
+              "versionCodes": {
+                "ARM64_V8A": 5001968,
+                "ARMEABI_V7A": 5001968,
+                "X86_64": 5001968,
+                "X86": 5001968
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Steam Link 2.0.21/5001968 high-resolution target."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.22",
+              "versionCodes": {
+                "ARM64_V8A": 5002244,
+                "ARMEABI_V7A": 5002244,
+                "X86_64": 5002244,
+                "X86": 5002244
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Steam Link 2.0.22/5002244 high-resolution target."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.23",
+              "versionCodes": {
+                "ARM64_V8A": 5002363,
+                "ARMEABI_V7A": 5002363,
+                "X86_64": 5002363,
+                "X86": 5002363
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Steam Link 2.0.23/5002363 high-resolution target."
+            }
+          ]
+        },
+        {
+          "packageName": "com.valvesoftware.steamlinkvr",
+          "name": "Steam Link",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#1B2838",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.0.24",
+              "versionCodes": {
+                "ARM64_V8A": 5002395,
+                "ARMEABI_V7A": 5002395,
+                "X86_64": 5002395,
+                "X86": 5002395
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": "Steam Link 2.0.24/5002395 high-resolution target."
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Android XR native permission names",
       "description": "Swaps the built-in Oculus face and eye permission names for Android XR ones. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244.",
       "category": "Advanced XR compatibility",
@@ -2604,161 +2748,15 @@
       ]
     },
     {
-      "name": "Native quad composition (experimental)",
-      "description": "Builds eye-aware quads directly in Steam Link's renderer. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: disable Stock quad composition.",
-      "category": "Image quality",
-      "default": false,
-      "dependencies": [
-        "RawResourcePatch"
-      ],
-      "compatiblePackages": [
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.20",
-              "versionCodes": {
-                "ARM64_V8A": 5001712,
-                "ARMEABI_V7A": 5001712,
-                "X86_64": 5001712,
-                "X86": 5001712
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Steam Link 2.0.20/5001712 high-resolution target."
-            }
-          ]
-        },
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.20",
-              "versionCodes": {
-                "ARM64_V8A": 5001812,
-                "ARMEABI_V7A": 5001812,
-                "X86_64": 5001812,
-                "X86": 5001812
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Steam Link 2.0.20/5001812 high-resolution target."
-            }
-          ]
-        },
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.21",
-              "versionCodes": {
-                "ARM64_V8A": 5001968,
-                "ARMEABI_V7A": 5001968,
-                "X86_64": 5001968,
-                "X86": 5001968
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Steam Link 2.0.21/5001968 high-resolution target."
-            }
-          ]
-        },
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.22",
-              "versionCodes": {
-                "ARM64_V8A": 5002244,
-                "ARMEABI_V7A": 5002244,
-                "X86_64": 5002244,
-                "X86": 5002244
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Steam Link 2.0.22/5002244 high-resolution target."
-            }
-          ]
-        },
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.23",
-              "versionCodes": {
-                "ARM64_V8A": 5002363,
-                "ARMEABI_V7A": 5002363,
-                "X86_64": 5002363,
-                "X86": 5002363
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Steam Link 2.0.23/5002363 high-resolution target."
-            }
-          ]
-        },
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.24",
-              "versionCodes": {
-                "ARM64_V8A": 5002395,
-                "ARMEABI_V7A": 5002395,
-                "X86_64": 5002395,
-                "X86": 5002395
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Steam Link 2.0.24/5002395 high-resolution target."
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
       "name": "Native quad far plane (experimental)",
-      "description": "Places the stream quads far from the eye to test whether whole-image flicker stops. Builds: 2.0.20 (5001712, 5001812).",
+      "description": "Builds head-oriented quads directly in Steam Link's renderer, placed far from the eye. Build: 2.0.20/5001712. Needs: deselect Alpha-0 high-resolution trigger and Stock quad composition (experimental).",
       "category": "Image quality",
       "default": false,
-      "dependencies": [
-        "ResourcePatch"
-      ],
+      "dependencies": [],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
           "apkFileType": "APK",
           "appIconColor": "#1B2838",
@@ -2774,29 +2772,7 @@
               },
               "isExperimental": false,
               "minSdk": null,
-              "description": "Steam Link 2.0.20/5001712 legacy base."
-            }
-          ]
-        },
-        {
-          "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
-          "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "2.0.20",
-              "versionCodes": {
-                "ARM64_V8A": 5001812,
-                "ARMEABI_V7A": 5001812,
-                "X86_64": 5001812,
-                "X86": 5001812
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": "Steam Link 2.0.20/5001812 legacy base."
+              "description": "Experimental Steam Link 2.0.20/5001712."
             }
           ]
         }
@@ -2805,7 +2781,7 @@
         {
           "key": "distance",
           "title": "Quad distance",
-          "description": "How far the stream quads sit from the eye. Larger values make head or eye position errors move the image less. Stock is about 2 m.",
+          "description": "How far the stream quads sit from the head. Larger values make eye-tracked position errors move the image less. Stock is about 2 m.",
           "required": true,
           "type": "kotlin.String",
           "default": "64",
@@ -2813,6 +2789,18 @@
             "16 m": "16",
             "64 m": "64",
             "250 m": "250"
+          }
+        },
+        {
+          "key": "layerSettings",
+          "title": "Layer settings",
+          "description": "Keep Steam Link's layer settings, or remove only the FB settings entry from each quad.",
+          "required": true,
+          "type": "kotlin.String",
+          "default": "keep",
+          "values": {
+            "Keep": "keep",
+            "Remove FB settings": "none"
           }
         }
       ]
@@ -3671,20 +3659,20 @@
       "options": []
     },
     {
-      "name": "Stock quad composition",
-      "description": "Rebuilds Steam Link's projection layers as eye-aware stock-style quads in a separate OpenXR layer. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395.",
+      "name": "Stock quad composition (experimental)",
+      "description": "Rebuilds Steam Link's projection layers as eye-aware stock-style quads in a separate OpenXR layer. Builds: 2.0.20 (5001712, 5001812), 2.0.21/5001968, 2.0.22/5002244, 2.0.23/5002363, 2.0.24/5002395. Needs: deselect Alpha-0 high-resolution trigger.",
       "category": "Image quality",
-      "default": true,
+      "default": false,
       "dependencies": [
         "RawResourcePatch"
       ],
       "compatiblePackages": [
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
+          "apkFileType": null,
+          "appIconColor": null,
           "signatures": null,
           "targets": [
             {
@@ -3703,10 +3691,10 @@
         },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
+          "apkFileType": null,
+          "appIconColor": null,
           "signatures": null,
           "targets": [
             {
@@ -3725,10 +3713,10 @@
         },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
+          "apkFileType": null,
+          "appIconColor": null,
           "signatures": null,
           "targets": [
             {
@@ -3747,10 +3735,10 @@
         },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
+          "apkFileType": null,
+          "appIconColor": null,
           "signatures": null,
           "targets": [
             {
@@ -3769,10 +3757,10 @@
         },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
+          "apkFileType": null,
+          "appIconColor": null,
           "signatures": null,
           "targets": [
             {
@@ -3791,10 +3779,10 @@
         },
         {
           "packageName": "com.valvesoftware.steamlinkvr",
-          "name": "Steam Link",
+          "name": "Steam Link Experimental",
           "description": null,
-          "apkFileType": "APK",
-          "appIconColor": "#1B2838",
+          "apkFileType": null,
+          "appIconColor": null,
           "signatures": null,
           "targets": [
             {

@@ -192,7 +192,6 @@ object Constants {
     // base stays frozen for existing patches and gets no new experiment.
     private val FAR_PLANE_STEAM_LINK_BUILDS = listOf(
         SteamLinkBuild("2.0.20", 5001712),
-        SteamLinkBuild("2.0.20", 5001812),
     )
 
     fun isNativeQuadFarPlaneSteamLinkBuild(version: String, versionCode: String): Boolean =
@@ -201,7 +200,7 @@ object Constants {
         }
 
     val COMPATIBILITIES_STEAM_LINK_FAR_PLANE =
-        FAR_PLANE_STEAM_LINK_BUILDS.map(::steamLinkBuildCompatibility)
+        experimentalCompatibilities(FAR_PLANE_STEAM_LINK_BUILDS)
 
     private fun experimentalCompatibilities(builds: List<SteamLinkBuild>) =
         builds.map { build ->

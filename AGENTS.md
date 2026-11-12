@@ -37,9 +37,10 @@ package. Never infer it from the version name, a neighboring build or another ap
    frozen: existing patches keep their declared compatibility, guards, tests
    and payloads, but get no new patches, options or adaptations unless the
    user names that base. Never drop a frozen base to simplify a change.
-   Compatibility metadata alone is not implementation. If exact-base evidence
-   is missing, report the blocker instead of borrowing another build's
-   offsets. Retired experiments remain retired under rule 13.
+   Far-plane experiment: `2.0.20/5001712` only.
+   Compatibility metadata alone is not implementation. If exact-base evidence is
+   missing, report the blocker instead of borrowing another build's offsets.
+   Retired experiments remain retired under rule 13.
 3. **Compatibility shape.** Use the primary `AppTarget` constructor so the
    `description` is retained. Builds that share a version name but differ by code
    stay in separate `Compatibility` objects and are passed together with
@@ -150,6 +151,11 @@ package. Never infer it from the version name, a neighboring build or another ap
     mechanism and new evidence. Read
     `diagnostics/steamlink-spacewarp-retirement/README.md` before frame-synthesis
     work.
+
+    `Native quad composition` was deleted on 2026-11-12; do not re-add it or its
+    helper/layouts. `Native quad far plane` is separate and targets only
+    `2.0.20/5001712`. Read
+    `diagnostics/steamlink-stock-quad-composition/NATIVE-EXPERIMENT.md`.
 
 14. **4XVR gates.** The adaptation targets exact base 2.0.22/20022 only. The
     pristine stock APK is retained at

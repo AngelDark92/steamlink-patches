@@ -8,7 +8,7 @@ import app.template.patches.steamlink.androidxr.controllerPoseExtrapolationPatch
 import app.template.patches.steamlink.androidxr.controllerPoseTimePatch
 import app.template.patches.steamlink.androidxr.controllerVelocityFramePatch
 import app.template.patches.steamlink.androidxr.gxrFacebridgePatch
-import app.template.patches.steamlink.androidxr.nativeQuadCompositionPatch
+import app.template.patches.steamlink.androidxr.alpha0HighResolutionTriggerPatch
 import app.template.patches.steamlink.androidxr.nativeQuadFarPlanePatch
 import app.template.patches.steamlink.androidxr.stockQuadCompositionPatch
 import app.template.patches.steamlink.androidxr.unrestrictedBatteryUsagePatch
@@ -134,7 +134,7 @@ class PatchCompatibilityMatrixTest {
     @Test
     fun `native bases expose exactly their individual patches`() {
         val earlierNative = setOf(
-            nativeQuadCompositionPatch,
+            alpha0HighResolutionTriggerPatch,
             networkOptimizationsPatch,
             gxrFacebridgePatch,
             microphoneInputPresetPatch,
@@ -283,7 +283,7 @@ class PatchCompatibilityMatrixTest {
             forceStreamXrGatesPatch,
             gxrFacebridgePatch,
             stockQuadCompositionPatch,
-            nativeQuadCompositionPatch,
+            alpha0HighResolutionTriggerPatch,
             nativeQuadFarPlanePatch,
             microphoneInputPresetPatch,
             networkOptimizationsPatch,
@@ -312,7 +312,7 @@ class PatchCompatibilityMatrixTest {
             forceLobbyPermissionStateGatePatch,
             forceStreamXrGatesPatch,
             gxrFacebridgePatch,
-            stockQuadCompositionPatch,
+            alpha0HighResolutionTriggerPatch,
             microphoneInputPresetPatch,
             oledCalibrationPatch,
             unrestrictedBatteryUsagePatch,
@@ -330,7 +330,7 @@ class PatchCompatibilityMatrixTest {
 
         // 2.0.23/5002363 and 2.0.24/5002395.
         val nativeRecommendedPatches = setOf(
-            stockQuadCompositionPatch,
+            alpha0HighResolutionTriggerPatch,
             gxrFacebridgePatch,
             microphoneInputPresetPatch,
             xrCodecsSupportPatch,
